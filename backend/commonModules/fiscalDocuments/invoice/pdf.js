@@ -58,18 +58,51 @@ function languageFromUserRef(userRef) {
   return null;
 }
 
-async function findUserLanguage(userRef) {
-  const populated = languageFromUserRef(userRef);
-  if (populated != null && String(populated).trim()) return String(populated);
+async function findUserProfile(userRef) {
+  const populatedLang = languageFromUserRef(userRef);
+  const populatedName =
+    userRef && typeof userRef === "object"
+      ? [userRef.firstName, userRef.lastName].filter(Boolean).join(" ").trim()
+      : "";
+  const populatedEmail =
+    userRef && typeof userRef === "object" ? userRef.email || "" : "";
+  if (populatedName && populatedLang != null && String(populatedLang).trim()) {
+    return {
+      language: String(populatedLang),
+      buyerName: populatedName,
+      buyerEmail: populatedEmail,
+    };
+  }
   const id = userRef && typeof userRef === "object" ? userRef._id : userRef;
-  if (!id) return "";
+  if (!id) {
+    return {
+      language: populatedLang || "",
+      buyerName: populatedName,
+      buyerEmail: populatedEmail,
+    };
+  }
   try {
     const { User } = require("../../../models/UserModel");
-    const user = await User.findById(id).select("language").lean();
-    return user?.language || "";
+    const user = await User.findById(id).select("language firstName lastName email").lean();
+    return {
+      language: user?.language || populatedLang || "",
+      buyerName:
+        populatedName ||
+        [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim(),
+      buyerEmail: populatedEmail || user?.email || "",
+    };
   } catch (error) {
-    return "";
+    return {
+      language: populatedLang || "",
+      buyerName: populatedName,
+      buyerEmail: populatedEmail,
+    };
   }
+}
+
+async function findUserLanguage(userRef) {
+  const profile = await findUserProfile(userRef);
+  return profile.language;
 }
 
 async function localeForInvoice(invoice, fallback) {
@@ -84,7 +117,10 @@ async function generateInvoicePdf(invoice, options = {}) {
   const { renderFiscalInvoiceHtml } = require("./htmlRenderer");
   const { htmlToPdfBuffer } = require("./htmlToPdf");
   const extras = await sellerExtrasForInvoice(invoice);
+  const profile = await findUserProfile(invoice.user);
   extras.locale = await localeForInvoice(invoice, options.locale);
+  extras.buyerName = profile.buyerName;
+  extras.buyerEmail = profile.buyerEmail;
   const html = renderFiscalInvoiceHtml(invoice, extras);
   const buffer = await htmlToPdfBuffer(html);
   if (!looksLikePdf(buffer)) {

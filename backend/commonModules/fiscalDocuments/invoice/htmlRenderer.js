@@ -27,11 +27,13 @@ function isPlaceholderBuyerName(firstName, lastName) {
   return !joined || joined === "guest" || joined === "guest user";
 }
 
-function customerFromBilling(billing = {}, locale) {
+function customerFromBilling(billing = {}, locale, extras = {}) {
   const copy = getCopy(locale).invoicePdf;
+  const profileName = String(extras.buyerName || "").trim();
   const joined = [billing.firstName, billing.lastName].filter(Boolean).join(" ").trim();
   const name =
     billing.companyName ||
+    profileName ||
     (isPlaceholderBuyerName(billing.firstName, billing.lastName) ? "" : joined) ||
     copy.guest;
   const address = billing.address || {};
@@ -40,7 +42,7 @@ function customerFromBilling(billing = {}, locale) {
     .join(" ");
   return {
     name,
-    email: billing.emailAddress || "",
+    email: billing.emailAddress || extras.buyerEmail || "",
     address: addressLine,
   };
 }
@@ -71,7 +73,7 @@ function renderFiscalInvoiceHtml(invoice, extras = {}) {
   const result = invoice.rawResponse || {};
   const products = result.products || extras.products || [];
   const billing = result.billingInformation || extras.billingInformation || {};
-  const customer = customerFromBilling(billing, locale);
+  const customer = customerFromBilling(billing, locale, extras);
   const paymentType = result.payment?.[0]?.paymentType;
   const total = products.reduce(
     (sum, product) =>

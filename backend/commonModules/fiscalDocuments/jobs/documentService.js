@@ -223,6 +223,25 @@ function groupTicketLines(bookings) {
   return [...grouped.values()];
 }
 
+async function profileNameForUser(userRef) {
+  if (userRef && typeof userRef === "object" && userRef.firstName) {
+    return {
+      firstName: userRef.firstName,
+      lastName: userRef.lastName,
+      email: userRef.email,
+    };
+  }
+  const id = userRef && typeof userRef === "object" ? userRef._id : userRef;
+  if (!id) return { firstName: "", lastName: "", email: "" };
+  const { User } = require("../../../models/UserModel");
+  const user = await User.findById(id).select("firstName lastName email").lean();
+  return {
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    email: user?.email || "",
+  };
+}
+
 async function issueTicketingInvoices(orderId) {
   const order = await TicketingOrders.findById(orderId)
     .populate("userBillingInformation")
@@ -235,11 +254,12 @@ async function issueTicketingInvoices(orderId) {
   if (!bookings.length) throw new Error("ticketing_bookings_not_found");
 
   const userId = order.user?._id || order.user;
-  const [organization, billing] = await Promise.all([
+  const [organization, billing, profile] = await Promise.all([
     Organizations.findById(order.organization).select("basicInfo location").lean(),
     order.userBillingInformation
       ? Promise.resolve(order.userBillingInformation)
       : UserBillingInformation.findOne({ user: userId, status: "active" }).lean(),
+    profileNameForUser(order.user),
   ]);
 
   const seller = await getOrganizerSeller(order.companyOrganizer, organization);
@@ -248,14 +268,12 @@ async function issueTicketingInvoices(orderId) {
   const billingInformation = buildBillingInformation(
     {
       ...(billing || {}),
-      firstName: order.user?.firstName || billing?.firstName,
-      lastName: order.user?.lastName || billing?.lastName,
-      email: billing?.email || order.user?.email,
+      email: billing?.email || profile.email,
     },
     {
-      firstName: order.user?.firstName,
-      lastName: order.user?.lastName,
-      email: order.user?.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      email: profile.email,
     },
   );
   const orderNumber = String(order._id);

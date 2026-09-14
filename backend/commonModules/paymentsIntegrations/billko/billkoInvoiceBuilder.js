@@ -109,7 +109,7 @@ function buildBillingInformation(billing, fallback = {}) {
     payload.companyName = billing.companyName;
     payload.personalIdentificationNumber = billing.personalIdentificationNumber;
   } else {
-    const person = personNameFromParts(billing, fallback);
+    const person = personNameFromParts(fallback, billing);
     payload.firstName = person.firstName || "Guest";
     payload.lastName = person.lastName;
   }

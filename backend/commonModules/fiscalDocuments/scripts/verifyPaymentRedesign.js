@@ -263,8 +263,8 @@ function stepSourceGates() {
   assert(ticketing.includes('kind: "service_fee"'), "ticketing still issues service fee");
   assert(ticketing.includes('kind: "tickets"'), "ticketing still issues tickets");
   assert(
-    ticketing.includes('populate("user"') &&
-      ticketing.includes("order.user?.firstName") &&
+    docSrc.includes("profileNameForUser") &&
+      ticketing.includes("profile.firstName") &&
       !ticketing.includes("protectionUserDetails") &&
       !ticketing.includes("protectionNameFallback"),
     "ticketing invoice buyer uses logged-in user profile, not ticket attendee",
@@ -595,6 +595,13 @@ async function stepFiscalInvoicePdf() {
     { firstName: "Ali", lastName: "Imran" },
   );
   assert(billed.firstName === "Ali" && billed.lastName === "Imran", "billing fallback uses user profile name");
+  assert(
+    buildBillingInformation(
+      { firstName: "Suheer", lastName: "Zahid" },
+      { firstName: "Ali", lastName: "Imran" },
+    ).firstName === "Ali",
+    "user profile name wins over billing record name",
+  );
   const missing = buildBillingInformation({});
   assert(
     `${missing.firstName} ${missing.lastName}`.trim() !== "Guest User",
@@ -607,6 +614,14 @@ async function stepFiscalInvoicePdf() {
   assert(
     customerFromBilling({ firstName: "Ali", lastName: "Imran" }, "en").name === "Ali Imran",
     "PDF renderer prints the real buyer name",
+  );
+  assert(
+    customerFromBilling(
+      { firstName: "Suheer", lastName: "Zahid" },
+      "en",
+      { buyerName: "Ali Imran" },
+    ).name === "Ali Imran",
+    "PDF overlay uses logged-in user name",
   );
 
   fs.mkdirSync(PREVIEW_DIR, { recursive: true });
