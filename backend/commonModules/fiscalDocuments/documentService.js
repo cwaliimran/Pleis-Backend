@@ -10,10 +10,17 @@ const {
   createInvoice,
   findInvoicesByOrderNumber,
   isInvalidApiKeyError,
+  refundInvoice,
 } = require("../paymentsIntegrations/billko/billkoClient");
+const {
+  stripPdfPayload,
+  storeInvoicePdfIfAvailable,
+  maybeEmailTicketingInvoicePdfs,
+} = require("./billkoInvoicePdf");
 const {
   getPleisBillkoApiKey,
   getOrganizerSeller,
+  getOrganizerParty,
   formatOrganizerAddress,
 } = require("../paymentsIntegrations/billko/billkoCredentials");
 const {
@@ -38,8 +45,13 @@ const {
   mapOrderItems,
   generateVoucherCode,
   resolveLocale,
+  snapshotCardFromMonriPayload,
 } = require("./confirmationGenerator");
 const { getCopy } = require("./confirmationI18n");
+const MonriTransaction = require("../paymentsIntegrations/monri/MonriTransaction");
+const {
+  buildSubscriptionInvoicePayload,
+} = require("./subscriptionInvoiceBuilder");
 
 function failUnrecoverable(error) {
   if (
@@ -61,8 +73,14 @@ function failUnrecoverable(error) {
   throw error;
 }
 
-function persistInvoiceFields(result) {
+function persistInvoiceFields(result, payload = {}) {
   const fiscalized = Boolean(result?.fiscalizationNumber);
+  const raw = { ...(result || {}) };
+  if (payload.products) raw.products = payload.products;
+  if (payload.billingInformation) raw.billingInformation = payload.billingInformation;
+  if (payload.payment) raw.payment = payload.payment;
+  if (payload.note) raw.note = payload.note;
+  if (payload.orderNumber) raw.orderNumber = payload.orderNumber;
   return {
     billkoId: result?.id || result?._id || "",
     invoiceNumber: result?.invoiceNumber || "",
@@ -70,7 +88,7 @@ function persistInvoiceFields(result) {
     invoicePreviewLink: result?.invoicePreviewLink || "",
     pdfFileName: result?.fileName || "",
     status: fiscalized ? "fiscalized" : "fiscalization_failed",
-    rawResponse: result,
+    rawResponse: stripPdfPayload(raw),
     lastError: fiscalized ? "" : "invoice_created_but_not_fiscalized",
   };
 }
@@ -89,7 +107,24 @@ async function ensureInvoice({
   uniqueCodePrefix,
 }) {
   const existing = await BillkoInvoice.findOne({ orderNumber, kind });
-  if (existing?.billkoId) return existing;
+  if (existing?.billkoId) {
+    if (!existing.rawResponse?.products?.length && payload?.products?.length) {
+      existing.rawResponse = {
+        ...(existing.rawResponse || {}),
+        products: payload.products,
+        billingInformation: payload.billingInformation,
+        payment: payload.payment,
+        note: payload.note,
+        orderNumber: payload.orderNumber,
+      };
+      await BillkoInvoice.updateOne(
+        { _id: existing._id },
+        { $set: { rawResponse: existing.rawResponse } },
+      );
+    }
+    await storeInvoicePdfIfAvailable(existing);
+    return existing;
+  }
 
   let remote = [];
   try {
@@ -108,7 +143,7 @@ async function ensureInvoice({
   });
 
   if (matched) {
-    return BillkoInvoice.findOneAndUpdate(
+    const existingMatched = await BillkoInvoice.findOneAndUpdate(
       { orderNumber, kind },
       {
         $set: {
@@ -122,11 +157,13 @@ async function ensureInvoice({
           user,
           amount: payload.payment?.[0]?.amount || 0,
           taxRateLabels: (payload.products || []).map((p) => p.taxRateLabels?.[0]).filter(Boolean),
-          ...persistInvoiceFields(matched),
+          ...persistInvoiceFields(matched, payload),
         },
       },
       { upsert: true, new: true },
     );
+    await storeInvoicePdfIfAvailable(existingMatched);
+    return existingMatched;
   }
 
   let result;
@@ -136,7 +173,7 @@ async function ensureInvoice({
     failUnrecoverable(error);
   }
 
-  return BillkoInvoice.findOneAndUpdate(
+  const created = await BillkoInvoice.findOneAndUpdate(
     { orderNumber, kind },
     {
       $set: {
@@ -150,11 +187,13 @@ async function ensureInvoice({
         user,
         amount: payload.payment?.[0]?.amount || 0,
         taxRateLabels: (payload.products || []).map((p) => p.taxRateLabels?.[0]).filter(Boolean),
-        ...persistInvoiceFields(result),
+        ...persistInvoiceFields(result, payload),
       },
     },
     { upsert: true, new: true },
   );
+  await storeInvoicePdfIfAvailable(created);
+  return created;
 }
 
 function groupTicketLines(bookings) {
@@ -261,6 +300,7 @@ async function issueTicketingInvoices(orderId) {
     }),
   );
 
+  await maybeEmailTicketingInvoicePdfs(orderNumber, order.user);
   return invoices;
 }
 
@@ -319,6 +359,7 @@ function buildMenuOrderLines(order) {
   return lines;
 }
 
+// Historical helper. Confirmation jobs must not call this (Billko §5).
 async function issueOrderingInvoices(order) {
   const organization = order.organization;
   const companyOrganizer = organization?.creator || order.companyOrganizer;
@@ -396,6 +437,17 @@ async function issueOrderingInvoices(order) {
   return invoices;
 }
 
+async function loadCardSnapshotForOrder(orderId, transactionId) {
+  const query = [];
+  if (orderId) query.push({ orderNumber: String(orderId) });
+  if (transactionId) query.push({ monriTransactionId: String(transactionId) });
+  if (!query.length) return {};
+  const tx = await MonriTransaction.findOne({ $or: query })
+    .select("rawCallback paymentMethod")
+    .lean();
+  return snapshotCardFromMonriPayload(tx?.rawCallback);
+}
+
 async function issueOrderingConfirmation(menuOrderId) {
   const order = await MenuOrders.findById(menuOrderId)
     .populate("organization", "basicInfo location creator")
@@ -404,16 +456,10 @@ async function issueOrderingConfirmation(menuOrderId) {
   if (!order) throw new Error("menu_order_not_found");
   if (order.paymentStatus !== "paid") return null;
 
-  const invoices = await issueOrderingInvoices(order);
-
   const organization = order.organization;
-  const seller = await getOrganizerSeller(organization?.creator || order.companyOrganizer, organization).catch(
-    () => ({
-      companyName: organization?.basicInfo?.name || "",
-      oib: "",
-      address: "",
-      venueName: organization?.basicInfo?.name || "",
-    }),
+  const seller = await getOrganizerParty(
+    organization?.creator || order.companyOrganizer,
+    organization,
   );
 
   const billing = await UserBillingInformation.findOne({
@@ -429,6 +475,10 @@ async function issueOrderingConfirmation(menuOrderId) {
   if (!customerEmail) throw new Error("confirmation_email_missing");
 
   const locale = resolveLocale(order.user?.language);
+  const card = await loadCardSnapshotForOrder(
+    order._id,
+    order.transactionId,
+  );
 
   const confirmation = await issuePaymentConfirmation({
     module: "ORDERING",
@@ -441,6 +491,8 @@ async function issueOrderingConfirmation(menuOrderId) {
     customerEmail,
     paidAt: order.paidAt || new Date(),
     paymentMethod: order.paymentMethod,
+    cardLast4: card.cardLast4,
+    cardBrand: card.cardBrand,
     amount: order.priceBreakdown?.finalTotal ?? order.totalPrice,
     currency: "EUR",
     items: mapOrderItems(order, locale),
@@ -450,9 +502,10 @@ async function issueOrderingConfirmation(menuOrderId) {
     organizerOib: seller.oib,
     locale,
   });
-  return { invoices, confirmation };
+  return { invoices: [], confirmation };
 }
 
+// Historical helper. Confirmation jobs must not call this (Billko §5).
 async function issueReservationInvoices(reservation, organization) {
   const seller = await getOrganizerSeller(
     reservation.companyOrganizer,
@@ -537,17 +590,10 @@ async function issueReservationConfirmation(reservationId) {
   if (!reservation.amount || reservation.amount <= 0) return null;
 
   const organization = reservation.organizationId;
-  const invoices = await issueReservationInvoices(reservation, organization);
-
-  const seller = await getOrganizerSeller(
+  const seller = await getOrganizerParty(
     reservation.companyOrganizer,
     organization,
-  ).catch(() => ({
-    companyName: organization?.basicInfo?.name || "",
-    oib: "",
-    address: "",
-    venueName: organization?.basicInfo?.name || "",
-  }));
+  );
 
   const billing = reservation.userBillingInformation;
   const customerName =
@@ -624,6 +670,11 @@ async function issueReservationConfirmation(reservationId) {
     });
   }
 
+  const card = await loadCardSnapshotForOrder(
+    reservation._id,
+    reservation.paymentDetails?.transactionId,
+  );
+
   const confirmation = await issuePaymentConfirmation({
     module: "RESERVATION",
     orderId: reservation._id,
@@ -636,6 +687,8 @@ async function issueReservationConfirmation(reservationId) {
     customerEmail,
     paidAt: reservation.paidAt || new Date(),
     paymentMethod: reservation.paymentDetails?.paymentMethod,
+    cardLast4: card.cardLast4,
+    cardBrand: card.cardBrand,
     amount: reservation.amount,
     currency: "EUR",
     items,
@@ -646,7 +699,95 @@ async function issueReservationConfirmation(reservationId) {
     organizerOib: seller.oib,
     locale,
   });
-  return { invoices, confirmation };
+  return { invoices: [], confirmation };
+}
+
+async function issueSubscriptionInvoice(transactionId) {
+  const tx = await MonriTransaction.findOne({
+    $or: [
+      { _id: transactionId },
+      { orderNumber: String(transactionId) },
+    ],
+  }).lean();
+  if (!tx) throw new Error("subscription_transaction_not_found");
+  if (tx.status !== "paid") return null;
+  if (tx.orderType !== "subscription") {
+    throw new Error("not_a_subscription_transaction");
+  }
+
+  const existing = await BillkoInvoice.findOne({
+    orderNumber: tx.orderNumber,
+    kind: "subscription",
+  });
+  if (existing?.billkoId) return existing;
+
+  const User = require("mongoose").model("User");
+  const user = await User.findById(tx.userId)
+    .select("firstName lastName email companyDetails")
+    .lean();
+  const organization = await Organizations.findOne({ creator: tx.userId })
+    .select("basicInfo location")
+    .lean();
+
+  const payload = buildSubscriptionInvoicePayload({
+    transaction: tx,
+    user,
+    organization,
+  });
+
+  return ensureInvoice({
+    kind: "subscription",
+    seller: "pleis",
+    apiKey: getPleisBillkoApiKey(),
+    payload,
+    orderType: "subscription",
+    orderId: tx._id,
+    orderNumber: tx.orderNumber,
+    organization: organization?._id,
+    companyOrganizer: tx.userId,
+    user: tx.userId,
+    uniqueCodePrefix: "SUB-",
+  });
+}
+
+async function stornoTicketingInvoices(orderId, { execute = false } = {}) {
+  const invoices = await BillkoInvoice.find({
+    orderId,
+    kind: { $in: ["tickets"] },
+    status: { $in: ["created", "fiscalized"] },
+  }).lean();
+  const skippedFee = await BillkoInvoice.find({
+    orderId,
+    kind: "service_fee",
+  })
+    .select("_id kind status")
+    .lean();
+
+  if (!execute || process.env.BILLKO_STORNO_ENABLED !== "true") {
+    return {
+      plannedTicketStornos: invoices.map((row) => String(row._id)),
+      skippedServiceFee: skippedFee.map((row) => String(row._id)),
+      executed: false,
+      reason: "live_billko_storno_disabled",
+    };
+  }
+
+  const results = [];
+  for (const invoice of invoices) {
+    const seller =
+      invoice.seller === "pleis"
+        ? { apiKey: getPleisBillkoApiKey() }
+        : await getOrganizerSeller(invoice.companyOrganizer);
+    const remote = await refundInvoice(seller.apiKey, {
+      id: invoice.billkoId,
+    });
+    await BillkoInvoice.updateOne(
+      { _id: invoice._id },
+      { $set: { status: "refunded", lastError: "", rawResponse: remote } },
+    );
+    results.push(remote);
+  }
+  return { executed: true, results, skippedServiceFee: skippedFee };
 }
 
 async function handleSuccessfulPayment(job) {
@@ -664,12 +805,15 @@ async function handleSuccessfulPayment(job) {
   if (kind === "reservation_confirmation") {
     return issueReservationConfirmation(orderId);
   }
+  if (kind === "subscription_invoice") {
+    return issueSubscriptionInvoice(orderId);
+  }
+  if (kind === "ticketing_storno") {
+    return stornoTicketingInvoices(orderId, { execute: false });
+  }
 
   throw new UnrecoverableError(`unsupported_fiscal_document_kind:${kind}`);
 }
-
-// Deferred (not in this slice): subscription eRačun, refund/storno,
-// Fiscalize/commission batches, admin document ZIP downloads, pain.001 payouts.
 
 async function applyBillkoCallback(payload) {
   const result = payload?.result || payload;
@@ -677,9 +821,27 @@ async function applyBillkoCallback(payload) {
   const orderNumber = result?.orderNumber || payload?.orderNumber;
   if (!billkoId && !orderNumber) return null;
 
-  const update = persistInvoiceFields(result);
   const query = billkoId ? { billkoId } : { orderNumber };
-  return BillkoInvoice.findOneAndUpdate(query, { $set: update }, { new: true });
+  const existing = await BillkoInvoice.findOne(query).lean();
+  const update = persistInvoiceFields(result);
+  if (existing?.rawResponse) {
+    update.rawResponse = {
+      ...existing.rawResponse,
+      ...update.rawResponse,
+      products: existing.rawResponse.products || update.rawResponse.products,
+      billingInformation:
+        existing.rawResponse.billingInformation ||
+        update.rawResponse.billingInformation,
+      payment: existing.rawResponse.payment || update.rawResponse.payment,
+    };
+  }
+  const updated = await BillkoInvoice.findOneAndUpdate(query, { $set: update }, { new: true });
+  if (!updated) return null;
+  await storeInvoicePdfIfAvailable(updated);
+  if (updated.kind === "tickets" || updated.kind === "service_fee") {
+    await maybeEmailTicketingInvoicePdfs(updated.orderNumber, updated.user);
+  }
+  return updated;
 }
 
 module.exports = {
@@ -687,5 +849,7 @@ module.exports = {
   issueTicketingInvoices,
   issueOrderingConfirmation,
   issueReservationConfirmation,
+  issueSubscriptionInvoice,
+  stornoTicketingInvoices,
   applyBillkoCallback,
 };

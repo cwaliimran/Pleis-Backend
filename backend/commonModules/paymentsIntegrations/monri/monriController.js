@@ -19,6 +19,11 @@ const {
   evaluateMonriSuccessIntent,
 } = require("./monriSuccessGuard");
 const {
+  isLiveRefundEnabled,
+  refundViaMonri,
+  planMonriRefund,
+} = require("./refundService");
+const {
   getMonriBaseUrl,
   getMonriKey,
   getMonriAuthToken,
@@ -1003,55 +1008,55 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
   }
 };
 
-async function refundViaMonri({
-  transactionId,
-  amount,
-  currency,
-}) {
-  const payload = {
-    transaction_type: "refund",
-    transaction_id: transactionId,
-    amount,
-    currency,
-  };
-
-  const response = await axios.post(
-    `${getMonriBaseUrl()}/v2/payment/refund`,
-    payload,
-    {
-      headers: {
-        Authorization: `key-${getMonriAuthToken()}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  return response.data;
-}
-
-
 exports.refundPayment = async (req, res) => {
   try {
-    const { orderNumber, amount } = req.body;
-
-    const tx = await monriRepository.findByOrderNumber(orderNumber);
-
-    if (!tx?.monriTransactionId) {
-      return res.status(400).json({
-        message: "Transaction not refundable",
+    if (!isLiveRefundEnabled()) {
+      return res.status(503).json({
+        message: "live_refund_disabled",
       });
+    }
+
+    const { orderNumber, amount } = req.body;
+    const tx = await monriRepository.findByOrderNumber(orderNumber);
+    const plan = planMonriRefund({ tx, amount });
+    if (!plan.ok) {
+      return res.status(400).json({ message: plan.error });
     }
 
     const result = await refundViaMonri({
       transactionId: tx.monriTransactionId,
-      amount: amount || tx.amount,
+      amount: plan.refundAmount,
       currency: tx.currency,
     });
 
     await monriRepository.updateTransaction(orderNumber, {
-      status: "refunded",
-      refundedAmount: amount || tx.amount,
+      status: plan.nextStatus,
+      refundedAmount: plan.nextRefundedAmount,
     });
+
+    const {
+      issueCancellationConfirmation,
+    } = require("../../fiscalDocuments/confirmationGenerator");
+    const PaymentConfirmation = require("../../fiscalDocuments/PaymentConfirmation.model");
+    const original = await PaymentConfirmation.findOne({
+      orderId: tx.orderNumber,
+      $or: [
+        { cancelsConfirmationId: null },
+        { cancelsConfirmationId: { $exists: false } },
+      ],
+      status: "ISSUED",
+    });
+    if (original) {
+      await issueCancellationConfirmation(original, {
+        transactionId: tx.monriTransactionId,
+        amount: plan.refundAmount,
+      });
+    }
+
+    if (tx.orderType === "ticketingbookings") {
+      const { stornoTicketingInvoices } = require("../../fiscalDocuments/documentService");
+      await stornoTicketingInvoices(tx.orderNumber, { execute: false });
+    }
 
     res.json(result);
   } catch (err) {

@@ -46,4 +46,5 @@ router.use(
   require("../../admin/reservation/reservationType/reservationTypeRoutes"),
 );
 router.use("/occasion", require("../../admin/reservation/occasion/occasionRoutes"));
+router.use("/fiscal-documents", require("../../commonModules/fiscalDocuments/fiscalDocumentRoutes"));
 module.exports = router;

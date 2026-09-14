@@ -85,6 +85,7 @@ function flattenTokens(data) {
     APP_DEEPLINK: data.appDeepLink || "https://pleis.hr",
     APP_DEEP_LINK: data.appDeepLink || "https://pleis.hr",
     DOCUMENT_URL: data.documentUrl || "",
+    CANCELLED_CONFIRMATION_NUMBER: data.cancelledConfirmationNumber || "",
   };
 }
 
@@ -185,11 +186,15 @@ function injectActionsBar(html, options) {
   return bar + html;
 }
 
-function applyTemplate(html, data, { itemRowsHtml, hasVoucher, filename, documentUrl }) {
+function applyTemplate(html, data, { itemRowsHtml, hasVoucher, isCancellation, filename, documentUrl, injectActions }) {
   html = fillTokens(html, data, itemRowsHtml);
   if (!hasVoucher) {
     html = stripDataBlock(html, "voucher");
   }
+  if (!isCancellation) {
+    html = stripDataBlock(html, "cancellation");
+  }
+  if (!injectActions) return html;
   return injectActionsBar(html, {
     locale: data.locale,
     filename: filename || `${data.confirmationNumber || "confirmation"}.html`,
@@ -197,25 +202,34 @@ function applyTemplate(html, data, { itemRowsHtml, hasVoucher, filename, documen
   });
 }
 
-function renderPaymentConfirmationHtml(data) {
+function stripEmbeddedFonts(html) {
+  return html.replace(/@font-face\s*\{[\s\S]*?\}\s*/g, "");
+}
+
+function renderPaymentConfirmationHtml(data, options = {}) {
   const locale = resolveLocale(data.locale);
   let html = localizeDocumentTemplate(readTemplate(DOCUMENT_TEMPLATE), locale);
-  return applyTemplate(html, data, {
+  html = applyTemplate(html, data, {
     itemRowsHtml: data.itemRowsHtml,
     hasVoucher: Boolean(data.voucher?.code),
+    isCancellation: Boolean(data.isCancellation),
     filename: `${data.confirmationNumber || "confirmation"}.html`,
+    injectActions: options.injectActions === true,
+    documentUrl: data.documentUrl,
   });
+  return html;
 }
 
 function renderPaymentConfirmationEmailHtml(data) {
   const locale = resolveLocale(data.locale);
   let html = localizeEmailTemplate(readTemplate(EMAIL_TEMPLATE), locale);
-  return applyTemplate(html, data, {
+  html = applyTemplate(html, data, {
     itemRowsHtml: data.emailItemRowsHtml,
     hasVoucher: Boolean(data.voucher?.code),
-    filename: `${data.confirmationNumber || "confirmation"}.html`,
-    documentUrl: data.documentUrl,
+    isCancellation: Boolean(data.isCancellation),
+    injectActions: false,
   });
+  return stripEmbeddedFonts(html);
 }
 
 module.exports = {

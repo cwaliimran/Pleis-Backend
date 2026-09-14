@@ -105,10 +105,48 @@ async function getOrganizerSeller(companyOrganizerId, organization) {
   };
 }
 
+/**
+ * Organizer legal/party fields for payment confirmations.
+ * Does not decrypt or require a Billko API key.
+ */
+async function getOrganizerParty(companyOrganizerId, organization = null) {
+  if (!companyOrganizerId) {
+    return {
+      companyName: organization?.basicInfo?.name || "",
+      oib: "",
+      address: organization?.location?.fullAddress || "",
+      venueName: organization?.basicInfo?.name || "",
+      representativeName: "",
+      hasBillkoApiKey: false,
+    };
+  }
+
+  const User = mongoose.model("User");
+  const organizer = await User.findById(companyOrganizerId)
+    .select(
+      "companyDetails.oib companyDetails.name companyDetails.location companyDetails.representativeName companyDetails.billkoApiKeyEncrypted",
+    )
+    .lean();
+
+  const companyDetails = organizer?.companyDetails || {};
+  return {
+    companyName: companyDetails.name || organization?.basicInfo?.name || "",
+    oib: companyDetails.oib || "",
+    address:
+      formatOrganizerAddress(companyDetails) ||
+      organization?.location?.fullAddress ||
+      "",
+    venueName: organization?.basicInfo?.name || companyDetails.name || "",
+    representativeName: companyDetails.representativeName || "",
+    hasBillkoApiKey: Boolean(companyDetails.billkoApiKeyEncrypted),
+  };
+}
+
 module.exports = {
   getPleisBillkoApiKey,
   getOrganizerBillkoApiKey,
   getOrganizerSeller,
+  getOrganizerParty,
   formatOrganizerAddress,
   assertOrganizerBillkoReady,
 };

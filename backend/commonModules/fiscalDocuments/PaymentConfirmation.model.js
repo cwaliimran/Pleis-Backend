@@ -24,6 +24,8 @@ const paymentConfirmationSchema = new mongoose.Schema(
     customerEmail: { type: String, required: true },
     paidAt: { type: Date, required: true },
     paymentMethod: { type: String, required: true },
+    cardLast4: { type: String, default: null },
+    cardBrand: { type: String, default: null },
     amountCents: { type: Number, required: true },
     currency: { type: String, default: "EUR" },
     items: { type: Array, default: [] },
@@ -51,13 +53,17 @@ const paymentConfirmationSchema = new mongoose.Schema(
     htmlFileUrl: { type: String, default: "" },
     documentHash: { type: String, default: "" },
     issuedAt: { type: Date, default: Date.now },
-    locale: { type: String, enum: ["en", "hr"], default: "en" },
+    locale: { type: String, enum: ["en", "hr"], default: "hr" },
     emailSentAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
 
-paymentConfirmationSchema.index({ orderId: 1, module: 1 }, { unique: true });
+paymentConfirmationSchema.index({ orderId: 1, module: 1 });
+paymentConfirmationSchema.index(
+  { orderId: 1, module: 1, cancelsConfirmationId: 1 },
+  { unique: true },
+);
 
 module.exports = mongoose.model(
   "PaymentConfirmation",

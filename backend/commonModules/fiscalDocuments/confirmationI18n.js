@@ -1,4 +1,4 @@
-const DEFAULT_LOCALE = "en";
+const DEFAULT_LOCALE = "hr";
 const SUPPORTED_LOCALES = new Set(["en", "hr"]);
 
 function resolveLocale(value) {
@@ -23,6 +23,9 @@ const COPY = {
     subjectWithVoucher: (venue) => `Payment confirmation and voucher, ${venue}`,
     subjectWithoutVoucher: (venue, currency, amount) =>
       `Payment confirmation, ${venue}, ${currency} ${amount}`,
+    subjectCancellation: (venue) =>
+      `Payment cancellation, ${venue}`,
+    openInApp: "Open in the app",
   },
   hr: {
     card: "Kartica",
@@ -36,6 +39,8 @@ const COPY = {
     subjectWithVoucher: (venue) => `Potvrda o plaćanju i vaučer, ${venue}`,
     subjectWithoutVoucher: (venue, currency, amount) =>
       `Potvrda o plaćanju, ${venue}, ${currency} ${amount}`,
+    subjectCancellation: (venue) => `Storno potvrde o plaćanju, ${venue}`,
+    openInApp: "Otvori u aplikaciji",
   },
 };
 
@@ -43,13 +48,23 @@ function getCopy(locale) {
   return COPY[resolveLocale(locale)];
 }
 
-function humanPaymentMethod(method, locale) {
+function humanPaymentMethod(method, locale, extras = {}) {
   const copy = getCopy(locale);
   const raw = String(method || "").trim();
-  if (raw === "applePay" || raw === "Apple Pay") return "Apple Pay";
-  if (raw === "googlePay" || raw === "Google Pay") return "Google Pay";
-  if (raw === "cash" || raw === "Gotovina" || raw === "Cash") return copy.cash;
-  return copy.card;
+  let label = copy.card;
+  if (raw === "applePay" || raw === "Apple Pay") label = "Apple Pay";
+  else if (raw === "googlePay" || raw === "Google Pay") label = "Google Pay";
+  else if (raw === "cash" || raw === "Gotovina" || raw === "Cash") label = copy.cash;
+
+  const brand = extras.cardBrand || extras.brand;
+  const last4 = extras.cardLast4 || extras.last4;
+  if (label === copy.card && brand && last4) {
+    return `${label}, ${brand} ${last4}`;
+  }
+  if (label === copy.card && last4) {
+    return `${label} ${last4}`;
+  }
+  return label;
 }
 
 function applyReplacements(html, pairs) {
@@ -137,6 +152,11 @@ const DOCUMENT_EN_PAIRS = [
     "Dokument je izdan elektronički i valjan je bez potpisa i pečata. Izdan {{ISSUED_AT}}.\n      Kontrolni zapis: {{DOCUMENT_HASH}} · Upiti: {{SUPPORT_EMAIL}}",
     "This document was issued electronically and is valid without a signature or stamp. Issued {{ISSUED_AT}}.\n      Control record: {{DOCUMENT_HASH}} · Enquiries: {{SUPPORT_EMAIL}}",
   ],
+  ["STORNIRANO", "CANCELLED"],
+  [
+    "Ova potvrda stornira {{CANCELLED_CONFIRMATION_NUMBER}}",
+    "This confirmation cancels {{CANCELLED_CONFIRMATION_NUMBER}}",
+  ],
 ];
 
 const EMAIL_EN_PAIRS = [
@@ -146,8 +166,8 @@ const EMAIL_EN_PAIRS = [
     "Payment confirmation {{CONFIRMATION_NUMBER}}",
   ],
   [
-    "Uplata od {{CURRENCY}} {{TOTAL_AMOUNT}} je zaprimljena. Potvrda {{CONFIRMATION_NUMBER}} u privitku.",
-    "A payment of {{CURRENCY}} {{TOTAL_AMOUNT}} has been received. Confirmation {{CONFIRMATION_NUMBER}} is attached.",
+    "Uplata od {{CURRENCY}} {{TOTAL_AMOUNT}} je zaprimljena. Potvrda {{CONFIRMATION_NUMBER}} je u ovoj poruci.",
+    "A payment of {{CURRENCY}} {{TOTAL_AMOUNT}} has been received. Confirmation {{CONFIRMATION_NUMBER}} is in this message.",
   ],
   [
     "text-transform:uppercase;font-weight:700;\">Potvrda o plaćanju</td>",
@@ -176,11 +196,16 @@ const EMAIL_EN_PAIRS = [
     "Iznos se automatski oduzima od narudžbi u aplikaciji, ili ga osoblje može aktivirati unosom koda.",
     "The amount is deducted automatically from in-app orders, or staff can redeem it by entering the code.",
   ],
+  [
+    "Ova poruka je tvoja potvrda o plaćanju. Uvijek je dostupna i u aplikaciji pod\n              <strong>Novčanik → Povijest transakcija</strong>.<br><br>\n              Trebaš pomoć? Piši nam na",
+    "This message is your payment confirmation. It is always available in the app under\n              <strong>Wallet → Transaction history</strong>.<br><br>\n              Need help? Write to us at",
+  ],
   ["Otvori u aplikaciji", "Open in the app"],
   [
-    "Potvrda o plaćanju je u privitku, a uvijek je dostupna i u aplikaciji pod\n              <strong>Novčanik → Povijest transakcija</strong>.<br><br>\n              Trebaš pomoć? Piši nam na",
-    "The payment confirmation is attached, and is always available in the app under\n              <strong>Wallet → Transaction history</strong>.<br><br>\n              Need help? Write to us at",
+    "Ova potvrda stornira {{CANCELLED_CONFIRMATION_NUMBER}}.",
+    "This confirmation cancels {{CANCELLED_CONFIRMATION_NUMBER}}.",
   ],
+  ["Storno potvrde o plaćanju", "Payment cancellation"],
 ];
 
 function localizeDocumentTemplate(html, locale) {

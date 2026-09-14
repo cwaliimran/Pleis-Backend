@@ -9,7 +9,7 @@ const {
 const BILLKO_TZ = "Europe/Zagreb";
 
 const InvoiceFormat = { A4Paper: 3 };
-const InvoiceType = { Normal: 0 };
+const InvoiceType = { Normal: 0, Electronic: 2 };
 const TransactionType = { Sale: 0, Refund: 1 };
 const ProductType = { Service: 1, Ticket: 4 };
 const PaymentType = {
@@ -109,6 +109,8 @@ function buildCreateInvoicePayload({
   dateOfService,
   note,
   createOrUpdateOrganizationCustomer = false,
+  invoiceType = InvoiceType.Normal,
+  transactionType = TransactionType.Sale,
 }) {
   const total = productTotal(products);
   if (products.some((product) => !isValidTaxRateLabel(product.taxRateLabels?.[0]))) {
@@ -120,8 +122,8 @@ function buildCreateInvoicePayload({
   const payload = {
     invoiceFormat: InvoiceFormat.A4Paper,
     fiscalizeInvoice: true,
-    type: InvoiceType.Normal,
-    transactionType: TransactionType.Sale,
+    type: invoiceType,
+    transactionType,
     orderNumber: String(orderNumber),
     payment: [{ amount: total, paymentType }],
     products,

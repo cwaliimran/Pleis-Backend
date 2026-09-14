@@ -1,4 +1,3 @@
-const crypto = require("crypto");
 const moment = require("moment-timezone");
 const { customAlphabet } = require("nanoid");
 const PaymentConfirmation = require("./PaymentConfirmation.model");
@@ -16,8 +15,14 @@ const {
   getCopy,
   humanPaymentMethod,
 } = require("./confirmationI18n");
+const {
+  snapshotCardFromMonriPayload,
+  computeHtmlHash,
+  mapOrderItems,
+} = require("./confirmationHelpers");
 const { uploadFilesToAzure } = require("../../controllers/uploadAzureController");
 const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
+const { buildConfirmationOpenUrl } = require("./openAppRedirect");
 
 const VOUCHER_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const voucherChunk = customAlphabet(VOUCHER_ALPHABET, 4);
@@ -71,8 +76,13 @@ async function issuePaymentConfirmation(input) {
   const existing = await PaymentConfirmation.findOne({
     orderId: input.orderId,
     module: input.module,
+    $or: [
+      { cancelsConfirmationId: null },
+      { cancelsConfirmationId: { $exists: false } },
+    ],
   });
   if (existing) {
+    if (existing.status === "CANCELLED") return existing;
     if (!existing.htmlStorageKey) {
       return regenerateAndStore(existing, input);
     }
@@ -87,6 +97,9 @@ async function issuePaymentConfirmation(input) {
   const items = input.items || [];
   const amountCents = Math.round(Number(input.amount || 0) * 100);
   const locale = resolveLocale(input.locale);
+  const card = snapshotCardFromMonriPayload(input.rawCallback || {});
+  const cardLast4 = input.cardLast4 || card.cardLast4;
+  const cardBrand = input.cardBrand || card.cardBrand;
 
   const record = await PaymentConfirmation.create({
     confirmationNumber,
@@ -100,6 +113,8 @@ async function issuePaymentConfirmation(input) {
     customerEmail: input.customerEmail,
     paidAt: input.paidAt,
     paymentMethod: input.paymentMethod || "card",
+    cardLast4: cardLast4 || undefined,
+    cardBrand: cardBrand || undefined,
     amountCents,
     currency: input.currency || "EUR",
     items,
@@ -108,35 +123,77 @@ async function issuePaymentConfirmation(input) {
     status: "ISSUED",
     issuedAt,
     locale,
+    cancelsConfirmationId: input.cancelsConfirmationId || null,
   });
 
   return regenerateAndStore(record, input);
 }
 
-function computeDocumentHash(view) {
-  return crypto
-    .createHash("sha256")
-    .update(
-      JSON.stringify({
-        confirmationNumber: view.confirmationNumber,
-        transactionId: view.transactionId,
-        orderReference: view.orderReference,
-        paidAt: view.paidAt,
-        amount: view.totalAmount,
-        currency: view.currency,
-        items: view.items,
-        voucher: view.voucher?.code || null,
-        customerEmail: view.customerEmail,
-      }),
-    )
-    .digest("hex");
+async function issueCancellationConfirmation(original, input = {}) {
+  if (!original?._id) throw new Error("original_confirmation_required");
+  const existingCancel = await PaymentConfirmation.findOne({
+    cancelsConfirmationId: original._id,
+  });
+  if (existingCancel) return existingCancel;
+
+  const confirmationNumber = await allocateConfirmationNumber();
+  const issuedAt = new Date();
+  const locale = resolveLocale(input.locale || original.locale);
+  const amountCents =
+    input.amount != null
+      ? Math.round(Number(input.amount) * 100)
+      : original.amountCents;
+
+  const record = await PaymentConfirmation.create({
+    confirmationNumber,
+    transactionId: input.transactionId || original.transactionId,
+    orderReference: original.orderReference,
+    orderId: original.orderId,
+    module: original.module,
+    organizerCompanyId: original.organizerCompanyId,
+    organization: original.organization,
+    customerName: original.customerName,
+    customerEmail: original.customerEmail,
+    paidAt: original.paidAt,
+    paymentMethod: original.paymentMethod,
+    cardLast4: original.cardLast4,
+    cardBrand: original.cardBrand,
+    amountCents,
+    currency: original.currency || "EUR",
+    items: original.items || [],
+    voucherId: original.voucherId,
+    voucher: original.voucher,
+    status: "ISSUED",
+    issuedAt,
+    locale,
+    cancelsConfirmationId: original._id,
+  });
+
+  if (original.status !== "CANCELLED") {
+    original.status = "CANCELLED";
+    await original.save();
+  }
+
+  return regenerateAndStore(record, {
+    ...input,
+    isCancellation: true,
+    cancelledConfirmationNumber: original.confirmationNumber,
+    organizerLegalName: input.organizerLegalName,
+    organizerVenueName: input.organizerVenueName,
+    organizerAddress: input.organizerAddress,
+    organizerOib: input.organizerOib,
+    locale,
+  });
 }
 
 async function regenerateAndStore(record, input) {
   const view = buildViewModel(record, input);
-  view.documentHash = computeDocumentHash(view);
-  const documentHtml = renderPaymentConfirmationHtml(view);
-  const htmlBuffer = Buffer.from(documentHtml, "utf8");
+  view.documentHash = "";
+  const unsignedHtml = renderPaymentConfirmationHtml(view, { injectActions: false });
+  const documentHash = computeHtmlHash(unsignedHtml);
+  view.documentHash = documentHash;
+  const storedHtml = renderPaymentConfirmationHtml(view, { injectActions: false });
+  const htmlBuffer = Buffer.from(storedHtml, "utf8");
   const filename = `${record.confirmationNumber}.html`;
 
   const uploaded = await uploadFilesToAzure([
@@ -148,15 +205,16 @@ async function regenerateAndStore(record, input) {
   ]);
   const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
 
-  record.documentHash = view.documentHash;
+  record.documentHash = documentHash;
   record.htmlStorageKey = file?.file || "";
   record.htmlFileUrl = file?.fileUrl || "";
   record.pdfStorageKey = "";
-  record.pdfFileUrl = record.htmlFileUrl;
+  record.pdfFileUrl = "";
   await record.save();
 
   view.documentUrl = record.htmlFileUrl;
-  await emailConfirmation(record, input, htmlBuffer, view);
+  view.documentHash = documentHash;
+  await emailConfirmation(record, input, view);
   return record;
 }
 
@@ -180,7 +238,10 @@ function buildViewModel(record, input = {}) {
     orderReference: record.orderReference,
     paidAt: record.paidAt,
     paidAtFormatted: formatZagreb(record.paidAt, locale),
-    paymentMethod: humanPaymentMethod(record.paymentMethod, locale),
+    paymentMethod: humanPaymentMethod(record.paymentMethod, locale, {
+      cardLast4: record.cardLast4 || input.cardLast4,
+      cardBrand: record.cardBrand || input.cardBrand,
+    }),
     currency,
     totalAmount: (record.amountCents || 0) / 100,
     organizerLegalName: input.organizerLegalName || "",
@@ -197,35 +258,33 @@ function buildViewModel(record, input = {}) {
       : "",
     itemRowsHtml: buildItemRows(items),
     emailItemRowsHtml: buildEmailItemRows(items),
-    appDeepLink: process.env.PLEIS_APP_DEEP_LINK || "https://pleis.hr",
+    appDeepLink: buildConfirmationOpenUrl(record.confirmationNumber),
+    isCancellation: Boolean(
+      input.isCancellation || record.cancelsConfirmationId,
+    ),
+    cancelledConfirmationNumber: input.cancelledConfirmationNumber || "",
   };
 }
 
-async function emailConfirmation(record, input, htmlBuffer, view) {
+async function emailConfirmation(record, input, view) {
   const model = view || buildViewModel(record, input);
   if (!model.documentUrl) {
     model.documentUrl = record.htmlFileUrl || record.pdfFileUrl || "";
   }
   const html = renderPaymentConfirmationEmailHtml(model);
-  const attachmentBuffer =
-    htmlBuffer || Buffer.from(renderPaymentConfirmationHtml(model), "utf8");
   const hasVoucher = Boolean(record.voucher?.code);
   const locale = resolveLocale(record.locale || model.locale);
   const copy = getCopy(locale);
   const venue = model.organizerVenueName || model.organizerLegalName;
   const amount = ((record.amountCents || 0) / 100).toFixed(2);
-  const subject = hasVoucher
-    ? copy.subjectWithVoucher(venue)
-    : copy.subjectWithoutVoucher(venue, record.currency, amount);
-
-  const attachments = [];
-  if (attachmentBuffer) {
-    attachments.push({
-      filename: `${record.confirmationNumber}.html`,
-      data: attachmentBuffer,
-      contentType: "text/html",
-    });
-  }
+  const isCancellation = Boolean(
+    model.isCancellation || record.cancelsConfirmationId,
+  );
+  const subject = isCancellation
+    ? copy.subjectCancellation(venue)
+    : hasVoucher
+      ? copy.subjectWithVoucher(venue)
+      : copy.subjectWithoutVoucher(venue, record.currency, amount);
 
   const result = await sendEmailViaMailgun(
     record.customerEmail,
@@ -234,7 +293,6 @@ async function emailConfirmation(record, input, htmlBuffer, view) {
     {
       fromEmail: `Pleis <noreply@${process.env.MAILGUN_DOMAIN || "pleis.ai"}>`,
       replyTo: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
-      attachments,
     },
   );
 
@@ -244,37 +302,15 @@ async function emailConfirmation(record, input, htmlBuffer, view) {
   }
 }
 
-function mapOrderItems(order, locale) {
-  const copy = getCopy(locale);
-  const rows = [];
-  for (const item of order.items || []) {
-    const snapshot = item.menuItemSnapShot || {};
-    rows.push({
-      name: snapshot.title || copy.item,
-      vatPercent: displayPercent(snapshot.taxPercent ?? snapshot.taxPercentage),
-      quantity: item.quantity,
-      unitPrice: item.unitFinalPrice ?? item.unitPrice ?? 0,
-      amount: item.finalPrice ?? 0,
-    });
-  }
-  if (order.priceBreakdown?.tip) {
-    rows.push({
-      name: copy.tip,
-      vatPercent: 0,
-      quantity: 1,
-      unitPrice: order.priceBreakdown.tip,
-      amount: order.priceBreakdown.tip,
-    });
-  }
-  return rows;
-}
-
 module.exports = {
   generateVoucherCode,
   allocateConfirmationNumber,
   issuePaymentConfirmation,
+  issueCancellationConfirmation,
   mapOrderItems,
   humanPaymentMethod,
   displayPercent,
   resolveLocale,
+  snapshotCardFromMonriPayload,
+  computeHtmlHash,
 };
