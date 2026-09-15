@@ -251,11 +251,32 @@ const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null, userId =
         from: "presettypes",
         localField: "presetType",
         foreignField: "_id",
-        pipeline: [{ $match: { status: "active" } }, { $project: { _id: 1,name: 1 } }],
-        as: "presetType",
+        pipeline: [
+          { $match: { status: "active" } },
+          {
+            $lookup: {
+              from: "menuitemsubcategorytypes",
+              localField: "type",
+              foreignField: "_id",
+              pipeline: [
+                { $match: { status: "active" } },
+                { $project: { _id: 1, name: 1 } },
+              ],
+              as: "type",
+            },
+          },
+          { $unwind: { path: "$type", preserveNullAndEmptyArrays: true } },
+          { $project: { _id: 1, name: "$type.name" } },
+        ],
+        as: "menuItemSubCategoryType",
       },
     },
-    { $unwind: { path: "$presetType", preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: "$menuItemSubCategoryType",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
     {
       $lookup: {
         from: "menusubcategories",
@@ -266,7 +287,7 @@ const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null, userId =
       },
     },
     { $match: { subCategoryInfo: { $ne: [] } } },
-    { $project: { subCategoryInfo: 0 } },
+    { $project: { subCategoryInfo: 0, presetType: 0 } },
     { $sort: { createdAt: -1 } },
   ]);
   if (!menuItems.length) return [];

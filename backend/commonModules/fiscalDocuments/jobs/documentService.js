@@ -328,15 +328,20 @@ async function issueTicketingInvoices(orderId) {
     );
   }
 
+  // Billko §4.3: organizer lines need attribution. Product note prints under
+  // each line; invoice-level note is also set because one organizer covers the
+  // whole ticket invoice (and our PDF reads {{INVOICE_NOTE}}).
+  const organizerAttributionNote = buildOrganizerAttributionNote(seller);
   const ticketProducts = buildTicketProducts(
     ticketLines,
-    buildOrganizerAttributionNote(seller),
+    organizerAttributionNote,
   );
   const ticketPayload = buildCreateInvoicePayload({
     orderNumber,
     products: ticketProducts,
     paymentType,
     billingInformation,
+    note: organizerAttributionNote,
   });
   invoices.push(
     await ensureInvoice({

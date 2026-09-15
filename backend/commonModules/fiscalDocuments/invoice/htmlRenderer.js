@@ -1,7 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 const { displayPercent } = require("../../paymentsIntegrations/billko/taxRateLabels");
-const { toGross } = require("../../paymentsIntegrations/billko/billkoInvoiceBuilder");
+const {
+  toGross,
+  buildOrganizerAttributionNote,
+} = require("../../paymentsIntegrations/billko/billkoInvoiceBuilder");
 const { getCopy, resolveLocale } = require("../locales");
 const { formatZagreb, escapeHtml, fillEscapedTokens } = require("../shared/html");
 const { resolveLogoSrc } = require("../shared/logo");
@@ -56,9 +59,33 @@ function buildItemRows(products = [], locale) {
       const unit = toGross(product.unitRetailPrice);
       const amount = toGross(unit * qty);
       const vat = displayPercent(product.taxRateLabels?.[0]);
-      return `<tr><td class="l">${escapeHtml(product.name || itemFallback)}</td><td>${vat == null ? "" : `${vat}%`}</td><td>${qty}</td><td>${unit.toFixed(2)}</td><td>${amount.toFixed(2)}</td></tr>`;
+      const note = String(product.note || "").trim();
+      const nameCell = note
+        ? `${escapeHtml(product.name || itemFallback)}<div class="item-note">${escapeHtml(note)}</div>`
+        : escapeHtml(product.name || itemFallback);
+      return `<tr><td class="l">${nameCell}</td><td>${vat == null ? "" : `${vat}%`}</td><td>${qty}</td><td>${unit.toFixed(2)}</td><td>${amount.toFixed(2)}</td></tr>`;
     })
     .join("");
+}
+
+function resolveInvoiceNote(invoice, result = {}, extras = {}) {
+  const explicit = String(result.note || extras.note || "").trim();
+  if (explicit) return explicit;
+
+  const fromProduct = (result.products || extras.products || [])
+    .map((product) => String(product.note || "").trim())
+    .find(Boolean);
+  if (fromProduct) return fromProduct;
+
+  // Organizer ticket invoices must show commercial-agent attribution (Billko §4.3).
+  if (invoice?.seller === "organizer" || invoice?.kind === "tickets") {
+    return buildOrganizerAttributionNote({
+      companyName: extras.sellerLegalName,
+      address: extras.sellerAddress,
+      oib: extras.sellerOib,
+    });
+  }
+  return "";
 }
 
 function fillTokens(html, data) {
@@ -145,7 +172,7 @@ function renderFiscalInvoiceHtml(invoice, extras = {}) {
     CUSTOMER_ADDRESS: customer.address,
     CURRENCY: invoice.currency || "EUR",
     TOTAL_AMOUNT: Number(invoice.amount || total || 0).toFixed(2),
-    INVOICE_NOTE: result.note || extras.note || "",
+    INVOICE_NOTE: resolveInvoiceNote(invoice, result, extras),
     itemRowsHtml: buildItemRows(products, locale),
   });
   if (!fiscalProtectionCode) {
@@ -157,6 +184,7 @@ function renderFiscalInvoiceHtml(invoice, extras = {}) {
 module.exports = {
   renderFiscalInvoiceHtml,
   buildItemRows,
+  resolveInvoiceNote,
   customerFromBilling,
   paymentMethodLabel,
 };

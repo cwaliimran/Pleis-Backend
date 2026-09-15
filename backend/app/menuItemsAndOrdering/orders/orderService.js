@@ -1,6 +1,8 @@
 const orderRepo = require("./orderRepository");
 const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
+const clubMemberRepo = require("../../loyalty/clubMembers/clubMembersRepository");
+
 const {
   menuItemOrderFormatter,
 } = require("./formatter/menuItemOrderFormatter");
@@ -1241,6 +1243,7 @@ const getOrderDetails = async (orderId, timezone) => {
   const organizationID = order.organization._id;
 
   const companyOrganizer = await getOrgCompanyOrganizer(organizationID);
+  
   const wallet = await clubMemberRepo.getWallet(userID, companyOrganizer, null, { autoCreate: false });
   const reservation = await getLatestUserReservations(
     userID,
