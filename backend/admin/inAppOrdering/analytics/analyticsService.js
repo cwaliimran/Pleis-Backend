@@ -80,10 +80,10 @@ const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizati
         ...withSubFilters("orderFrequencyPerHour"),
       },
       {
-        key: "mostOrderedCategory",  // used 
-        title: Analytics_KEYS.mostOrderedCategory.title,
+        key: "mostOrderedSubCategory",  // used 
+        title: Analytics_KEYS.mostOrderedSubCategory.title,
         value: orderStats.mostOrderedCategory || 0,
-        ...withSubFilters("mostOrderedCategory"),
+        ...withSubFilters("mostOrderedSubCategory"),
       },
       {
         key: "totalItemsSold",  // used 
