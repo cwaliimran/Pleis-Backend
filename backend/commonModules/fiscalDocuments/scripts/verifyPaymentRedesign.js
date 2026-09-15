@@ -274,6 +274,11 @@ function stepSourceGates() {
   assert(ticketing.includes('kind: "service_fee"'), "ticketing still issues service fee");
   assert(ticketing.includes('kind: "tickets"'), "ticketing still issues tickets");
   assert(
+    ticketing.includes("buildOrganizerAttributionNote") &&
+      ticketing.includes("note: organizerAttributionNote"),
+    "organizer ticket invoice sets attribution note on products and invoice",
+  );
+  assert(
     docSrc.includes("profileNameForUser") &&
       ticketing.includes("profile.firstName") &&
       !ticketing.includes("protectionUserDetails") &&
@@ -798,6 +803,80 @@ async function stepFiscalInvoicePdf() {
   assert(
     html.includes("Zaštitni kod izdavatelja") || html.includes("ZKI"),
     "HR PDF labels ZKI",
+  );
+
+  const attribution =
+    "Stavka zaračunata u ime i za račun Organizatora: Dummy Organizer d.o.o., Ilica 1, Zagreb, OIB 12345678901.";
+  const htmlOrganizer = renderFiscalInvoiceHtml(
+    {
+      kind: "tickets",
+      seller: "organizer",
+      invoiceNumber: "15/ORG/1",
+      fiscalizationNumber: "JIR-ORG",
+      orderNumber: "order-org-1",
+      amount: 30,
+      currency: "EUR",
+      createdAt: new Date("2026-09-14T07:52:24Z"),
+      rawResponse: {
+        products: [
+          {
+            name: "Standard",
+            quantity: 1,
+            unitRetailPrice: 30,
+            taxRateLabels: ["Tg4"],
+            note: attribution,
+          },
+        ],
+        billingInformation: {
+          firstName: "Tin",
+          lastName: "Manojlovic",
+          emailAddress: "tin@example.com",
+        },
+        payment: [{ paymentType: 2, amount: 30 }],
+        note: attribution,
+      },
+    },
+    {
+      sellerLegalName: "Dummy Organizer d.o.o.",
+      sellerAddress: "Ilica 1, Zagreb",
+      sellerOib: "12345678901",
+    },
+  );
+  assert(
+    htmlOrganizer.includes("Stavka zaračunata u ime i za račun Organizatora"),
+    "organizer ticket PDF shows attribution note",
+  );
+  assert(htmlOrganizer.includes("item-note"), "product attribution renders under the line");
+
+  const htmlOrganizerFallback = renderFiscalInvoiceHtml(
+    {
+      kind: "tickets",
+      seller: "organizer",
+      invoiceNumber: "16/ORG/1",
+      amount: 30,
+      currency: "EUR",
+      rawResponse: {
+        products: [
+          {
+            name: "Standard",
+            quantity: 1,
+            unitRetailPrice: 30,
+            taxRateLabels: ["Tg4"],
+          },
+        ],
+        payment: [{ paymentType: 2, amount: 30 }],
+      },
+    },
+    {
+      sellerLegalName: "Dummy Organizer d.o.o.",
+      sellerAddress: "Ilica 1, Zagreb",
+      sellerOib: "12345678901",
+    },
+  );
+  assert(
+    htmlOrganizerFallback.includes("Dummy Organizer d.o.o.") &&
+      htmlOrganizerFallback.includes("Stavka zaračunata u ime i za račun Organizatora"),
+    "organizer ticket PDF falls back to seller attribution when note missing",
   );
 
   const htmlNoZki = renderFiscalInvoiceHtml(
