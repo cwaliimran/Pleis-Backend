@@ -1241,7 +1241,7 @@ const getOrderDetails = async (orderId, timezone) => {
   const organizationID = order.organization._id;
 
   const companyOrganizer = await getOrgCompanyOrganizer(organizationID);
-  const wallet = await getWallet(userID, companyOrganizer);
+  const wallet = await clubMemberRepo.getWallet(userID, companyOrganizer, null, { autoCreate: false });
   const reservation = await getLatestUserReservations(
     userID,
     organizationID,

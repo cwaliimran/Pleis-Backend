@@ -324,12 +324,12 @@ const updateUserCompanyPointsRepo = async ({
   try {
     const delta = points.total;
 
-    // Ensure wallet exists (uses session if provided)
-    await ensureClubMemberWallet(userId, companyOrganizer, session);
-
+    // Only update existing active club members — never auto-join / create wallet.
+    // Membership is created only via joinClub API.
     const query = {
       user: userId,
-      companyOrganizer
+      companyOrganizer,
+      status: "active",
     };
 
     // Prevent negative balance atomically
@@ -357,6 +357,22 @@ const updateUserCompanyPointsRepo = async ({
     );
 
     if (!updated) {
+      let memberQuery = ClubMembers.findOne({
+        user: userId,
+        companyOrganizer,
+        status: "active",
+      }).select("_id");
+      if (session) memberQuery = memberQuery.session(session);
+      const isActiveMember = !!(await memberQuery);
+
+      if (!isActiveMember) {
+        return {
+          success: false,
+          skipped: true,
+          message: "User is not an active club member.",
+        };
+      }
+
       return {
         success: false,
         message: "Insufficient company loyalty points."
@@ -386,7 +402,8 @@ const getWallet = async (
   userId,
   companyOrganizer,
   session = null,
-  { autoCreate = false } = {}
+  // autoCreate kept for call-site compat; ignored — membership only via joinClub
+  { autoCreate: _autoCreate = false } = {}
 ) => {
   const { tierKey } = await getCompanyLoyaltyInfo(companyOrganizer);
 
@@ -399,18 +416,7 @@ const getWallet = async (
 
   let wallet = await query;
 
-  if (!wallet) {
-    if (!autoCreate) return null;
-
-    await ensureClubMemberWallet(userId, companyOrganizer, session);
-
-    return getWallet(
-      userId,
-      companyOrganizer,
-      session,
-      { autoCreate }
-    );
-  }
+  if (!wallet) return null;
 
   if (wallet.level) {
     const currentEntry =
@@ -804,18 +810,18 @@ const getClubMembersForUsers = async ({ userIds, companyOrganizers }) => {
     .lean();
 };
 
-//get closing balance
+//get closing balance — does not create membership; returns 0 if user has not joined
 const getClosingBalance = async (user, companyOrganizer, session) => {
   try {
     const objectId = new mongoose.Types.ObjectId(companyOrganizer);
-    const result = await ClubMembers.findOne({ companyOrganizer: objectId, user: user }).select("points").lean();
-    if (result) {
-      return result.points || 0;
-    } else {
-      //ensure wallet exists
-      const member = await ensureClubMemberWallet(user, companyOrganizer, session);
-      return member.points || 0;
-    }
+    let query = ClubMembers.findOne({
+      companyOrganizer: objectId,
+      user,
+      status: "active",
+    }).select("points");
+    if (session) query = query.session(session);
+    const result = await query.lean();
+    return result?.points || 0;
   } catch (err) {
     throw err;
   }
