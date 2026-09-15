@@ -113,6 +113,7 @@ const getReservationTypesSummary = async ({
         name: 1,
         maxPartySize: 1,
         conditionType: 1,
+        minimumSpend: 1,
         occasionRequired: 1,
 
         availableTables: {

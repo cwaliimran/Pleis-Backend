@@ -17,6 +17,7 @@ const {
   getReservationsV2,
   getReservationsV2Calender,
 } = require("./reservationController");
+const { testPayUserReservation } = require("./testPayUserReservation");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
 const roleMiddleware = require("../../middlewares/roleMiddleware");
@@ -28,6 +29,12 @@ router.use(auth);
 // Create a rate limiter for Reservations
 const apiRateLimiter = createRateLimiter("Reservations");
 const apiRateLimiterDetails = createRateLimiter("Reservations/:id");
+
+router.post(
+  "/users/:id/test-pay",
+  roleMiddleware(["admin"]),
+  testPayUserReservation,
+);
 
 // Create a new Reservation
 router.post("/", auth,roleMiddleware(["admin", "staff", "organizer", "manager"]), createReservation);

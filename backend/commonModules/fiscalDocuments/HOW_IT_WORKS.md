@@ -151,6 +151,7 @@ Enqueue sources:
 - Dummy-charge finalizers (ticketing / menu / reservation / subscription)
 - Staff and admin in-app ordering services (cash / card captured in venue)
 - `admin/ticketing/testPayTicketingOrder.js`
+- `admin/reservation/testPayUserReservation.js`
 
 Mapping from order type:
 
@@ -167,7 +168,7 @@ Mapping from order type:
 
 1. Load paid `TicketingOrders` + bookings + billing + organizer + event.
 2. If Pleis collected a service fee (`orderPricing.taxAmount`), create a `service_fee` invoice on **Pleis** Billko (`FEE-…` unique codes).
-3. Create a `tickets` invoice on the **organizer** Billko account (`TCK-…` unique codes), with an attribution note.
+3. Create a `tickets` invoice on the **organizer** Billko account (`TCK-…` unique codes), with the commercial-agent attribution note on each product and at invoice level (`Stavka zaračunata u ime i za račun Organizatora: …`).
 4. Persist each as `BillkoInvoice`, generate HTML → PDF, upload to Azure.
 5. When the tickets invoice exists, email both PDFs once (`pdfEmailedAt`).
 6. Issue a `TICKETING` payment confirmation (event title/schedule/venue, ticket types, `TBK-…` IDs, service fee) and email the covering message with PDF attached.
