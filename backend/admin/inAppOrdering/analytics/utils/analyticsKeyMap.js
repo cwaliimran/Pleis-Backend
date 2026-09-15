@@ -21,8 +21,8 @@ const DASHBOARD_KEYS = {
         title: "Order Frequency Per Hour",
         subFilters: ["all", "today", "thisWeek", "thisMonth"],
         },
-        mostOrderedCategory: {
-        title: "Most Ordered Category",
+        mostOrderedSubCategory: {
+        title: "Most Ordered Subcategory",
         subFilters: ["all", "today", "thisWeek", "thisMonth"],
         },
         totalItemsSold: {

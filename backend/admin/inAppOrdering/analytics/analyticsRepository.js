@@ -188,43 +188,44 @@ const orderStatsRaw = async ({ organizations, dateFilter, timezone }) => {
   // =========================
   // 🚀 MOST ORDERED CATEGORY (from menuItemSnapShot)
   // =========================
-  const mostOrderedCategoryData = await MenuOrders.aggregate([
-    { $match: baseMatch },
-    { $unwind: "$items" },
-    {
-      $lookup: {
-        from: "menuitems", // Lookup menu item details
-        localField: "items.menuItem",
-        foreignField: "_id",
-        as: "menuItemDetails",
-      },
+const mostOrderedCategoryData = await MenuOrders.aggregate([
+  { $match: baseMatch },
+  { $unwind: "$items" },
+  {
+    $lookup: {
+      from: "menuitems",
+      localField: "items.menuItem",
+      foreignField: "_id",
+      as: "menuItemDetails",
     },
-    { $unwind: "$menuItemDetails" },
-    {
-      $group: {
-        _id: "$menuItemDetails.category", // Group by category
-        totalItemsSoldInCategory: { $sum: "$items.quantity" }, // Count of items in each category
-      },
+  },
+  { $unwind: { path: "$menuItemDetails", preserveNullAndEmptyArrays: true } },
+  { $match: { "menuItemDetails.subCategory": { $ne: null } } }, // skip items with no subcategory
+  {
+    $group: {
+      _id: "$menuItemDetails.subCategory",
+      totalItemsSoldInCategory: { $sum: "$items.quantity" },
     },
-    { $sort: { totalItemsSoldInCategory: -1 } },
-    { $limit: 1 },
-    {
-      $lookup: {
-        from: "menuitemcategories", // Lookup category details
-        localField: "_id",
-        foreignField: "_id",
-        as: "categoryDetails",
-      },
+  },
+  { $sort: { totalItemsSoldInCategory: -1 } },
+  { $limit: 1 },
+  {
+    $lookup: {
+      from: "menusubcategories",
+      localField: "_id",
+      foreignField: "_id",
+      as: "categoryDetails",
     },
-    { $unwind: "$categoryDetails" },
-    {
-      $project: {
-        mostOrderedCategory: "$categoryDetails.title", // Most ordered category title
-        totalItemsSoldInCategory: 1,
-      },
+  },
+  { $unwind: { path: "$categoryDetails", preserveNullAndEmptyArrays: true } },
+  {
+    $project: {
+      _id: 1,
+      mostOrderedCategory: { $ifNull: ["$categoryDetails.title", "Uncategorized"] },
+      totalItemsSoldInCategory: 1,
     },
-  ]);
-
+  },
+]);
   // Returning the results
   return {
     totalOrdersCurrent: parseInt(totalOrdersCurrent.toFixed(2)),

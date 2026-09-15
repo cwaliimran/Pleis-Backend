@@ -73,7 +73,7 @@ const getLoyaltyDashboardChallenges = async ({
 
   // 2️⃣ Wallet per club (tier info)
   const wallets = await Promise.all(
-    clubIds.map(org => clubMemberRepo.getWallet(userId, org))
+    clubIds.map(org => clubMemberRepo.getWallet(userId, org, null, { autoCreate: false }))
   );
 
   const walletMap = new Map();
@@ -188,7 +188,7 @@ const getSuggestedRewardsForDashboard = async ({
 
   // 2️⃣ Wallets (points + tier per club)
   const wallets = await Promise.all(
-    clubIds.map(org => clubMemberRepo.getWallet(userId, org))
+    clubIds.map(org => clubMemberRepo.getWallet(userId, org, null, { autoCreate: false }))
   );
 
   const walletMap = new Map();
