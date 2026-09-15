@@ -1,6 +1,6 @@
 // repositories/unifiedTransactionsRepository.js
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel"); // new model
-const { updateUserCompanyPointsRepo, checkLoyaltyTierPromotion, getClosingBalance } = require("../../../loyalty/clubMembers/clubMembersRepository"); // company loyalty wallet ops
+const { updateUserCompanyPointsRepo, isClubMember } = require("../../../loyalty/clubMembers/clubMembersRepository"); // company loyalty wallet ops
 const { updateGlobalPoints, checkPromotionGlobal } = require("../../global/walletManagement/userWalletRepository");
 const { nanoid } = require("nanoid");
 
@@ -23,29 +23,20 @@ const createTransaction = async (data, session) => {
   const batchId = nanoid();
   const createdTransactions = [];
 
-  // 1) COMPANY POINTS
+  // 1) COMPANY POINTS — only if user has manually joined the club (no auto-join)
   if (companyPoints && companyPoints.total !== 0) {
+    const isMember = await isClubMember(userId, companyOrganizer);
 
-    const walletBalance = await getClosingBalance(userId, companyOrganizer, session);
-    let closingBalance = walletBalance + companyPoints.total;
-
-    const trx = await UnifiedWalletTransactions.create(
-      [{
-        user: userId,
-        companyOrganizer,
-        organization,
-        walletType: "companyLoyalty",
-        batchId,
-        type,
-        domainType,
-        entityId,
-        points: companyPoints,
-        closingBalance,
-        description
-      }],
-      { session }
-    );
-
+    if (!isMember) {
+      // Earn: points wasted if not in club. Redeem: cannot spend without membership.
+      if (companyPoints.total < 0) {
+        return {
+          success: false,
+          message: "User is not an active club member.",
+        };
+      }
+      // positive earn — skip company wallet; membership only via joinClub API
+    } else {
       const walletUpdate = await updateUserCompanyPointsRepo({
         userId,
         companyOrganizer,
@@ -53,11 +44,36 @@ const createTransaction = async (data, session) => {
         allowNegative: false,
         session
       });
-    
-    //TODO demotion call via cron job in a separate function that checks for all users and organizers and sends notification if they are demoted
-    // await checkDemotion(userId, companyOrganizer, session);
 
-    createdTransactions.push(trx[0]);
+      if (!walletUpdate.success) {
+        return {
+          success: false,
+          message: walletUpdate.message || "Failed to update company loyalty points.",
+        };
+      }
+
+      const trx = await UnifiedWalletTransactions.create(
+        [{
+          user: userId,
+          companyOrganizer,
+          organization,
+          walletType: "companyLoyalty",
+          batchId,
+          type,
+          domainType,
+          entityId,
+          points: companyPoints,
+          closingBalance: walletUpdate.newBalance,
+          description
+        }],
+        { session }
+      );
+
+      //TODO demotion call via cron job in a separate function that checks for all users and organizers and sends notification if they are demoted
+      // await checkDemotion(userId, companyOrganizer, session);
+
+      createdTransactions.push(trx[0]);
+    }
   }
 
   // 2) GLOBAL POINTS
