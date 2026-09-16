@@ -1,34 +1,24 @@
-const crypto = require('crypto');
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
-// Function to generate a secure JWT secret
+// Standalone helper to mint a JWT_SECRET + admin-creation token.
+// Safe to require: side effects only run when executed directly.
+
 function generateJWTSecret(length = 64) {
-    return crypto.randomBytes(length).toString('hex'); // Generate random secret as a hexadecimal string
+  return crypto.randomBytes(length).toString("hex");
 }
 
-// Generate the secret
-const jwtSecret = generateJWTSecret(64); // 64 bytes = 128 characters in hex
-logger.log('Your JWT_SECRET:', jwtSecret);
+function generateAdminCreationToken(secretKey, expiresIn = "1h") {
+  return jwt.sign({ role: "admin-creation" }, secretKey, { expiresIn });
+}
 
-// Import the jsonwebtoken library
-//to generate token >>>>>>>>>>>>>>>>>>>>>>> node generateToken.js
-const jwt = require('jsonwebtoken');
+if (require.main === module) {
+  const jwtSecret = generateJWTSecret(64);
+  console.log("Your JWT_SECRET:", jwtSecret);
+  console.log("Generated Token:", generateAdminCreationToken(jwtSecret));
+}
 
-// Define your secret key (it should be the same as your JWT secret or a separate one for admin tokens)
-const secretKey = jwtSecret // Replace this with your actual JWT secret
-//logger.log("====>secretKey",secretKey)
-// Define the payload for the admin creation token
-const payload = {
-  role: 'admin-creation',
+module.exports = {
+  generateJWTSecret,
+  generateAdminCreationToken,
 };
-
-// Define options for the token, such as expiration
-const options = {
-  expiresIn: '1h', // Token will be valid for 1 hour
-};
-
-// Generate the token
-const adminCreationToken = jwt.sign(payload, secretKey, options);
-
-// Output the token
-logger.log('Generated Token:', adminCreationToken);
-

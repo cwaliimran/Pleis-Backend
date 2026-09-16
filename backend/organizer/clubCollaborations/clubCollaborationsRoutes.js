@@ -6,9 +6,9 @@ const {
   deleteClubCollaboration,
   getClubCollaborationDetails,
 } = require("./clubCollaborationsController");
-const createRateLimiter = require("../../../helperUtils/rateLimiter");
-const auth = require("../../../middlewares/authMiddleware");
-const roleMiddleware = require("../../../middlewares/roleMiddleware");
+const createRateLimiter = require("../../helperUtils/rateLimiter");
+const auth = require("../../middlewares/authMiddleware");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 

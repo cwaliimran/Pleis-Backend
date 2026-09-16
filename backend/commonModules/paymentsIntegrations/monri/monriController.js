@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const axios = require("axios");
 const { buildAuthorizationHeader } = require("./monriAuth");
+const { sendResponse } = require("../../../helperUtils/responseUtil");
 
 const monriRepository = require("./monriRepository");
 const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
@@ -216,8 +217,11 @@ exports.redirectToMonriWebPay = async (req, res) => {
     `);
   } catch (error) {
     console.error("Monri redirect error:", error);
-    res.status(500).json({
-      message: "Payment initialization failed",
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "payment_initialization_failed",
+      error,
     });
   }
 };
@@ -434,13 +438,21 @@ exports.handleSuccess = async (req, res) => {
     const orderNumber = payload.order_number;
 
     if (!orderNumber) {
-      return res.status(400).json({ message: "Missing order_number" });
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "missing_order_number",
+      });
     }
 
     const tx = await monriRepository.findByOrderNumber(orderNumber);
     if (!tx) {
       console.warn("Order not found:", orderNumber);
-      return res.status(404).json({ message: "Transaction not found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "transaction_not_found",
+      });
     }
 
     const decision = evaluateMonriSuccessIntent({
@@ -457,6 +469,7 @@ exports.handleSuccess = async (req, res) => {
           rawCallback: payload,
         });
       }
+      // Flat payment-callback contract — keep shape for clients
       return res.status(decision.httpStatus || 400).json({
         message:
           decision.reason === "invalid_digest"
@@ -529,7 +542,12 @@ exports.handleSuccess = async (req, res) => {
     });
   } catch (err) {
     console.error("Monri success handler error:", err);
-    return res.status(500).json({ message: "Processing failed" });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "processing_failed",
+      error: err,
+    });
   }
 };
 
@@ -542,12 +560,20 @@ exports.handleCancel = async (req, res) => {
 
     const orderNumber = payload.order_number;
     if (!orderNumber) {
-      return res.status(400).json({ message: "Missing order_number" });
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "missing_order_number",
+      });
     }
 
     const tx = await monriRepository.findByOrderNumber(orderNumber);
     if (!tx) {
-      return res.status(404).json({ message: "Transaction not found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "transaction_not_found",
+      });
     }
 
     if (tx.status === "paid" || tx.status === "refunded") {
@@ -587,7 +613,12 @@ exports.handleCancel = async (req, res) => {
     });
   } catch (err) {
     console.error("Monri cancel handler error:", err);
-    return res.status(500).json({ message: "Processing failed" });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "processing_failed",
+      error: err,
+    });
   }
 };
 
@@ -599,7 +630,11 @@ exports.createClientSecret = async (req, res) => {
 
     amount = Number(amount);
     if (!Number.isInteger(amount)) {
-      return res.status(400).json({ message: "Amount must be integer (minor units)" });
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "amount_must_be_integer_minor_units",
+      });
     }
 
     const payload = {
@@ -632,7 +667,11 @@ exports.createClientSecret = async (req, res) => {
     });
   } catch (err) {
     console.error("Monri error:", err.response?.data || err);
-    return res.status(500).json({ message: "Failed to create payment" });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "failed_to_create_payment",
+    });
   }
 };
 
@@ -792,36 +831,47 @@ exports.createWebPaySession = async (req, res) => {
     console.error("❌ createWebPaySession failed:", err);
 
     if (err.code === "ORDER_ALREADY_FINALIZED" || err.statusCode === 409) {
-      return res.status(409).json({ message: err.message });
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: err.message,
+        translateMessage: false,
+        error: err,
+      });
     }
 
     if (err.statusCode === 403) {
-      return res.status(403).json({ message: err.message });
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: err.message,
+        translateMessage: false,
+        error: err,
+      });
     }
 
     if (err.message === "monri_form_failed" || err.code === "ENOTFOUND" || err.statusCode === 502) {
-      return res.status(502).json({
-        message: "Failed to open Monri card form",
-        error: {
-          message: err.message,
-          code: err.code,
-          details: err.details,
-        },
+      return sendResponse({
+        res,
+        statusCode: 502,
+        translationKey: "failed_to_open_monri_card_form",
+        error: err,
       });
     }
 
     if (err.code === 11000) {
-      return res.status(409).json({
-        message: "orderNumber already exists — generate a new one",
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "order_number_already_exists",
       });
     }
 
-    return res.status(500).json({
-      message: "Init failed",
-      error: {
-        message: err.message,
-        name: err.name,
-      },
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "payment_init_failed",
+      error: err,
     });
   }
 };
@@ -842,12 +892,20 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
     } = { ...req.query, ...req.body };
 
     if (!orderNumber) {
-      return res.status(400).json({ message: "orderNumber is required" });
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "order_number_required",
+      });
     }
 
     const amountNumber = Number(amount);
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-      return res.status(400).json({ message: "amount must be a positive number (minor units)" });
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "amount_must_be_positive_minor_units",
+      });
     }
 
     let parsedSubscriptionTypes = subscriptionTypes;
@@ -860,8 +918,10 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
     }
 
     if (!Array.isArray(parsedSubscriptionTypes) || parsedSubscriptionTypes.length === 0) {
-      return res.status(400).json({
-        message: "subscriptionTypes must be a non-empty array",
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "subscriptionTypes_must_be_non_empty_array",
       });
     }
 
@@ -870,9 +930,12 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
       (type) => !PAID_SUBSCRIPTION_TYPES.includes(type)
     );
     if (invalidTypes.length > 0) {
-      return res.status(400).json({
-        message: `Invalid subscriptionTypes: ${invalidTypes.join(", ")}`,
-        allowed: PAID_SUBSCRIPTION_TYPES,
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_subscription_types",
+        values: { types: invalidTypes.join(", ") },
+        data: { allowed: PAID_SUBSCRIPTION_TYPES },
       });
     }
 
@@ -990,22 +1053,29 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
     console.error("❌ createSubscriptionWebPaySession failed:", err);
 
     if (err.code === "ORDER_ALREADY_FINALIZED" || err.statusCode === 409) {
-      return res.status(409).json({ message: err.message });
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: err.message,
+        translateMessage: false,
+        error: err,
+      });
     }
 
     // Duplicate key from unique orderNumber race
     if (err.code === 11000) {
-      return res.status(409).json({
-        message: "orderNumber already exists — generate a new one",
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "order_number_already_exists",
       });
     }
 
-    return res.status(500).json({
-      message: "Subscription payment init failed",
-      error: {
-        message: err.message,
-        name: err.name,
-      },
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "subscription_payment_init_failed",
+      error: err,
     });
   }
 };
@@ -1013,8 +1083,10 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
 exports.refundPayment = async (req, res) => {
   try {
     if (!isLiveRefundEnabled()) {
-      return res.status(503).json({
-        message: "live_refund_disabled",
+      return sendResponse({
+        res,
+        statusCode: 503,
+        translationKey: "live_refund_disabled",
       });
     }
 
@@ -1022,7 +1094,12 @@ exports.refundPayment = async (req, res) => {
     const tx = await monriRepository.findByOrderNumber(orderNumber);
     const plan = planMonriRefund({ tx, amount });
     if (!plan.ok) {
-      return res.status(400).json({ message: plan.error });
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: plan.error,
+        translateMessage: false,
+      });
     }
 
     const result = await refundViaMonri({
@@ -1086,7 +1163,12 @@ exports.refundPayment = async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error("Refund error:", err);
-    res.status(500).json({ message: "Refund failed" });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "refund_failed",
+      error: err,
+    });
   }
 };
 

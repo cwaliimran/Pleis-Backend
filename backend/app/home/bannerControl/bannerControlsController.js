@@ -3,7 +3,7 @@ const {
   parsePaginationParams,
   validateParams,
   getReadableErrorMessage,
-} = require("../../helperUtils/responseUtil");
+} = require("../../../helperUtils/responseUtil");
 
 const bannerControlsService = require("./bannerControlsService");
 

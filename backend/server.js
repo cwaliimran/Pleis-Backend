@@ -183,8 +183,11 @@ app.use((err, req, res, next) => {
     stack: err.stack,
   });
 
-  res.status(500).json({
-    message: "Internal server error",
+  sendResponse({
+    res,
+    statusCode: 500,
+    translationKey: "internal_server_error",
+    error: err,
   });
 });
 

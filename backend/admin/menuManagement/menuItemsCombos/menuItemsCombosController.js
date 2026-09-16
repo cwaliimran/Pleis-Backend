@@ -49,6 +49,23 @@ const validatePriceByMode = (res, priceMode, price) => {
   return true;
 };
 
+const validateImageFilename = (res, image) => {
+  if (image === undefined || image === null || image === "") {
+    return true;
+  }
+
+  if (typeof image !== "string" || /^https?:\/\//i.test(image.trim())) {
+    sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_image_value",
+    });
+    return false;
+  }
+
+  return true;
+};
+
 const createMenuItemsCombo = async (req, res) => {
   let {
     name,
@@ -88,6 +105,10 @@ const createMenuItemsCombo = async (req, res) => {
   }
 
   if (!validatePriceByMode(res, priceMode, price)) {
+    return;
+  }
+
+  if (!validateImageFilename(res, image)) {
     return;
   }
 
@@ -295,6 +316,10 @@ if (menuItems !== undefined) {
       },
     })
   ) {
+    return;
+  }
+
+  if (!validateImageFilename(res, image)) {
     return;
   }
 

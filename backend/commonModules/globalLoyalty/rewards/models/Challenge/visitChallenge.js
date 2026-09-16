@@ -1,4 +1,4 @@
-const GlobalChallenge = require("./BaseChallenge");
+const GlobalChallenge = require("./models/Challenge/BaseChallenge");
 const mongoose = require("mongoose");
 
 const VisitChallenge = GlobalChallenge.discriminator(

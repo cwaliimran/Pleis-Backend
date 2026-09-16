@@ -3,7 +3,7 @@ const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { getFullImageUrl } = require("@utils/imageHelper"); 
 
 const { generateMeta } = require("@utils/responseUtil");
-const Presets = require("./Presets");
+const Presets = require("@PresetsModel");
 const presetRepo = require("./presetsRepository");
 const mongoose = require("mongoose");
 

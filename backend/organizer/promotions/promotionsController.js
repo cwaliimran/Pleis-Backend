@@ -9,7 +9,7 @@ const {
 const service = require("./promotionsService");
 const {
   preparePromotionTimesForStorage,
-} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
+} = require("../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 const create = async (req, res) => {
   let { timezone } = req.user;
