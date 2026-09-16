@@ -1,4 +1,5 @@
 const { PriceMode } = require("@MenuItemsCombosModel");
+const { getFullImageUrl } = require("@utils/imageHelper");
 const { formatMenuItem } = require("./formatMenuItems");
 
 const resolveComponentQuantity = (quantity) => {
@@ -84,6 +85,7 @@ const formatMenuItemsCombo = (
   return {
     _id: obj._id,
     name: obj.name,
+    image: getFullImageUrl(obj.image || "noimage.png"),
     description: obj.description || "",
     subCategory: obj.subCategory
       ? {

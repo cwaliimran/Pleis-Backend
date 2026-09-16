@@ -52,6 +52,7 @@ const validatePriceByMode = (res, priceMode, price) => {
 const createMenuItemsCombo = async (req, res) => {
   let {
     name,
+    image = "",
     subCategory,
     description = "",
     menuItems,
@@ -92,6 +93,7 @@ const createMenuItemsCombo = async (req, res) => {
 
   const data = {
     name,
+    image,
     subCategory,
     description,
     menuItems,
@@ -254,6 +256,7 @@ const updateMenuItemsCombo = async (req, res) => {
   const { id } = req.params;
   let {
     name,
+    image,
     subCategory,
     description,
     menuItems,
@@ -297,6 +300,7 @@ if (menuItems !== undefined) {
 
   const data = {
     name,
+    image,
     subCategory,
     description,
     menuItems,
