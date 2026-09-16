@@ -66,12 +66,20 @@ async function testPayUserReservation(req, res) {
       });
     }
 
-    if (reservation.status !== "pendingPayment") {
+    const awaitingPayment =
+      reservation.status === "pendingPayment" ||
+      (reservation.paymentDetails?.paymentStatus === "pending" &&
+        Number(reservation.amount || 0) > 0);
+
+    if (!awaitingPayment) {
       return sendResponse({
         res,
         statusCode: 400,
         translationKey: "reservation_not_pending_payment",
-        data: { status: reservation.status },
+        data: {
+          status: reservation.status,
+          paymentStatus: reservation.paymentDetails?.paymentStatus,
+        },
       });
     }
 

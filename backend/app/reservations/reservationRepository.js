@@ -688,6 +688,9 @@ const createReservation = async (data, session) => {
     occasion,
   } = data;
 
+  const resolvedPaymentMethod =
+    paymentMethod || data?.paymentDetails?.paymentMethod;
+
   /* ---------- Capacity check ---------- */
   // if (reservationId) {
   //   const capacityCheck = await validateReservationCapacity({
@@ -759,8 +762,12 @@ const createReservation = async (data, session) => {
   if (reservationTypeData.requireConfirmationToApprove) {
     data.status = "needsConfirmation";
   } else {
-    if (reservationTypeData.amount > 0) {
-      if (["card", "applePay"].includes(paymentMethod)) {
+    // Fixed fee (type.amount) OR prepaid min-spend (payload amount) both need capture.
+    const requiresUpfrontPayment =
+      Number(reservationTypeData.amount || 0) > 0 ||
+      Number(totalReservationAmount || 0) > 0;
+    if (requiresUpfrontPayment) {
+      if (["card", "applePay"].includes(resolvedPaymentMethod)) {
         data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
         data.status = "pendingPayment";
       } else {

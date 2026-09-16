@@ -54,6 +54,7 @@ const {
   snapshotCardFromMonriPayload,
 } = require("../confirmation/generator");
 const { getCopy } = require("../locales");
+const { TAX_RATE_RESERVATION } = require("../../../config/CONSTANTS");
 const MonriTransaction = require("../../paymentsIntegrations/monri/MonriTransaction");
 const {
   buildSubscriptionInvoicePayload,
@@ -635,7 +636,9 @@ async function issueReservationInvoices(reservation, organization) {
     snapshot.name || reservationDoc.reservationType?.name || "Reservation";
   const isMinSpend =
     reservationDoc.conditionType === "minimumSpendOnLocation" ||
-    snapshot.conditionType === "minimumSpendOnLocation";
+    reservationDoc.conditionType === "minimumSpend" ||
+    snapshot.conditionType === "minimumSpendOnLocation" ||
+    snapshot.conditionType === "minimumSpend";
   const amount = toGross(reservation.amount || 0);
   if (amount <= 0) return [];
 
@@ -692,12 +695,18 @@ async function issueReservationConfirmation(reservationId) {
     .populate("userBillingInformation")
     .populate("userId", "firstName lastName email language")
     .populate("reservationId")
+    .populate("reservationType")
     .lean();
   if (!reservation) throw new Error("reservation_not_found");
   if (reservation.paymentDetails?.paymentStatus !== "paid") return null;
   if (!reservation.amount || reservation.amount <= 0) return null;
 
-  const organization = reservation.organizationId;
+  let organization = reservation.organizationId;
+  if (!organization || !organization.basicInfo) {
+    organization = await Organizations.findById(reservation.organizationId)
+      .select("basicInfo location creator")
+      .lean();
+  }
   const seller = await getOrganizerParty(
     reservation.companyOrganizer,
     organization,
@@ -715,14 +724,23 @@ async function issueReservationConfirmation(reservationId) {
 
   const snapshot = reservation.reservationSnapshot || {};
   const reservationDoc = reservation.reservationId || {};
+  const reservationTypeDoc = reservation.reservationType || {};
   const locale = resolveLocale(reservation.userId?.language);
   const copy = getCopy(locale);
+  const conditionType =
+    reservationDoc.conditionType ||
+    snapshot.conditionType ||
+    reservationTypeDoc.conditionType ||
+    "";
   const isMinSpend =
-    reservationDoc.conditionType === "minimumSpendOnLocation" ||
-    snapshot.conditionType === "minimumSpendOnLocation";
+    conditionType === "minimumSpendOnLocation" ||
+    conditionType === "minimumSpend";
 
   const reservationName =
-    snapshot.name || reservationDoc.reservationType?.name || copy.reservation;
+    snapshot.name ||
+    reservationTypeDoc.name ||
+    reservationDoc.reservationType?.name ||
+    copy.reservation;
   const items = [];
   let voucher;
 
@@ -734,11 +752,21 @@ async function issueReservationConfirmation(reservationId) {
       lastSlot?.timeSlots?.slice(-1)?.[0]?.endTime ||
       lastSlot?.date ||
       validFrom;
+    const breakdown = reservation.priceBreakDown || {};
+    const prepaidAmount = toGross(
+      breakdown.reservationAmount ??
+        reservation.voucher?.discountAmount ??
+        reservation.amount,
+    );
+    const reservationTax = toGross(
+      breakdown.reservationTax ??
+        Math.max(0, toGross(reservation.amount) - prepaidAmount),
+    );
     voucher = {
       code: reservation.voucher?.code?.startsWith("PLS-")
         ? reservation.voucher.code
         : generateVoucherCode(),
-      amount: reservation.voucher?.discountAmount || reservation.amount,
+      amount: prepaidAmount,
       validFrom,
       validTo,
       venueName: organization?.basicInfo?.name || seller.venueName,
@@ -746,7 +774,11 @@ async function issueReservationConfirmation(reservationId) {
     items.push({
       name: reservationName,
       vatPercent: displayPercent(
-        snapshot.taxPercentage ?? snapshot.taxPercent ?? reservationDoc.taxPercentage ?? reservationDoc.tax,
+        snapshot.taxPercentage ??
+          snapshot.taxPercent ??
+          reservationTypeDoc.taxPercentage ??
+          reservationDoc.taxPercentage ??
+          reservationDoc.tax,
       ),
       quantity: 1,
       unitPrice: 0,
@@ -757,9 +789,20 @@ async function issueReservationConfirmation(reservationId) {
       name: copy.minSpendPrepayment,
       vatPercent: 0,
       quantity: 1,
-      unitPrice: voucher.amount,
-      amount: voucher.amount,
+      unitPrice: prepaidAmount,
+      amount: prepaidAmount,
     });
+    // Billko §5.3: prepaid voucher is 0%; reservation tax/fee is a separate paid line
+    // so the item table sums to total paid (e.g. 300 + 18 = 318).
+    if (reservationTax > 0) {
+      items.push({
+        name: `${copy.reservationTax} (${Math.round(TAX_RATE_RESERVATION * 100)}%)`,
+        vatPercent: Math.round(TAX_RATE_RESERVATION * 100),
+        quantity: 1,
+        unitPrice: reservationTax,
+        amount: reservationTax,
+      });
+    }
     if (voucher.code && reservation.voucher?.code !== voucher.code) {
       await UserReservations.updateOne(
         { _id: reservation._id },
@@ -770,7 +813,11 @@ async function issueReservationConfirmation(reservationId) {
     items.push({
       name: reservationName,
       vatPercent: displayPercent(
-        snapshot.taxPercentage ?? snapshot.taxPercent ?? reservationDoc.taxPercentage ?? reservationDoc.tax,
+        snapshot.taxPercentage ??
+          snapshot.taxPercent ??
+          reservationTypeDoc.taxPercentage ??
+          reservationDoc.taxPercentage ??
+          reservationDoc.tax,
       ),
       quantity: 1,
       unitPrice: reservation.amount,
