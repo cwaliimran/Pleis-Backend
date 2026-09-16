@@ -7,6 +7,8 @@ const compression = require("compression");
 const express = require("express");
 const { isDev, connectSrc } = require("../config/origins");
 
+const { sendResponse } = require("../helperUtils/responseUtil");
+
 const securityMiddleware = (app, options = {}) => {
   const {
     allowedOrigins = [],
@@ -106,7 +108,11 @@ const securityMiddleware = (app, options = {}) => {
   // Optional JSON error for CORS
   app.use((err, req, res, next) => {
     if (err && err.message === "CORS Forbidden") {
-      return res.status(403).json({ message: "CORS Forbidden" });
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "cors_forbidden",
+      });
     }
     next(err);
   });
@@ -118,7 +124,11 @@ const securityMiddleware = (app, options = {}) => {
         req.headers["x-forwarded-for"]?.split(",")[0] ||
         req.connection.remoteAddress;
       if (!adminIPWhitelist.includes(clientIP)) {
-        return res.status(403).json({ message: "Access denied for this IP" });
+        return sendResponse({
+          res,
+          statusCode: 403,
+          translationKey: "access_denied_for_ip",
+        });
       }
       next();
     });

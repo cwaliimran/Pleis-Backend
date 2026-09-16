@@ -24,6 +24,9 @@ const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
 const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmitter");
+const {
+  recordPaidCaptureLedger,
+} = require("../../ledger/ledgerWriter");
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
 
@@ -230,6 +233,20 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     }
 
     if (result.status === "paid") {
+      fireAndForget(
+        recordPaidCaptureLedger({
+          orderId: userReservation._id,
+          orderType: "userreservations",
+          module: "RESERVATION",
+          organization: userReservation.organizationId,
+          companyOrganizer: userReservation.companyOrganizer,
+          user: userReservation.userId,
+          amount: userReservation.amount,
+          paymentStatus: "paid",
+          providerTransactionId: result.transactionId,
+        }),
+        "LEDGER_RESERVATION_CAPTURE",
+      );
       fireAndForget(
         enqueueFiscalDocument({
           kind: "reservation_confirmation",

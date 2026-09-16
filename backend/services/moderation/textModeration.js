@@ -1,3 +1,5 @@
+const { sendResponse } = require("../../helperUtils/responseUtil");
+
 let filter;
 
 async function initTextModeration() {
@@ -70,8 +72,10 @@ function textModerationMiddleware(req, res, next) {
     if (typeof text !== "string") continue;
 
     if (filter.isProfane(text)) {
-      return res.status(400).json({
-        message: "Inappropriate language detected",
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "inappropriate_language_detected",
       });
     }
   }

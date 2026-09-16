@@ -17,6 +17,9 @@ const { ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemp
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
 const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmitter");
+const {
+  recordPaidCaptureLedger,
+} = require("../../ledger/ledgerWriter");
 
 /**
  * Ticketing Order Finalizer
@@ -281,6 +284,20 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
     }
 
     if (result.status === "paid") {
+      fireAndForget(
+        recordPaidCaptureLedger({
+          orderId: order._id,
+          orderType: "ticketingbookings",
+          module: "TICKETING",
+          organization: order.organization,
+          companyOrganizer: order.companyOrganizer,
+          user: order.user,
+          amount: order.orderPricing?.total,
+          paymentStatus: "paid",
+          providerTransactionId: result.transactionId,
+        }),
+        "LEDGER_TICKETING_CAPTURE",
+      );
       fireAndForget(
         enqueueFiscalDocument({
           kind: "ticketing_invoices",

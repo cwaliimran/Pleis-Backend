@@ -93,6 +93,11 @@ function menuItemOrderFormatter(order, timezone) {
 
   if (Array.isArray(obj.combos)) {
     obj.combos = obj.combos.map((combo) => {
+      if (combo.comboSnapShot) {
+        combo.comboSnapShot.image = getFullImageUrl(
+          combo.comboSnapShot.image || "noimage.png",
+        );
+      }
       if (Array.isArray(combo.items)) {
         combo.items = combo.items.map((item) => {
           if (item.menuItemSnapShot) {

@@ -69,7 +69,9 @@ const createSubscription = async (req, res) => {
       const commissionFields = [
         "orderingCommission",
         "reservationCommission",
-        "ticketingCommission"
+        "ticketingCommission",
+        "tipCommission",
+        "offAppOrderingCommission",
       ];
 
       for (const field of commissionFields) {
@@ -623,8 +625,11 @@ const updateUserSubscriptionStatus = async (req, res) => {
   const { id, value } = req.params;
   const validStatuses = ["confirmed", "rejected", "pending", "cancelled"];
   if (!validStatuses.includes(value)) {
-    return res.status(404).json({
-      message: "Invalid Subscription status value. Accepted values are: confirmed, rejected, pending, cancelled.",
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "invalid_subscription_status",
+      values: { statuses: validStatuses.join(", ") },
     });
   }
   if (

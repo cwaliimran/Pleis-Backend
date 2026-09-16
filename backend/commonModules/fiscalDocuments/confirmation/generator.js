@@ -227,6 +227,16 @@ async function issueCancellationConfirmation(original, input = {}) {
 }
 
 async function regenerateAndStore(record, input) {
+  if (Array.isArray(input.items) && input.items.length) {
+    record.items = input.items;
+  }
+  if (input.amount != null) {
+    record.amountCents = Math.round(Number(input.amount) * 100);
+  }
+  if (input.voucher) {
+    record.voucher = input.voucher;
+    record.voucherId = input.voucher.code || record.voucherId;
+  }
   const view = buildViewModel(record, input);
   view.documentHash = "";
   // Intermediate HTML → PDF. Hash is of PDF bytes (unsigned pass), then stamped into final PDF.

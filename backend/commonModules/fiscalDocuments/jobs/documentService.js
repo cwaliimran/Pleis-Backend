@@ -635,7 +635,9 @@ async function issueReservationInvoices(reservation, organization) {
     snapshot.name || reservationDoc.reservationType?.name || "Reservation";
   const isMinSpend =
     reservationDoc.conditionType === "minimumSpendOnLocation" ||
-    snapshot.conditionType === "minimumSpendOnLocation";
+    reservationDoc.conditionType === "minimumSpend" ||
+    snapshot.conditionType === "minimumSpendOnLocation" ||
+    snapshot.conditionType === "minimumSpend";
   const amount = toGross(reservation.amount || 0);
   if (amount <= 0) return [];
 
@@ -692,12 +694,18 @@ async function issueReservationConfirmation(reservationId) {
     .populate("userBillingInformation")
     .populate("userId", "firstName lastName email language")
     .populate("reservationId")
+    .populate("reservationType")
     .lean();
   if (!reservation) throw new Error("reservation_not_found");
   if (reservation.paymentDetails?.paymentStatus !== "paid") return null;
   if (!reservation.amount || reservation.amount <= 0) return null;
 
-  const organization = reservation.organizationId;
+  let organization = reservation.organizationId;
+  if (!organization || !organization.basicInfo) {
+    organization = await Organizations.findById(reservation.organizationId)
+      .select("basicInfo location creator")
+      .lean();
+  }
   const seller = await getOrganizerParty(
     reservation.companyOrganizer,
     organization,
@@ -715,14 +723,23 @@ async function issueReservationConfirmation(reservationId) {
 
   const snapshot = reservation.reservationSnapshot || {};
   const reservationDoc = reservation.reservationId || {};
+  const reservationTypeDoc = reservation.reservationType || {};
   const locale = resolveLocale(reservation.userId?.language);
   const copy = getCopy(locale);
+  const conditionType =
+    reservationDoc.conditionType ||
+    snapshot.conditionType ||
+    reservationTypeDoc.conditionType ||
+    "";
   const isMinSpend =
-    reservationDoc.conditionType === "minimumSpendOnLocation" ||
-    snapshot.conditionType === "minimumSpendOnLocation";
+    conditionType === "minimumSpendOnLocation" ||
+    conditionType === "minimumSpend";
 
   const reservationName =
-    snapshot.name || reservationDoc.reservationType?.name || copy.reservation;
+    snapshot.name ||
+    reservationTypeDoc.name ||
+    reservationDoc.reservationType?.name ||
+    copy.reservation;
   const items = [];
   let voucher;
 
@@ -734,31 +751,28 @@ async function issueReservationConfirmation(reservationId) {
       lastSlot?.timeSlots?.slice(-1)?.[0]?.endTime ||
       lastSlot?.date ||
       validFrom;
+    const breakdown = reservation.priceBreakDown || {};
+    const prepaidAmount = toGross(
+      breakdown.reservationAmount ??
+        reservation.voucher?.discountAmount ??
+        reservation.amount,
+    );
     voucher = {
       code: reservation.voucher?.code?.startsWith("PLS-")
         ? reservation.voucher.code
         : generateVoucherCode(),
-      amount: reservation.voucher?.discountAmount || reservation.amount,
+      amount: prepaidAmount,
       validFrom,
       validTo,
       venueName: organization?.basicInfo?.name || seller.venueName,
     };
+    // Single line only — tax is already in app prices / handled on menu spend outside this PC.
     items.push({
-      name: reservationName,
-      vatPercent: displayPercent(
-        snapshot.taxPercentage ?? snapshot.taxPercent ?? reservationDoc.taxPercentage ?? reservationDoc.tax,
-      ),
-      quantity: 1,
-      unitPrice: 0,
-      amount: 0,
-      isOption: true,
-    });
-    items.push({
-      name: copy.minSpendPrepayment,
+      name: reservationName || copy.minSpendPrepayment,
       vatPercent: 0,
       quantity: 1,
-      unitPrice: voucher.amount,
-      amount: voucher.amount,
+      unitPrice: prepaidAmount,
+      amount: prepaidAmount,
     });
     if (voucher.code && reservation.voucher?.code !== voucher.code) {
       await UserReservations.updateOne(
@@ -770,7 +784,11 @@ async function issueReservationConfirmation(reservationId) {
     items.push({
       name: reservationName,
       vatPercent: displayPercent(
-        snapshot.taxPercentage ?? snapshot.taxPercent ?? reservationDoc.taxPercentage ?? reservationDoc.tax,
+        snapshot.taxPercentage ??
+          snapshot.taxPercent ??
+          reservationTypeDoc.taxPercentage ??
+          reservationDoc.taxPercentage ??
+          reservationDoc.tax,
       ),
       quantity: 1,
       unitPrice: reservation.amount,
@@ -782,6 +800,15 @@ async function issueReservationConfirmation(reservationId) {
     reservation._id,
     reservation.paymentDetails?.transactionId,
   );
+
+  const confirmationAmount =
+    voucher != null
+      ? toGross(
+          reservation.priceBreakDown?.reservationAmount ??
+            reservation.voucher?.discountAmount ??
+            reservation.amount,
+        )
+      : reservation.amount;
 
   const confirmation = await issuePaymentConfirmation({
     module: "RESERVATION",
@@ -798,7 +825,7 @@ async function issueReservationConfirmation(reservationId) {
     paymentMethod: reservation.paymentDetails?.paymentMethod,
     cardLast4: card.cardLast4,
     cardBrand: card.cardBrand,
-    amount: reservation.amount,
+    amount: confirmationAmount,
     currency: "EUR",
     items,
     voucher,

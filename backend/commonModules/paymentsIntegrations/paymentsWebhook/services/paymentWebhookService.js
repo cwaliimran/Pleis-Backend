@@ -15,6 +15,9 @@ const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmi
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { UserReservations } = require("@UserReservationsModel");
 const MenuOrders = require("@OrdersModel");
+const {
+  recordPaidCaptureLedger,
+} = require("../../ledger/ledgerWriter");
 
 function toWebhookPaymentMethod(method) {
   if (method === "applePay") return "applePay";
@@ -177,6 +180,30 @@ const processPaymentWebhook = async ({
   });
 
   if (result.status === "paid") {
+    // Idempotent payout ledger row (orderId+module). Finalizers also write;
+    // duplicate webhook / redirect fulfill is safe.
+    if (
+      orderType === "ticketingbookings" ||
+      orderType === "menuorders" ||
+      orderType === "userreservations" ||
+      orderType === "subscription"
+    ) {
+      fireAndForget(
+        recordPaidCaptureLedger({
+          orderId,
+          orderType,
+          organization: payload.transaction?.metadata?.organization,
+          companyOrganizer: payload.transaction?.metadata?.companyOrganizer,
+          user: payload.user,
+          paymentStatus: "paid",
+          paymentMethod,
+          providerTransactionId: result.transactionId,
+          // Amount resolved from order docs inside recordPaidCaptureLedger when omitted.
+        }),
+        "LEDGER_WEBHOOK_CAPTURE",
+      );
+    }
+
     const fiscalKind = {
       menuorders: "ordering_confirmation",
       userreservations: "reservation_confirmation",

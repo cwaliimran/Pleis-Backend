@@ -10,6 +10,7 @@ module.exports = {
   ticketId: "Ticket ID",
   fastTrack: "Fast track",
   minSpendPrepayment: "Minimum-spend prepayment (multi-use voucher)",
+  reservationTax: "Reservation tax",
   print: "Print",
   download: "Download",
   subjectWithVoucher: (venue) => `Payment confirmation and voucher, ${venue}`,

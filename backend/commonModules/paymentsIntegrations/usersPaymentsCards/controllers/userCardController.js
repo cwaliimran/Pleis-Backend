@@ -133,7 +133,11 @@ const chargeSavedCard = async (req, res) => {
         // 1) Validate card belongs to user
         const card = await getCardById(cardId, userId);
         if (!card) {
-            return res.status(404).json({ message: "Card not found" });
+            return sendResponse({
+                res,
+                statusCode: 404,
+                translationKey: "card_not_found",
+            });
         }
 
         // 2) Validate billing belongs to user
@@ -142,7 +146,11 @@ const chargeSavedCard = async (req, res) => {
         });
 
         if (!billing) {
-            return res.status(404).json({ message: "Billing information not found" });
+            return sendResponse({
+                res,
+                statusCode: 404,
+                translationKey: "billing_information_not_found",
+            });
         }
 
         // 3) Get client IP (works behind proxies if trust proxy enabled)
@@ -192,8 +200,10 @@ const chargeSavedCard = async (req, res) => {
     } catch (err) {
         console.error("Monri charge error:", err.response?.data || err.message);
 
-        return res.status(err.response?.status || 500).json({
-            message: "Payment failed",
+        return sendResponse({
+            res,
+            statusCode: err.response?.status || 500,
+            translationKey: "payment_failed",
             error: err.response?.data || err.message,
         });
     }

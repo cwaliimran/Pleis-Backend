@@ -9,13 +9,6 @@ const {
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
 const roleMiddleware = require("../../../middlewares/roleMiddleware");
-const {
-  createMenuItem,
-  getMenuItems,
-  updateMenuItem,
-  deleteMenuItem,
-  getMenuItemDetails,
-} = require("../../../admin/menuManagement/menuItems/menuItemsController");
 
 const router = express.Router();
 

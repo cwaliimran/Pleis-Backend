@@ -11,6 +11,13 @@ function formatUserWallet(item) {
   } else if (obj.global?.level) {
     obj.global.level.image = getFullImageUrl("noimage.png");
   }
+
+  if (obj.global?.level?.backgroundImage) {
+    obj.global.level.backgroundImage = getFullImageUrl(obj.global.level.backgroundImage);
+  } else if (obj.global?.level) {
+    obj.global.level.backgroundImage = getFullImageUrl("noimage.png");
+  }
+
   if (obj.global?.nextStatusLevel?.image) {
     obj.global.nextStatusLevel.image = getFullImageUrl(obj.global.nextStatusLevel.image);
   } else if (obj.global?.nextStatusLevel) {

@@ -58,6 +58,7 @@ const updateMenuItemsCombo = async (id, data) => {
 
   const allowedFields = [
     "name",
+    "image",
     "subCategory",
     "description",
     "menuItems",

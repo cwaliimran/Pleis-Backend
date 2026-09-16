@@ -1,4 +1,4 @@
-const { validateParams } = require("@utils/responseUtil");
+const { validateParams, sendResponse } = require("@utils/responseUtil");
 
 /**
  * Validates ticketing payload at controller level
@@ -13,9 +13,12 @@ const validateTicketingPayload = (req, res) => {
   if (!validateParams(req, res, validateData)) return false;
 
   if (!Array.isArray(req.body.ticketings) || req.body.ticketings.length === 0) {
-    return res.status(400).json({
+    sendResponse({
+      res,
+      statusCode: 400,
       translationKey: "ticketings_required",
     });
+    return false;
   }
 
   return true;

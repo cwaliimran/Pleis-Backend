@@ -34,9 +34,10 @@ const createMenu = async (req, res) => {
     !DATE_RE.test(startDate) ||
     !moment(startDate, "YYYY-MM-DD", true).isValid()
   ) {
-    return res.status(400).json({
-      success: false,
-      message: "startDate must be a valid date in YYYY-MM-DD format",
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "start_date_invalid_format",
     });
   }
   let data = {
