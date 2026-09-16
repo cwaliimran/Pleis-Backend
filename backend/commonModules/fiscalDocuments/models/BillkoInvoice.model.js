@@ -27,6 +27,7 @@ const billkoInvoiceSchema = new mongoose.Schema(
         "userreservations",
         "menuorders",
         "subscription",
+        "commission",
       ],
       required: true,
     },

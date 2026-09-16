@@ -740,11 +740,35 @@ function stepRefundAndFields() {
     orderType: "menuorders",
     module: "ORDERING",
     amount: 12.5,
+    tipAmount: 1.5,
     paymentStatus: "paid",
   });
   assert(ledger.schemaVersion === 5 && ledger.amountCents === 1250, "ledger v5 writer");
-  const filtered = applyLedgerListFilters({}, { cardLast4: "4242", module: "ORDERING" });
+  assert(ledger.tipAmountCents === 150, "ledger stores tip cents");
+  assert(ledger.payoutStatus === "PENDING", "ordering capture is PENDING");
+  assert(ledger.fiscalizationStatus === "NOT_FISCALIZED", "fiscalization default");
+  assert(ledger.gatewayCostCents === 13, "gateway cost 1% rounded");
+  const filtered = applyLedgerListFilters(
+    {},
+    { cardLast4: "4242", module: "ORDERING", payoutStatus: "PENDING" },
+  );
   assert(filtered.cardLast4 === "4242", "additive ledger filters");
+  assert(filtered.payoutStatus === "PENDING", "payoutStatus ledger filter");
+
+  const webhookSrc = readSrc(
+    "backend/commonModules/paymentsIntegrations/paymentsWebhook/services/paymentWebhookService.js",
+  );
+  assert(
+    webhookSrc.includes("recordPaidCaptureLedger"),
+    "webhook wires ledger on paid capture",
+  );
+  const menuFinalizerSrc = readSrc(
+    "backend/commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService.js",
+  );
+  assert(
+    menuFinalizerSrc.includes("recordPaidCaptureLedger"),
+    "menu finalizer wires ledger",
+  );
 }
 
 async function stepFiscalInvoicePdf() {
