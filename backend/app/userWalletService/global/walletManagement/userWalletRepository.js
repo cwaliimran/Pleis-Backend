@@ -57,7 +57,7 @@ const getUserWallet = async (user) => {
 
   let wallet = await UserGlobalWallet.findOne({ user: userId }).populate({
     path: "global.level",
-    select: "image title type entryPoints retainPoints bonusPointsPerEuro"
+    select: "image backgroundImage title type entryPoints retainPoints bonusPointsPerEuro"
   });
 
   if (!wallet) {

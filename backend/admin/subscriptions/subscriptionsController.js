@@ -69,7 +69,9 @@ const createSubscription = async (req, res) => {
       const commissionFields = [
         "orderingCommission",
         "reservationCommission",
-        "ticketingCommission"
+        "ticketingCommission",
+        "tipCommission",
+        "offAppOrderingCommission",
       ];
 
       for (const field of commissionFields) {

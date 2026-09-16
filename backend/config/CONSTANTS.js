@@ -11,7 +11,12 @@ const SERVICE_FEE_BASE_CENTS = 300; // 3.00 EUR
 const SERVICE_FEE_BASE_CAP_CENTS = 3000; // 30.00 EUR
 const SERVICE_FEE_RATE = 0.08;
 
-const TAX_RATE_RESERVATION = 0.06;
+/**
+ * Reservation min-spend voucher: no Pleis tax/service fee on the prepaid voucher.
+ * Tax applies later on menu items when the voucher is spent (organizer fiscalizes those).
+ * Kept at 0 — do not reintroduce a reservation tax line on payment confirmations.
+ */
+const TAX_RATE_RESERVATION = 0;
 
 function computeTicketingServiceFeeCents(itemPriceCents) {
   const price = Math.max(0, Math.round(Number(itemPriceCents) || 0));

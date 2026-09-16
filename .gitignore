@@ -145,3 +145,4 @@ backend/secretAssets/serviceAccountKey.json
 scripts/combine-files.js
 /raw
 /tmp
+.env.prodtest

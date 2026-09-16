@@ -54,7 +54,6 @@ const {
   snapshotCardFromMonriPayload,
 } = require("../confirmation/generator");
 const { getCopy } = require("../locales");
-const { TAX_RATE_RESERVATION } = require("../../../config/CONSTANTS");
 const MonriTransaction = require("../../paymentsIntegrations/monri/MonriTransaction");
 const {
   buildSubscriptionInvoicePayload,
@@ -758,10 +757,6 @@ async function issueReservationConfirmation(reservationId) {
         reservation.voucher?.discountAmount ??
         reservation.amount,
     );
-    const reservationTax = toGross(
-      breakdown.reservationTax ??
-        Math.max(0, toGross(reservation.amount) - prepaidAmount),
-    );
     voucher = {
       code: reservation.voucher?.code?.startsWith("PLS-")
         ? reservation.voucher.code
@@ -771,38 +766,14 @@ async function issueReservationConfirmation(reservationId) {
       validTo,
       venueName: organization?.basicInfo?.name || seller.venueName,
     };
+    // Single line only — tax is already in app prices / handled on menu spend outside this PC.
     items.push({
-      name: reservationName,
-      vatPercent: displayPercent(
-        snapshot.taxPercentage ??
-          snapshot.taxPercent ??
-          reservationTypeDoc.taxPercentage ??
-          reservationDoc.taxPercentage ??
-          reservationDoc.tax,
-      ),
-      quantity: 1,
-      unitPrice: 0,
-      amount: 0,
-      isOption: true,
-    });
-    items.push({
-      name: copy.minSpendPrepayment,
+      name: reservationName || copy.minSpendPrepayment,
       vatPercent: 0,
       quantity: 1,
       unitPrice: prepaidAmount,
       amount: prepaidAmount,
     });
-    // Billko §5.3: prepaid voucher is 0%; reservation tax/fee is a separate paid line
-    // so the item table sums to total paid (e.g. 300 + 18 = 318).
-    if (reservationTax > 0) {
-      items.push({
-        name: `${copy.reservationTax} (${Math.round(TAX_RATE_RESERVATION * 100)}%)`,
-        vatPercent: Math.round(TAX_RATE_RESERVATION * 100),
-        quantity: 1,
-        unitPrice: reservationTax,
-        amount: reservationTax,
-      });
-    }
     if (voucher.code && reservation.voucher?.code !== voucher.code) {
       await UserReservations.updateOne(
         { _id: reservation._id },
@@ -830,6 +801,15 @@ async function issueReservationConfirmation(reservationId) {
     reservation.paymentDetails?.transactionId,
   );
 
+  const confirmationAmount =
+    voucher != null
+      ? toGross(
+          reservation.priceBreakDown?.reservationAmount ??
+            reservation.voucher?.discountAmount ??
+            reservation.amount,
+        )
+      : reservation.amount;
+
   const confirmation = await issuePaymentConfirmation({
     module: "RESERVATION",
     orderId: reservation._id,
@@ -845,7 +825,7 @@ async function issueReservationConfirmation(reservationId) {
     paymentMethod: reservation.paymentDetails?.paymentMethod,
     cardLast4: card.cardLast4,
     cardBrand: card.cardBrand,
-    amount: reservation.amount,
+    amount: confirmationAmount,
     currency: "EUR",
     items,
     voucher,

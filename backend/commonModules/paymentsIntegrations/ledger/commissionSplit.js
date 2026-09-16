@@ -33,6 +33,13 @@ function defaultCommissionRates(overrides = {}) {
     ticketing: clampRate(
       overrides.ticketing ?? process.env.PLEIS_TICKETING_COMMISSION ?? 0,
     ),
+    offAppOrdering: clampRate(
+      overrides.offAppOrdering ??
+        process.env.PLEIS_OFFAPP_ORDERING_COMMISSION ??
+        overrides.ordering ??
+        process.env.PLEIS_ORDERING_COMMISSION ??
+        0,
+    ),
   };
 }
 
@@ -49,6 +56,10 @@ function ratesFromSubscriptionCommissions(commissions = {}, fallback) {
       c.ticketingCommission != null
         ? clampRate(c.ticketingCommission)
         : base.ticketing,
+    offAppOrdering:
+      c.offAppOrderingCommission != null
+        ? clampRate(c.offAppOrderingCommission)
+        : base.offAppOrdering ?? base.ordering,
   };
 }
 
