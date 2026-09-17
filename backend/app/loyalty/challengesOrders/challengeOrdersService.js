@@ -166,19 +166,7 @@ const updateChallengeProgressByTaskTypeService = async ({
     return { success: false, message: "challenge_claim_limit_reached" };
   }
 
-  if (!existingOrder) {
-    void sendUserNotifications({
-      recipientIds: [userId.toString()],
-      title: challenge.title,
-      body: "Your challenge has started. Good luck!",
-      data: {
-        type: NotificationTypes.CHALLENGE_STARTED,
-        objectType: "challengesorders"
-      },
-      sender: companyOrganizer,
-      objectId: order._id
-    });
-  }
+  const justStarted = !existingOrder;
 
   const previousCurrent = order.progress.current;
 
@@ -202,8 +190,25 @@ const updateChallengeProgressByTaskTypeService = async ({
   });
 
   // ✅ Check for completion when progress reaches target
-  if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
+  const completedThisUpdate =
+    updated.progress.current >= updated.progress.target &&
+    updated.status === "in-progress";
+
+  if (completedThisUpdate) {
     await finalizeChallengeCompletion(updated);
+  } else if (justStarted) {
+    // Only notify "started" if it did not also complete in this same update
+    void sendUserNotifications({
+      recipientIds: [userId.toString()],
+      title: challenge.title,
+      body: "Your challenge has started. Good luck!",
+      data: {
+        type: NotificationTypes.CHALLENGE_STARTED,
+        objectType: "challengesorders"
+      },
+      sender: companyOrganizer,
+      objectId: order._id
+    });
   }
 
   return { success: true, order: updated };
@@ -350,20 +355,9 @@ console.log("resolveBuyMenuItemChallengeService===>", JSON.stringify(items, null
 
 
 
-      if (!existingOrder) {
+      if (!order) continue;
 
-        void sendUserNotifications({
-          recipientIds: [userId.toString()],
-          title: challenge.title,
-          body: "Your challenge has started. Good luck!",
-          data: {
-            type: NotificationTypes.CHALLENGE_STARTED,
-            objectType: "loyaltychallengesorders"
-          },
-          sender: companyOrganizer,
-          objectId: order._id
-        });
-      }
+      const justStarted = !existingOrder;
 
       const previousCurrent = order.progress.current;
 
@@ -391,10 +385,25 @@ console.log("resolveBuyMenuItemChallengeService===>", JSON.stringify(items, null
         continue;
       }
 
-      if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
+      const completedThisUpdate =
+        updated.progress.current >= updated.progress.target &&
+        updated.status === "in-progress";
 
-
+      if (completedThisUpdate) {
         await finalizeChallengeCompletion(updated);
+      } else if (justStarted) {
+        // Only notify "started" if it did not also complete in this same update
+        void sendUserNotifications({
+          recipientIds: [userId.toString()],
+          title: challenge.title,
+          body: "Your challenge has started. Good luck!",
+          data: {
+            type: NotificationTypes.CHALLENGE_STARTED,
+            objectType: "loyaltychallengesorders"
+          },
+          sender: companyOrganizer,
+          objectId: order._id
+        });
       } else {
       }
     }
@@ -455,20 +464,7 @@ const resolveGenericTaskTypeService = async ({
       if (!canStart) continue;
     }
 
-    // 🔔 Send STARTED if first cycle (do not block progress on notifications)
-    if (order.progress.current === 0) {
-      void sendUserNotifications({
-        recipientIds: [userId.toString()],
-        title: challenge.title,
-        body: "Your challenge has started. Good luck!",
-        data: {
-          type: NotificationTypes.CHALLENGE_STARTED,
-          objectType: "challengesorders"
-        },
-        sender: companyOrganizer,
-        objectId: order._id
-      });
-    }
+    const wasAtZero = order.progress.current === 0;
 
     // 4️⃣ Apply overflow logic (multi-cycle)
     while (remaining > 0) {
@@ -525,6 +521,22 @@ const resolveGenericTaskTypeService = async ({
         if (!order) break;
 
         continue; // apply remaining to next cycle
+      }
+
+      // Still in progress — notify started only if this update began the cycle
+      // and it did not complete in the same update
+      if (wasAtZero && previousCurrent === 0) {
+        void sendUserNotifications({
+          recipientIds: [userId.toString()],
+          title: challenge.title,
+          body: "Your challenge has started. Good luck!",
+          data: {
+            type: NotificationTypes.CHALLENGE_STARTED,
+            objectType: "challengesorders"
+          },
+          sender: companyOrganizer,
+          objectId: order._id
+        });
       }
 
       break; // still in progress, no more cycles

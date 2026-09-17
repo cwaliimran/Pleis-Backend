@@ -14,7 +14,11 @@ const getActiveGlobalOrdersForDashboard = async ({ userId }) => {
 /**
  * Create new challenge order
  */
-const createGlobalChallengeOrder = async (payload) => {
+const createGlobalChallengeOrder = async (payload, session) => {
+  if (session) {
+    const [doc] = await GlobalChallengesOrders.create([payload], { session });
+    return doc;
+  }
   return GlobalChallengesOrders.create(payload);
 };
 

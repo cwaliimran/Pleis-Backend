@@ -1,10 +1,8 @@
 const express = require("express");
 const {
-  create,
   get,
   getDetails,
-  update,
-  deleteItem,
+  claimPromotion,
 } = require("./promotionsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -17,6 +15,7 @@ const apiRateLimiter = createRateLimiter("Promotions");
 const apiRateLimiterDetails = createRateLimiter("Promotions/:id");
 
 router.get("/", apiRateLimiter, get);
+router.post("/:id/claim", apiRateLimiterDetails, claimPromotion);
 router.get("/:id", apiRateLimiterDetails, getDetails);
 
 module.exports = router;

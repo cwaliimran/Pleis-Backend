@@ -3,7 +3,6 @@ const {
   parsePaginationParams,
   validateParams,
   getReadableErrorMessage,
-  convertTimezoneToUtc,
 } = require("@utils/responseUtil");
 
 const service = require("./promotionsService");
@@ -12,7 +11,7 @@ const get = async (req, res) => {
   const { page, limit, skip } = parsePaginationParams(req);
   const { keyword } = req.query;
 
-  const {_id:userId, timezone} = req.user;
+  const { _id: userId, timezone } = req.user;
   try {
     const { responses, meta } = await service.getGlobalPromotionsService({
       userId,
@@ -37,9 +36,9 @@ const get = async (req, res) => {
 
 const getDetails = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
-  let { timezone } = req.user;
+  const { timezone, _id: userId } = req.user;
   try {
-    const response = await service.getDetails(req.params.id, timezone);
+    const response = await service.getDetails(req.params.id, timezone, userId);
     if (!response) {
       return sendResponse({ res, statusCode: 404, translationKey: "promotion_not_found" });
     }
@@ -55,8 +54,30 @@ const getDetails = async (req, res) => {
   }
 };
 
+const claimPromotion = async (req, res) => {
+  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+  try {
+    const { _id: userId, timezone } = req.user || {};
+    const response = await service.claimPromotion(req.params.id, userId, timezone);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "promotion_claimed_successfully",
+      data: response,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 400,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 module.exports = {
   get,
   getDetails,
+  claimPromotion,
 };

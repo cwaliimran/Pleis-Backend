@@ -6,9 +6,237 @@ const ordersRepo =
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const { GlobalChallengesOrders } = require("@GlobalChallengesOrdersModel");
+const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
 const { createTicketingBookingService } = require("../../bookings/ticketings/ticketingBookingService");
+const { createTransactionService } =
+  require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const TicketingsModel = require("@TicketingsModel");
+const { getUserWallet } = require("../../userWalletService/global/walletManagement/userWalletService");
 
 const mongoose = require("mongoose");
+
+const resolveTicketId = (rawTicket) => {
+  if (!rawTicket) return null;
+  if (mongoose.Types.ObjectId.isValid(rawTicket)) return rawTicket;
+  if (
+    typeof rawTicket === "object" &&
+    mongoose.Types.ObjectId.isValid(rawTicket._id)
+  ) {
+    return rawTicket._id;
+  }
+  return null;
+};
+
+/**
+ * Prefer challenge-configured timeSlot; otherwise first available slot
+ * when the ticket requires timingSlots.
+ */
+const resolveChallengeTimeSlot = (ticketDoc, configuredTimeSlot) => {
+  if (configuredTimeSlot) return String(configuredTimeSlot);
+
+  if (!ticketDoc?.timingSlots?.enabled) return null;
+
+  const slots = (ticketDoc.timingSlots.dateTimeSlots || []).flatMap(
+    (day) => day.timeSlots || []
+  );
+
+  const available = slots.find((slot) => (slot.quantity ?? 0) > 0) || slots[0];
+  return available?._id ? String(available._id) : null;
+};
+
+/**
+ * Issue reward when a global challenge completes.
+ * - specialTicket → TicketingOrder (+ meta) linked on challenge order
+ * - points → global wallet earn
+ * - customReward → GlobalRewardsOrders (pending)
+ */
+const issueGlobalChallengeReward = async ({
+  userId,
+  challenge,
+  order,
+  timezone,
+  session,
+}) => {
+  const reward = challenge?.reward || {};
+  const rewardType = reward.rewardType;
+
+  if (rewardType === "specialTicket") {
+    let ticketOrderId = null;
+    let ticketStatus = "failed";
+
+    try {
+      const ticketId = resolveTicketId(reward.specialTicket?.ticket);
+      if (!ticketId) {
+        return { ticketOrderId, ticketStatus };
+      }
+
+      const ticketDoc = await TicketingsModel.findById(ticketId)
+        .session(session)
+        .lean();
+
+      if (!ticketDoc) {
+        return { ticketOrderId, ticketStatus };
+      }
+
+      const timeSlot = resolveChallengeTimeSlot(
+        ticketDoc,
+        reward.specialTicket?.timeSlot
+      );
+
+      if (ticketDoc.timingSlots?.enabled && !timeSlot) {
+        throw new Error("challenge_ticket_time_slot_required");
+      }
+
+      let isFastTrack = Boolean(reward.specialTicket?.isFastTrack);
+      let bookingResult;
+
+      try {
+        bookingResult = await createTicketingBookingService(
+          {
+            user: userId,
+            ticketings: [
+              {
+                ticketId,
+                timeSlot,
+                isFastTrack,
+                protectionUserDetails: {
+                  firstName: "n/a",
+                  surName: "n/a",
+                  dob: "n/a",
+                  pid: "n/a",
+                },
+              },
+            ],
+            bookingReference: "globalchallengeorders",
+            meta: {
+              id: order._id,
+              type: "globalchallengeorders",
+              source: "globalLoyalty",
+              challengeId: challenge._id,
+              challengeOrderId: order._id,
+              rewardType: "specialTicket",
+            },
+          },
+          timezone,
+          session
+        );
+      } catch (fastTrackErr) {
+        // Retry without fast-track if that was the only blocker
+        if (!isFastTrack) throw fastTrackErr;
+
+        bookingResult = await createTicketingBookingService(
+          {
+            user: userId,
+            ticketings: [
+              {
+                ticketId,
+                timeSlot,
+                isFastTrack: false,
+                protectionUserDetails: {
+                  firstName: "n/a",
+                  surName: "n/a",
+                  dob: "n/a",
+                  pid: "n/a",
+                },
+              },
+            ],
+            bookingReference: "globalchallengeorders",
+            meta: {
+              id: order._id,
+              type: "globalchallengeorders",
+              source: "globalLoyalty",
+              challengeId: challenge._id,
+              challengeOrderId: order._id,
+              rewardType: "specialTicket",
+              fastTrackFallback: true,
+            },
+          },
+          timezone,
+          session
+        );
+      }
+
+      const issuedOrder = bookingResult?.order || bookingResult;
+      if (issuedOrder?._id) {
+        ticketOrderId = issuedOrder._id;
+        ticketStatus = "issued";
+      }
+    } catch (err) {
+      console.error("[GLOBAL] Ticket creation failed (non-blocking)", {
+        challengeId: challenge._id,
+        challengeOrderId: order._id,
+        error: err.message,
+      });
+    }
+
+    return { ticketOrderId, ticketStatus };
+  }
+
+  if (rewardType === "points") {
+    const points = reward.rewardValue || 0;
+    if (points > 0) {
+      const trx = await createTransactionService(
+        {
+          user: userId,
+          type: "earn",
+          domainType: "globalchallengeorders",
+          entityId: order._id,
+          globalPoints: {
+            base: points,
+            total: points,
+          },
+          allowNegative: false,
+          description: `Points awarded for completing global challenge: ${challenge.title}`,
+        },
+        session
+      );
+
+      if (!trx?.success) {
+        throw new Error(trx?.message || "challenge_reward_transaction_failed");
+      }
+    }
+    return { ticketOrderId: null, ticketStatus: null };
+  }
+
+  if (rewardType === "customReward") {
+    const existing = await GlobalRewardsOrders.findOne({
+      user: userId,
+      sourceType: "globalchallengeorders",
+      sourceId: order._id,
+    }).session(session);
+
+    if (!existing) {
+      const custom = reward.customReward || {};
+      await GlobalRewardsOrders.create(
+        [
+          {
+            user: userId,
+            sourceType: "globalchallengeorders",
+            sourceId: order._id,
+            snapshot: {
+              title: custom.title || challenge.title,
+              image: custom.image || custom.media || challenge.image || "",
+              description: custom.description || challenge.description || "",
+              rewardType: "customReward",
+              customReward: custom,
+              minPointsRequiredToClaim: 0,
+              fromChallenge: true,
+              challengeId: challenge._id,
+              challengeTitle: challenge.title,
+            },
+            pointsUsed: 0,
+            status: "pending",
+          },
+        ],
+        { session }
+      );
+    }
+
+    return { ticketOrderId: null, ticketStatus: null };
+  }
+
+  return { ticketOrderId: null, ticketStatus: null };
+};
 
 const resolveGlobalChallengeByTaskTypeService = async ({
   userId,
@@ -33,8 +261,16 @@ const resolveGlobalChallengeByTaskTypeService = async ({
     const challenges =
       await challengesRepo.getActiveGlobalChallenges({ timezone });
 
+    // Enforce global tier eligibility (same rule as list API)
+    const wallet = await getUserWallet(userId);
+    const userTierEntry = wallet?.global?.level?.entryPoints ?? 0;
+
     const eligible = challenges
       .filter(ch => ch.taskType === taskType)
+      .filter((ch) => {
+        const requiredEntry = ch?.tierLimit?.entryPoints ?? 0;
+        return userTierEntry >= requiredEntry;
+      })
       .sort((a, b) =>
         (a.taskValue ?? 1) - (b.taskValue ?? 1) ||
         new Date(a.createdAt) - new Date(b.createdAt)
@@ -133,77 +369,14 @@ const resolveGlobalChallengeByTaskTypeService = async ({
 
         if (isCompleted) {
 
-          let ticketOrderId = null;
-          let ticketStatus = null;
-
-          if (challenge.reward?.rewardType === "specialTicket") {
-
-            ticketStatus = "failed";
-
-            try {
-
-              const rawTicket =
-                challenge.reward?.specialTicket?.ticket;
-
-              let ticketId = null;
-
-              if (rawTicket) {
-                if (mongoose.Types.ObjectId.isValid(rawTicket)) {
-                  ticketId = rawTicket;
-                } else if (
-                  typeof rawTicket === "object" &&
-                  mongoose.Types.ObjectId.isValid(rawTicket._id)
-                ) {
-                  ticketId = rawTicket._id;
-                }
-              }
-
-              if (ticketId) {
-
-                const bookingResult =
-                  await createTicketingBookingService(
-                    {
-                      user: userId,
-                      ticketings: [
-                        {
-                          ticketId,
-                          timeSlot:
-                            challenge.reward.specialTicket.timeSlot || null,
-                          isFastTrack: challenge.reward.specialTicket.isFastTrack || false,
-                          protectionUserDetails: {
-                            firstName: "n/a",
-                            surName: "n/a",
-                            dob: "n/a",
-                            pid: "n/a",
-                          },
-                        },
-                      ],
-                      bookingReference: "globalchallengeorders",
-                      meta: {
-                        id: order._id,
-                        type: "globalchallengeorders",
-                      },
-                    },
-                    timezone,
-                    session
-                  );
-
-                if (bookingResult?._id) {
-                  ticketOrderId = bookingResult._id;
-                  ticketStatus = "issued";
-                }
-              }
-
-            } catch (err) {
-              console.error(
-                "[GLOBAL] Ticket creation failed (non-blocking)",
-                {
-                  challengeId: challenge._id,
-                  error: err.message
-                }
-              );
-            }
-          }
+          const { ticketOrderId, ticketStatus } =
+            await issueGlobalChallengeReward({
+              userId,
+              challenge,
+              order,
+              timezone,
+              session,
+            });
 
           bulkOperations.push({
             updateOne: {
@@ -344,6 +517,28 @@ const flushGlobalNotifications = async ({
     });
   };
 
+  // If a challenge starts and completes in the same resolve, only send completed.
+  const completedOrderIds = new Set(
+    (buffer.completed || []).map((o) => String(o.orderId))
+  );
+  const completedChallengeIds = new Set(
+    (buffer.completed || []).map((o) =>
+      String(o.challenge?._id || o.challenge)
+    )
+  );
+
+  const notAlsoCompleted = (o) => {
+    const orderId = String(o.orderId);
+    const challengeId = String(o.challenge?._id || o.challenge);
+    return (
+      !completedOrderIds.has(orderId) &&
+      !completedChallengeIds.has(challengeId)
+    );
+  };
+
+  buffer.started = (buffer.started || []).filter(notAlsoCompleted);
+  buffer.milestones = (buffer.milestones || []).filter(notAlsoCompleted);
+
   // =========================
   // COMPLETED (Highest Priority)
   // =========================
@@ -388,12 +583,6 @@ const flushGlobalNotifications = async ({
         type: NotificationTypes.GLOBAL_CHALLENGE_BATCH_UPDATE,
         orders: filteredCompleted
       });
-    }
-
-    // Suppress started + milestone if valid completion exists
-    if (filteredCompleted.length > 0) {
-      buffer.started = [];
-      buffer.milestones = [];
     }
   }
 
