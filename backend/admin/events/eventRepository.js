@@ -1071,18 +1071,15 @@ const getEventsBatchRepo = async ({
   let venueTypeMap = new Map(); // venueId → venueTypeIds
 
   if (venueTypeObjectIds.length) {
-    const venues = await Venues.find({
-      venueType: { $in: venueTypeObjectIds },
-      status: "active",
-    }).select("_id venueType");
+    const { getActiveVenueTypeMap } = require("../venues/venuesRepository");
+    const needed = new Set(venueTypeObjectIds.map((id) => String(id)));
+    const allVenues = await getActiveVenueTypeMap();
 
-    venueIds = venues.map((v) => v._id);
-
-    for (const v of venues) {
-      venueTypeMap.set(
-        v._id.toString(),
-        v.venueType.map((x) => x.toString()),
-      );
+    for (const v of allVenues || []) {
+      const matchedTypes = (v.venueType || []).filter((vt) => needed.has(String(vt)));
+      if (!matchedTypes.length) continue;
+      venueIds.push(new mongoose.Types.ObjectId(v._id));
+      venueTypeMap.set(String(v._id), matchedTypes.map(String));
     }
   }
 

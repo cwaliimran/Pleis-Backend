@@ -1,8 +1,8 @@
-const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
+const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 const {
   convertUtcToTimezone,
   convertUtcTimeToTimezone,
-} = require("../../../../helperUtils/responseUtil");
+} = require("../../../helperUtils/responseUtil");
 
 function convertPromotionDates(promotion, timezone, format) {
     if (promotion.startDate && promotion.endDate && timezone) {

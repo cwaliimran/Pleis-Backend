@@ -5,6 +5,9 @@ const {
   updateUserSubscriptionPaymentStatus,
 } = require("../../../../organizer/subscriptions/subscriptionsService");
 const { SubscriptionPaymentStatuses } = require("../../../../models/UserModel");
+const {
+  recordPaidCaptureLedger,
+} = require("../../ledger/ledgerWriter");
 
 const subscriptionPaymentFinalizerService = async ({ transaction, result }) => {
   if (!transaction?._id && !transaction?.orderNumber) {
@@ -60,6 +63,28 @@ const subscriptionPaymentFinalizerService = async ({ transaction, result }) => {
     }),
     "FISCAL_SUBSCRIPTION_INVOICE",
   );
+
+  // Subscription is Pleis B2B revenue — EXCLUDED from organizer payout (idempotent).
+  const subOrderId = transaction.orderNumber || transaction._id;
+  if (subOrderId) {
+    fireAndForget(
+      recordPaidCaptureLedger({
+        orderId: subOrderId,
+        orderType: "subscription",
+        module: "SUBSCRIPTION",
+        user: transaction.userId,
+        amountCents:
+          transaction.amountCents != null
+            ? transaction.amountCents
+            : Math.round(Number(transaction.amount || 0)),
+        paymentStatus: "paid",
+        paymentMethod: transaction.paymentMethod,
+        providerTransactionId:
+          result.transactionId || transaction.monriTransactionId,
+      }),
+      "LEDGER_SUBSCRIPTION_CAPTURE",
+    );
+  }
 
   return { handled: true };
 };

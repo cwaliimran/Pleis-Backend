@@ -61,8 +61,11 @@ const getDashboardValue = async (req, res) => {
 
   // 1. Validate key
   if (!DASHBOARD_KEYS[key]) {
-    return res.status(400).json({
-      message: "Invalid dashboard key",
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_filter_key",
+      values: { type: "dashboard" },
     });
   }
 
@@ -72,8 +75,10 @@ const getDashboardValue = async (req, res) => {
   );
 
   if (!isValidSubFilter) {
-    return res.status(400).json({
-      message: "Invalid sub filter for given key",
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_sub_filter",
     });
   }
 

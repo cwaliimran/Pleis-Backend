@@ -63,7 +63,7 @@ const UserReservationsSchema = new mongoose.Schema(
     },
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization",
+      ref: "Organizations",
       required: true,
     },
     reservationId: {

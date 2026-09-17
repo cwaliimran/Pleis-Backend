@@ -13,6 +13,10 @@ const menuItemsCombosSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    image: {
+      type: String,
+      default: "",
+    },
     subCategory: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MenuSubcategory",

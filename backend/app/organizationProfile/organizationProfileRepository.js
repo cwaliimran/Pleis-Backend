@@ -2225,8 +2225,13 @@ const getOrganizationsGroupedByTagsRepo = async ({
   userLocation,
   radiusKm,
   limitPerTag = 10,
+  maxOrgsScan = 150,
+  maxTagGroups = 12,
   category
 }) => {
+  const orgsScan = Math.max(1, Number(maxOrgsScan) || 150);
+  const perTag = Math.max(1, Number(limitPerTag) || 10);
+  const tagGroupsCap = Math.max(1, Number(maxTagGroups) || 12);
   const radiusMeters = (radiusKm || 0) * 1000;
 
   const categoryObjectId = category
@@ -2265,6 +2270,15 @@ const getOrganizationsGroupedByTagsRepo = async ({
       $addFields: { distance: null }
     });
   }
+
+  /**
+   * Cap orgs BEFORE lookups/group so global mode cannot scan the full collection.
+   * Sort closest-first when distance exists; otherwise keep natural order.
+   */
+  if (userLocation) {
+    pipeline.push({ $sort: { distance: 1 } });
+  }
+  pipeline.push({ $limit: orgsScan });
 
   /**
    * -------------------------------------
@@ -2362,14 +2376,7 @@ const getOrganizationsGroupedByTagsRepo = async ({
 
   /**
    * -------------------------------------
-   * 6️⃣ SORT (closest first)
-   * -------------------------------------
-   */
-  pipeline.push({ $sort: { distance: 1 } });
-
-  /**
-   * -------------------------------------
-   * 7️⃣ GROUP BY TAG
+   * 6️⃣ GROUP BY TAG
    * -------------------------------------
    */
   pipeline.push({
@@ -2401,16 +2408,17 @@ const getOrganizationsGroupedByTagsRepo = async ({
 
   /**
    * -------------------------------------
-   * 8️⃣ LIMIT PER TAG
+   * 7️⃣ LIMIT PER TAG + TAG GROUPS
    * -------------------------------------
    */
   pipeline.push({
     $project: {
       _id: 0,
       title: 1,
-      objects: { $slice: ["$objects", limitPerTag] }
+      objects: { $slice: ["$objects", perTag] }
     }
   });
+  pipeline.push({ $limit: tagGroupsCap });
 
   return Organizations.aggregate(pipeline).allowDiskUse(true);
 };

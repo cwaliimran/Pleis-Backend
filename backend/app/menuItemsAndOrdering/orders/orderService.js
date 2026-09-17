@@ -212,6 +212,7 @@ const buildOrderCombos = async ({
         JSON.stringify({
           _id: combo._id,
           name: combo.name,
+          image: combo.image || "",
           description: combo.description || "",
           subCategory: combo.subCategory || null,
           priceMode: combo.priceMode,

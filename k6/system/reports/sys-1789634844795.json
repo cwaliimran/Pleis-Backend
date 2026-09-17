@@ -1,0 +1,639 @@
+{
+  "startedAt": "2026-09-17T08:47:24.795Z",
+  "finishedAt": "2026-09-17T08:49:15.613Z",
+  "base": "http://127.0.0.1:4020/api/v1",
+  "runId": "sys-1789634844795",
+  "concurrency": 20,
+  "durationSec": 60,
+  "phases": [
+    {
+      "name": "auth",
+      "ms": 3966
+    },
+    {
+      "name": "discover",
+      "ms": 25912
+    },
+    {
+      "name": "seed-users",
+      "ms": 17456
+    },
+    {
+      "name": "seed-org",
+      "ms": 2147
+    },
+    {
+      "name": "load",
+      "ms": 61325
+    },
+    {
+      "name": "post-health",
+      "ms": 2
+    }
+  ],
+  "seeded": {
+    "guestUser": {
+      "basicInfo": {
+        "_id": "6aab7ba23b9b64b16deb5d35",
+        "profileIcon": "https://pleis-images-ceeshqhnf7avgnan.z02.azurefd.net/pleisappcontainerdev/noimage.png",
+        "firstName": "Guest",
+        "lastName": "User",
+        "email": "guest@pleis.com",
+        "phoneNumber": {
+          "code": "",
+          "number": ""
+        },
+        "language": "en",
+        "publicId": "85882692",
+        "companyDetails": null
+      },
+      "accountState": {
+        "companyDetails": null,
+        "twoFactorAuth": false,
+        "userType": "guest",
+        "status": "active",
+        "profileCompleted": true,
+        "verificationStatus": {
+          "email": "verified",
+          "phoneNumber": "pending"
+        },
+        "userglobalwallets": [],
+        "revenue": 0,
+        "lastLogin": null
+      },
+      "preferences": {
+        "notifications": {
+          "email": true,
+          "push": true
+        }
+      },
+      "metadata": {
+        "timezone": "UTC",
+        "createdAt": "2026-09-17T05:33:22.427Z",
+        "updatedAt": "2026-09-17T08:45:33.118Z",
+        "__v": 0
+      },
+      "token": "[REDACTED_JWT]"
+    },
+    "adminUser": {
+      "basicInfo": {
+        "_id": "6aab7ba33b9b64b16deb5d5a",
+        "profileIcon": "https://pleis-images-ceeshqhnf7avgnan.z02.azurefd.net/pleisappcontainerdev/noimage.png",
+        "firstName": "Pleis",
+        "lastName": "Admin",
+        "email": "admin@pleis.com",
+        "phoneNumber": {
+          "code": "",
+          "number": ""
+        },
+        "language": "en",
+        "publicId": "14727438",
+        "companyDetails": null
+      },
+      "accountState": {
+        "companyDetails": null,
+        "twoFactorAuth": false,
+        "userType": "admin",
+        "status": "active",
+        "profileCompleted": true,
+        "verificationStatus": {
+          "email": "verified",
+          "phoneNumber": "pending"
+        },
+        "userglobalwallets": [],
+        "revenue": 0,
+        "lastLogin": null
+      },
+      "preferences": {
+        "notifications": {
+          "email": true,
+          "push": true
+        }
+      },
+      "metadata": {
+        "timezone": "UTC",
+        "createdAt": "2026-09-17T05:33:23.176Z",
+        "updatedAt": "2026-09-17T08:45:37.115Z",
+        "__v": 0
+      },
+      "token": "[REDACTED_JWT]"
+    },
+    "discovered": {
+      "orgCount": 10,
+      "venueCount": 10,
+      "userCount": 3,
+      "eventCount": 0,
+      "orgId": "6aab92339a7dd9a391c33adb",
+      "countries": 250
+    },
+    "users": [
+      {
+        "email": "loadtest.sys-1789634844795.0@example.com",
+        "status": 400,
+        "message": "Missing raw data fields: dob, gender"
+      },
+      {
+        "email": "loadtest.sys-1789634844795.1@example.com",
+        "status": 400,
+        "message": "Missing raw data fields: dob, gender"
+      },
+      {
+        "email": "loadtest.sys-1789634844795.2@example.com",
+        "status": 400,
+        "message": "Missing raw data fields: dob, gender"
+      },
+      {
+        "email": "loadtest.sys-1789634844795.3@example.com",
+        "status": 400,
+        "message": "Missing raw data fields: dob, gender"
+      },
+      {
+        "email": "loadtest.sys-1789634844795.4@example.com",
+        "status": 400,
+        "message": "Missing raw data fields: dob, gender"
+      }
+    ],
+    "venueType": {
+      "status": 400,
+      "message": "Missing raw data fields: categories"
+    },
+    "organization": {
+      "status": 500,
+      "message": "Input must be a 24 character hex string, 12 byte Uint8Array, or an integer"
+    }
+  },
+  "endpointCount": 38,
+  "endpoints": {
+    "auth.login.guest": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1998,
+      "p95": 1998,
+      "p99": 1998,
+      "max": 1998
+    },
+    "auth.login.admin": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1968,
+      "p95": 1968,
+      "p99": 1968,
+      "max": 1968
+    },
+    "locations.countries": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 2013,
+      "p95": 2013,
+      "p99": 2013,
+      "max": 2013
+    },
+    "settings/settings/privacy-policy": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 2197,
+      "p95": 2197,
+      "p99": 2197,
+      "max": 2197
+    },
+    "settings/settings/terms-conditions": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 2123,
+      "p95": 2123,
+      "p99": 2123,
+      "max": 2123
+    },
+    "settings/settings/about-us": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 2110,
+      "p95": 2110,
+      "p99": 2110,
+      "max": 2110
+    },
+    "settings/settings/faqs": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 2128,
+      "p95": 2128,
+      "p99": 2128,
+      "max": 2128
+    },
+    "admin.organizations.list": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1947,
+      "p95": 1947,
+      "p99": 1947,
+      "max": 1947
+    },
+    "admin.venues.list": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1960,
+      "p95": 1960,
+      "p99": 1960,
+      "max": 1960
+    },
+    "admin.users.list": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1991,
+      "p95": 1991,
+      "p99": 1991,
+      "max": 1991
+    },
+    "admin.events.list": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1858,
+      "p95": 1858,
+      "p99": 1858,
+      "max": 1858
+    },
+    "app.orgs.nearby": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1074,
+      "p95": 1074,
+      "p99": 1074,
+      "max": 1074
+    },
+    "app.popular.events": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1859,
+      "p95": 1859,
+      "p99": 1859,
+      "max": 1859
+    },
+    "tags.global": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1656,
+      "p95": 1656,
+      "p99": 1656,
+      "max": 1656
+    },
+    "categories.via.admin": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1129,
+      "p95": 1129,
+      "p99": 1129,
+      "max": 1129
+    },
+    "app.menu.items": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1866,
+      "p95": 1866,
+      "p99": 1866,
+      "max": 1866
+    },
+    "admin.users.create": {
+      "ok": 5,
+      "fail": 0,
+      "reqs": 5,
+      "statuses": {
+        "400": 5
+      },
+      "p50": 1652,
+      "p95": 1882,
+      "p99": 1882,
+      "max": 1882
+    },
+    "auth.register": {
+      "ok": 5,
+      "fail": 0,
+      "reqs": 5,
+      "statuses": {
+        "400": 5
+      },
+      "p50": 1856,
+      "p95": 1884,
+      "p99": 1884,
+      "max": 1884
+    },
+    "admin.venueTypes.create": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "400": 1
+      },
+      "p50": 1072,
+      "p95": 1072,
+      "p99": 1072,
+      "max": 1072
+    },
+    "admin.organizations.create": {
+      "ok": 0,
+      "fail": 1,
+      "reqs": 1,
+      "statuses": {
+        "500": 1
+      },
+      "p50": 1074,
+      "p95": 1074,
+      "p99": 1074,
+      "max": 1074
+    },
+    "L.health": {
+      "ok": 60,
+      "fail": 0,
+      "reqs": 60,
+      "statuses": {
+        "200": 60
+      },
+      "p50": 1,
+      "p95": 6,
+      "p99": 8,
+      "max": 8
+    },
+    "L.apiRoot": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1,
+      "p95": 4,
+      "p99": 9,
+      "max": 9
+    },
+    "L.guest.nearby": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 815,
+      "p95": 1122,
+      "p99": 1155,
+      "max": 1155
+    },
+    "L.app.org.profile": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 838,
+      "p95": 1277,
+      "p99": 1347,
+      "max": 1347
+    },
+    "L.guest.trending": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 912,
+      "p95": 1277,
+      "p99": 1455,
+      "max": 1455
+    },
+    "L.guest.popular": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1363,
+      "p95": 1848,
+      "p99": 1851,
+      "max": 1851
+    },
+    "L.admin.orgs": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1373,
+      "p95": 1669,
+      "p99": 1850,
+      "max": 1850
+    },
+    "L.countries": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1606,
+      "p95": 1987,
+      "p99": 2095,
+      "max": 2095
+    },
+    "L.guest.menu": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1354,
+      "p95": 1860,
+      "p99": 1929,
+      "max": 1929
+    },
+    "L.admin.events": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1412,
+      "p95": 1821,
+      "p99": 1921,
+      "max": 1921
+    },
+    "L.admin.users": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1382,
+      "p95": 1813,
+      "p99": 1960,
+      "max": 1960
+    },
+    "L.admin.venues": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1396,
+      "p95": 1716,
+      "p99": 1901,
+      "max": 1901
+    },
+    "L.faqs": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1869,
+      "p95": 2152,
+      "p99": 2253,
+      "max": 2253
+    },
+    "L.admin.dashboard": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1352,
+      "p95": 1874,
+      "p99": 1917,
+      "max": 1917
+    },
+    "L.privacy": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1863,
+      "p95": 2245,
+      "p99": 2259,
+      "max": 2259
+    },
+    "L.guest.foryou.orgs": {
+      "ok": 59,
+      "fail": 0,
+      "reqs": 59,
+      "statuses": {
+        "200": 59
+      },
+      "p50": 1304,
+      "p95": 1855,
+      "p99": 2956,
+      "max": 2956
+    },
+    "post.health": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 2,
+      "p95": 2,
+      "p99": 2,
+      "max": 2
+    },
+    "post.api": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 0,
+      "p95": 0,
+      "p99": 0,
+      "max": 0
+    }
+  },
+  "totals": {
+    "ok": 974,
+    "fail": 1,
+    "reqs": 975
+  },
+  "errorSample": [
+    {
+      "name": "admin.organizations.create",
+      "status": 500,
+      "ms": 1074,
+      "message": "Input must be a 24 character hex string, 12 byte Uint8Array, or an integer",
+      "path": "/admin/organizations"
+    }
+  ],
+  "errorCount": 1
+}

@@ -36,9 +36,13 @@ const yearlyDiscountSchema = new mongoose.Schema({
   discountPercent: { type: Number, default: 0 },   // Example: 15%
 });
 const commissionSchema = new mongoose.Schema({
-  orderingCommission:   { type: Number, default: 0 },
-  ticketingCommission:    { type: Number, default: 0 },
-  reservationCommission:{ type: Number, default: 0 },
+  orderingCommission: { type: Number, default: 0 },
+  ticketingCommission: { type: Number, default: 0 },
+  reservationCommission: { type: Number, default: 0 },
+  /** Tip (napojnica) commission on ordering tips — used by payout split. */
+  tipCommission: { type: Number, default: 0 },
+  /** Off-app / cash ordering commission — used by off-app fiscalize batch. */
+  offAppOrderingCommission: { type: Number, default: 0 },
 });
 // ---------------------------------------------------------
 // MAIN SUBSCRIPTION SETTINGS DOCUMENT

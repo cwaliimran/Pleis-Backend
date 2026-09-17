@@ -10,6 +10,7 @@ module.exports = {
   ticketId: "ID ulaznice",
   fastTrack: "Fast track",
   minSpendPrepayment: "Predujam za minimalnu potrošnju (višenamjenski vaučer)",
+  reservationTax: "Porez na rezervaciju",
   print: "Ispiši",
   download: "Preuzmi",
   subjectWithVoucher: (venue) => `Potvrda o plaćanju i vaučer, ${venue}`,

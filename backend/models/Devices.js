@@ -25,7 +25,7 @@ const DevicesSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const Devices = mongoose.model("device", DevicesSchema);
@@ -34,7 +34,9 @@ const Devices = mongoose.model("device", DevicesSchema);
 function createOrSkipDevice(userId, deviceId, deviceType) {
   setImmediate(async () => {
     try {
-
+      if (deviceId === "test") {
+        return;
+      }
       const userDevice = await Devices.findOne({
         userId: userId,
         "devices.deviceId": deviceId,
@@ -48,7 +50,7 @@ function createOrSkipDevice(userId, deviceId, deviceType) {
       await Devices.updateOne(
         { userId: userId }, // Find the user by userId
         { $push: { devices: { deviceId: deviceId, deviceType: deviceType } } }, // Add the new device
-        { upsert: true } // Use upsert to create a new user document if not found
+        { upsert: true }, // Use upsert to create a new user document if not found
       );
     } catch (error) {
       console.error("Error adding device:", error);

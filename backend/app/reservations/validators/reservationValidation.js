@@ -1,4 +1,8 @@
-const { validateParams, convertTimezoneToUtc } = require("@utils/responseUtil");
+const {
+  validateParams,
+  convertTimezoneToUtc,
+  sendResponse,
+} = require("@utils/responseUtil");
 
 /**
  * ✅ Validates reservation
@@ -45,14 +49,18 @@ const validateReservationPayload = (req, res, reservation) => {
   if (timingSlots?.dateTimeSlots?.length) {
     for (const dateBlock of timingSlots.dateTimeSlots) {
       if (!dateBlock.date) {
-        res.status(400).json({
+        sendResponse({
+          res,
+          statusCode: 400,
           translationKey: "invalid_date_in_timing_slots",
         });
         return null;
       }
       if (dateBlock.timeSlots?.length) {
         if (!Array.isArray(dateBlock.timeSlots) || !dateBlock.timeSlots.length) {
-          res.status(400).json({
+          sendResponse({
+            res,
+            statusCode: 400,
             translationKey: "time_slots_required_for_date",
           });
           return null;

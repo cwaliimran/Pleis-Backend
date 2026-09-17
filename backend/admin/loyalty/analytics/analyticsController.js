@@ -104,8 +104,11 @@ const getAnalyticsValue = async (req, res) => {
 
   // 1. Validate key
   if (!Analytics_KEYS[key]) {
-    return res.status(400).json({
-      message: "Invalid Analytics key",
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_filter_key",
+      values: { type: "Analytics" },
     });
   }
 
@@ -115,8 +118,10 @@ const getAnalyticsValue = async (req, res) => {
   );
 
   if (!isValidSubFilter) {
-    return res.status(400).json({
-      message: "Invalid sub filter for given key",
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_sub_filter",
     });
   }
 

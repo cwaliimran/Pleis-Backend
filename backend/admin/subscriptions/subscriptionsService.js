@@ -87,10 +87,20 @@ const updateSubscription = async (id, data) => {
   if (data.commissions !== undefined) {
     const c = data.commissions;
 
-    // ❌ orderingCommission NOT allowed unless ordering module exists
+    // ❌ orderingCommission / tip / off-app NOT allowed unless ordering module exists
     if (c.orderingCommission !== undefined) {
       if (!finalModules.includes("ordering")) {
         return { error: "ordering_module_required_for_orderingCommission" };
+      }
+    }
+    if (c.tipCommission !== undefined) {
+      if (!finalModules.includes("ordering")) {
+        return { error: "ordering_module_required_for_tipCommission" };
+      }
+    }
+    if (c.offAppOrderingCommission !== undefined) {
+      if (!finalModules.includes("ordering")) {
+        return { error: "ordering_module_required_for_offAppOrderingCommission" };
       }
     }
 

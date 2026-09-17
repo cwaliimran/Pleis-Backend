@@ -27,6 +27,7 @@ const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 const { getCreatorByStaffId } = require("../admin/organizations/organizationRepository");
 const UserLogs = require("../models/UserLogs");
 const { hardDeleteUserById } = require("../helperUtils/hardDeleteUser");
+const { recordAuthFailure } = require("../services/security/ipThreatService");
 
 const createAdmin = async (req, res) => {
   try {
@@ -282,12 +283,20 @@ const login = async (req, res) => {
     // Check if an error occurred
     if (user.error) {
       if (user.error === "user_not_found") {
+        recordAuthFailure(req, {
+          reason: "user_not_found",
+          email,
+        });
         return sendResponse({
           res,
           statusCode: 404,
           translationKey: "user_not_found", // Use your translation key for user not found
         });
       } else if (user.error === "incorrect_password") {
+        recordAuthFailure(req, {
+          reason: "incorrect_password",
+          email,
+        });
         return sendResponse({
           res,
           statusCode: 401,
@@ -700,6 +709,10 @@ const verifyOtp = async (req, res) => {
     if (type === "email") {
       // Check if the OTP matches
       if (userOtpInfo.otp !== otp.toString()) {
+        recordAuthFailure(req, {
+          reason: "otp",
+          email,
+        });
         return sendResponse({
           res,
           statusCode: 400,

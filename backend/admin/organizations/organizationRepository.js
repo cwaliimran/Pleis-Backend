@@ -1029,25 +1029,21 @@ const getOrganizationsBatchRepo = async ({
   let venueOrgMap = new Map(); // orgId -> [venueTypeIds]
 
   if (venueTypeObjectIds.length) {
-    const venueAgg = await Venues.aggregate([
-      {
-        $match: {
-          status: "active",
-          venueType: { $in: venueTypeObjectIds },
-        },
-      },
-      {
-        $group: {
-          _id: "$organization",
-          venueTypes: { $addToSet: "$venueType" },
-        },
-      },
-    ]);
+    const { getActiveVenueTypeMap } = require("../venues/venuesRepository");
+    const needed = new Set(venueTypeObjectIds.map((id) => String(id)));
+    const allVenues = await getActiveVenueTypeMap();
 
-    for (const v of venueAgg) {
+    for (const v of allVenues || []) {
+      const matchedTypes = (v.venueType || []).filter((vt) => needed.has(String(vt)));
+      if (!matchedTypes.length) continue;
+
+      const orgId = v.organization;
+      if (!orgId) continue;
+
+      const existing = venueOrgMap.get(String(orgId)) || [];
       venueOrgMap.set(
-        v._id.toString(),
-        v.venueTypes.map((x) => x.toString()),
+        String(orgId),
+        [...new Set([...existing, ...matchedTypes.map(String)])],
       );
     }
 

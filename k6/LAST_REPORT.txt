@@ -1,0 +1,513 @@
+============================================================
+FINAL multi-country rate-limit ISOLATION REPORT
+Started: 2026-09-17T08:41:00Z
+BASE_URL=http://127.0.0.1:4020 RUN_ID=1789634457
+Server must stay up (no file edits during this run)
+============================================================
+
+===== A) CURL XFF PROBE =====
+attacker=203.0.113.167  victims=198.51.100.167,192.0.2.167
+attacker x25: 404 404 404 404 404 404 404 404 404 404 404 404 404 404 404 404 404 404 404 404 429 429 429 429 429 
+victim 198.51.100.167 -> 404
+victim 192.0.2.167 -> 404
+attacker after flood -> 429
+
+===== B) K6 ISOLATION (6 countries/users) =====
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6/rate-limit-isolation.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 6 max VUs, 3m33s max duration (incl. graceful stop):
+              * attacker: 35 iterations for each of 1 VUs (maxDuration: 3m0s, exec: attackerScenario, gracefulStop: 30s)
+              * victims: 8 iterations for each of 5 VUs (maxDuration: 3m0s, exec: victimScenario, startTime: 3s, gracefulStop: 30s)
+
+time="2026-09-17T13:41:39+05:00" level=info msg="RUN_ID=457 attacker=203.0.113.67" source=console
+time="2026-09-17T13:41:39+05:00" level=info msg="victim DE-user=198.51.100.68" source=console
+time="2026-09-17T13:41:39+05:00" level=info msg="victim PK-user=192.0.2.69" source=console
+time="2026-09-17T13:41:39+05:00" level=info msg="victim GB-user=203.0.113.70" source=console
+time="2026-09-17T13:41:39+05:00" level=info msg="victim FR-user=198.51.100.71" source=console
+time="2026-09-17T13:41:39+05:00" level=info msg="victim AE-user=192.0.2.72" source=console
+
+running (0m01.0s), 1/6 VUs, 0 complete and 0 interrupted iterations
+attacker   [   0% ] 1 VUs    0m01.0s/3m0s  00/35 iters, 35 per VU
+victims  • [   0% ] waiting  2.0s         
+
+running (0m02.0s), 1/6 VUs, 1 complete and 0 interrupted iterations
+attacker   [   3% ] 1 VUs    0m02.0s/3m0s  01/35 iters, 35 per VU
+victims  • [   0% ] waiting  1.0s         
+
+running (0m03.0s), 1/6 VUs, 1 complete and 0 interrupted iterations
+attacker   [   3% ] 1 VUs    0m03.0s/3m0s  01/35 iters, 35 per VU
+victims  • [   0% ] waiting  0.0s         
+
+running (0m04.0s), 6/6 VUs, 2 complete and 0 interrupted iterations
+attacker   [   6% ] 1 VUs  0m04.0s/3m0s  02/35 iters, 35 per VU
+victims    [   0% ] 5 VUs  0m01.0s/3m0s  00/40 iters, 8 per VU
+
+running (0m05.0s), 6/6 VUs, 5 complete and 0 interrupted iterations
+attacker   [   9% ] 1 VUs  0m05.0s/3m0s  03/35 iters, 35 per VU
+victims    [   5% ] 5 VUs  0m02.0s/3m0s  02/40 iters, 8 per VU
+
+running (0m06.0s), 6/6 VUs, 8 complete and 0 interrupted iterations
+attacker   [   9% ] 1 VUs  0m06.0s/3m0s  03/35 iters, 35 per VU
+victims    [  12% ] 5 VUs  0m03.0s/3m0s  05/40 iters, 8 per VU
+
+running (0m07.0s), 6/6 VUs, 14 complete and 0 interrupted iterations
+attacker   [  11% ] 1 VUs  0m07.0s/3m0s  04/35 iters, 35 per VU
+victims    [  25% ] 5 VUs  0m04.0s/3m0s  10/40 iters, 8 per VU
+
+running (0m08.0s), 6/6 VUs, 17 complete and 0 interrupted iterations
+attacker   [  14% ] 1 VUs  0m08.0s/3m0s  05/35 iters, 35 per VU
+victims    [  30% ] 5 VUs  0m05.0s/3m0s  12/40 iters, 8 per VU
+
+running (0m09.0s), 6/6 VUs, 21 complete and 0 interrupted iterations
+attacker   [  17% ] 1 VUs  0m09.0s/3m0s  06/35 iters, 35 per VU
+victims    [  38% ] 5 VUs  0m06.0s/3m0s  15/40 iters, 8 per VU
+
+running (0m10.0s), 6/6 VUs, 26 complete and 0 interrupted iterations
+attacker   [  17% ] 1 VUs  0m10.0s/3m0s  06/35 iters, 35 per VU
+victims    [  50% ] 5 VUs  0m07.0s/3m0s  20/40 iters, 8 per VU
+
+running (0m11.0s), 6/6 VUs, 29 complete and 0 interrupted iterations
+attacker   [  20% ] 1 VUs  0m11.0s/3m0s  07/35 iters, 35 per VU
+victims    [  55% ] 5 VUs  0m08.0s/3m0s  22/40 iters, 8 per VU
+
+running (0m12.0s), 6/6 VUs, 33 complete and 0 interrupted iterations
+attacker   [  23% ] 1 VUs  0m12.0s/3m0s  08/35 iters, 35 per VU
+victims    [  62% ] 5 VUs  0m09.0s/3m0s  25/40 iters, 8 per VU
+
+running (0m13.0s), 6/6 VUs, 38 complete and 0 interrupted iterations
+attacker   [  23% ] 1 VUs  0m13.0s/3m0s  08/35 iters, 35 per VU
+victims    [  75% ] 5 VUs  0m10.0s/3m0s  30/40 iters, 8 per VU
+
+running (0m14.0s), 6/6 VUs, 41 complete and 0 interrupted iterations
+attacker   [  26% ] 1 VUs  0m14.0s/3m0s  09/35 iters, 35 per VU
+victims    [  80% ] 5 VUs  0m11.0s/3m0s  32/40 iters, 8 per VU
+
+running (0m15.0s), 6/6 VUs, 45 complete and 0 interrupted iterations
+attacker   [  29% ] 1 VUs  0m15.0s/3m0s  10/35 iters, 35 per VU
+victims    [  88% ] 5 VUs  0m12.0s/3m0s  35/40 iters, 8 per VU
+
+running (0m16.0s), 1/6 VUs, 51 complete and 0 interrupted iterations
+attacker   [  31% ] 1 VUs  0m16.0s/3m0s  11/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m17.0s), 1/6 VUs, 51 complete and 0 interrupted iterations
+attacker   [  31% ] 1 VUs  0m17.0s/3m0s  11/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m18.0s), 1/6 VUs, 52 complete and 0 interrupted iterations
+attacker   [  34% ] 1 VUs  0m18.0s/3m0s  12/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m19.0s), 1/6 VUs, 53 complete and 0 interrupted iterations
+attacker   [  37% ] 1 VUs  0m19.0s/3m0s  13/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m20.0s), 1/6 VUs, 54 complete and 0 interrupted iterations
+attacker   [  40% ] 1 VUs  0m20.0s/3m0s  14/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m21.0s), 1/6 VUs, 54 complete and 0 interrupted iterations
+attacker   [  40% ] 1 VUs  0m21.0s/3m0s  14/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m22.0s), 1/6 VUs, 55 complete and 0 interrupted iterations
+attacker   [  43% ] 1 VUs  0m22.0s/3m0s  15/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m23.0s), 1/6 VUs, 55 complete and 0 interrupted iterations
+attacker   [  43% ] 1 VUs  0m23.0s/3m0s  15/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m24.0s), 1/6 VUs, 56 complete and 0 interrupted iterations
+attacker   [  46% ] 1 VUs  0m24.0s/3m0s  16/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m25.0s), 1/6 VUs, 57 complete and 0 interrupted iterations
+attacker   [  49% ] 1 VUs  0m25.0s/3m0s  17/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m26.0s), 1/6 VUs, 57 complete and 0 interrupted iterations
+attacker   [  49% ] 1 VUs  0m26.0s/3m0s  17/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m27.0s), 1/6 VUs, 58 complete and 0 interrupted iterations
+attacker   [  51% ] 1 VUs  0m27.0s/3m0s  18/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m28.0s), 1/6 VUs, 59 complete and 0 interrupted iterations
+attacker   [  54% ] 1 VUs  0m28.0s/3m0s  19/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m29.0s), 1/6 VUs, 60 complete and 0 interrupted iterations
+attacker   [  57% ] 1 VUs  0m29.0s/3m0s  20/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m30.0s), 1/6 VUs, 60 complete and 0 interrupted iterations
+attacker   [  57% ] 1 VUs  0m30.0s/3m0s  20/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m31.0s), 1/6 VUs, 61 complete and 0 interrupted iterations
+attacker   [  60% ] 1 VUs  0m31.0s/3m0s  21/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m32.0s), 1/6 VUs, 62 complete and 0 interrupted iterations
+attacker   [  63% ] 1 VUs  0m32.0s/3m0s  22/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m33.0s), 1/6 VUs, 62 complete and 0 interrupted iterations
+attacker   [  63% ] 1 VUs  0m33.0s/3m0s  22/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m34.0s), 1/6 VUs, 63 complete and 0 interrupted iterations
+attacker   [  66% ] 1 VUs  0m34.0s/3m0s  23/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m35.0s), 1/6 VUs, 64 complete and 0 interrupted iterations
+attacker   [  69% ] 1 VUs  0m35.0s/3m0s  24/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m36.0s), 1/6 VUs, 65 complete and 0 interrupted iterations
+attacker   [  71% ] 1 VUs  0m36.0s/3m0s  25/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m37.0s), 1/6 VUs, 65 complete and 0 interrupted iterations
+attacker   [  71% ] 1 VUs  0m37.0s/3m0s  25/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m38.0s), 1/6 VUs, 66 complete and 0 interrupted iterations
+attacker   [  74% ] 1 VUs  0m38.0s/3m0s  26/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m39.0s), 1/6 VUs, 67 complete and 0 interrupted iterations
+attacker   [  77% ] 1 VUs  0m39.0s/3m0s  27/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m40.0s), 1/6 VUs, 68 complete and 0 interrupted iterations
+attacker   [  80% ] 1 VUs  0m40.0s/3m0s  28/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m41.0s), 1/6 VUs, 68 complete and 0 interrupted iterations
+attacker   [  80% ] 1 VUs  0m41.0s/3m0s  28/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m42.0s), 1/6 VUs, 69 complete and 0 interrupted iterations
+attacker   [  83% ] 1 VUs  0m42.0s/3m0s  29/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m43.0s), 1/6 VUs, 70 complete and 0 interrupted iterations
+attacker   [  86% ] 1 VUs  0m43.0s/3m0s  30/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m44.0s), 1/6 VUs, 70 complete and 0 interrupted iterations
+attacker   [  86% ] 1 VUs  0m44.0s/3m0s  30/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m45.0s), 1/6 VUs, 71 complete and 0 interrupted iterations
+attacker   [  89% ] 1 VUs  0m45.0s/3m0s  31/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m46.0s), 1/6 VUs, 72 complete and 0 interrupted iterations
+attacker   [  91% ] 1 VUs  0m46.0s/3m0s  32/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m47.0s), 1/6 VUs, 72 complete and 0 interrupted iterations
+attacker   [  91% ] 1 VUs  0m47.0s/3m0s  32/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m48.0s), 1/6 VUs, 73 complete and 0 interrupted iterations
+attacker   [  94% ] 1 VUs  0m48.0s/3m0s  33/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m49.0s), 1/6 VUs, 74 complete and 0 interrupted iterations
+attacker   [  97% ] 1 VUs  0m49.0s/3m0s  34/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+running (0m50.0s), 1/6 VUs, 74 complete and 0 interrupted iterations
+attacker   [  97% ] 1 VUs  0m50.0s/3m0s  34/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+
+
+  █ THRESHOLDS 
+
+    attacker_429
+    ✓ 'count>0' count=15
+
+    isolation_fail
+    ✓ 'rate==0' rate=0.00%
+
+    victim_429
+    ✓ 'count==0' count=0
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 265     5.288339/s
+    checks_succeeded...: 100.00% 265 out of 265
+    checks_failed......: 0.00%   0 out of 265
+
+    ✓ attacker: got response
+    ✓ attacker: not 5xx
+    ✓ attacker: 401/404/400/429
+    ✓ victim: got response
+    ✓ victim: not 5xx
+    ✓ victim: NOT rate-limited by attacker
+    ✓ victim: normal auth failure
+
+    CUSTOM
+    attacker_429.........: 15      0.29934/s
+    attacker_pre_limit...: 20      0.39912/s
+    isolation_fail.......: 0.00%   0 out of 75
+    victim_429...........: 0       0/s
+    victim_ok............: 40      0.79824/s
+
+    HTTP
+    http_req_duration....: avg=1.35s min=1.27s med=1.3s  max=1.81s p(90)=1.47s p(95)=1.79s
+    http_req_failed......: 100.00% 75 out of 75
+    http_reqs............: 75      1.4967/s
+
+    EXECUTION
+    iteration_duration...: avg=1.49s min=1.36s med=1.49s max=2.01s p(90)=1.65s p(95)=1.87s
+    iterations...........: 75      1.4967/s
+    vus..................: 1       min=1        max=6
+    vus_max..............: 6       min=6        max=6
+
+    NETWORK
+    data_received........: 105 kB  2.1 kB/s
+    data_sent............: 27 kB   542 B/s
+
+
+
+
+running (0m50.1s), 0/6 VUs, 75 complete and 0 interrupted iterations
+attacker ✓ [ 100% ] 1 VUs  0m50.1s/3m0s  35/35 iters, 35 per VU
+victims  ✓ [ 100% ] 5 VUs  0m12.6s/3m0s  40/40 iters, 8 per VU
+isolation_exit=0
+
+===== C) HEALTH ci =====
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6/health.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 2 max VUs, 45s max duration (incl. graceful stop):
+              * default: Up to 2 looping VUs for 15s over 2 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+running (01.0s), 1/2 VUs, 4 complete and 0 interrupted iterations
+default   [   7% ] 1/2 VUs  01.0s/15.0s
+
+running (02.0s), 1/2 VUs, 9 complete and 0 interrupted iterations
+default   [  13% ] 1/2 VUs  02.0s/15.0s
+
+running (03.0s), 1/2 VUs, 14 complete and 0 interrupted iterations
+default   [  20% ] 1/2 VUs  03.0s/15.0s
+
+running (04.0s), 1/2 VUs, 19 complete and 0 interrupted iterations
+default   [  27% ] 1/2 VUs  04.0s/15.0s
+
+running (05.0s), 1/2 VUs, 24 complete and 0 interrupted iterations
+default   [  33% ] 1/2 VUs  05.0s/15.0s
+
+running (06.0s), 1/2 VUs, 29 complete and 0 interrupted iterations
+default   [  40% ] 1/2 VUs  06.0s/15.0s
+
+running (07.0s), 1/2 VUs, 34 complete and 0 interrupted iterations
+default   [  47% ] 1/2 VUs  07.0s/15.0s
+
+running (08.0s), 1/2 VUs, 39 complete and 0 interrupted iterations
+default   [  53% ] 1/2 VUs  08.0s/15.0s
+
+running (09.0s), 1/2 VUs, 44 complete and 0 interrupted iterations
+default   [  60% ] 1/2 VUs  09.0s/15.0s
+
+running (10.0s), 1/2 VUs, 49 complete and 0 interrupted iterations
+default   [  67% ] 1/2 VUs  10.0s/15.0s
+
+running (11.0s), 2/2 VUs, 58 complete and 0 interrupted iterations
+default   [  73% ] 2/2 VUs  11.0s/15.0s
+
+running (12.0s), 2/2 VUs, 68 complete and 0 interrupted iterations
+default   [  80% ] 2/2 VUs  12.0s/15.0s
+
+running (13.0s), 1/2 VUs, 77 complete and 0 interrupted iterations
+default   [  87% ] 1/2 VUs  13.0s/15.0s
+
+running (14.0s), 1/2 VUs, 82 complete and 0 interrupted iterations
+default   [  93% ] 1/2 VUs  14.0s/15.0s
+
+running (15.0s), 1/2 VUs, 87 complete and 0 interrupted iterations
+default   [ 100% ] 1/2 VUs  15.0s/15.0s
+
+
+  █ THRESHOLDS 
+
+    health_fail_rate
+    ✓ 'rate<0.01' rate=0.00%
+
+    http_req_duration
+    ✓ 'p(95)<500' p(95)=1.41ms
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 88      5.806205/s
+    checks_succeeded...: 100.00% 88 out of 88
+    checks_failed......: 0.00%   0 out of 88
+
+    ✓ health 200
+
+    CUSTOM
+    health_fail_rate...............: 0.00%  0 out of 88
+    health_latency.................: avg=948.4µs  min=544µs    med=831µs    max=4.42ms   p(90)=1.36ms  p(95)=1.41ms  
+
+    HTTP
+    http_req_duration..............: avg=948.4µs  min=544µs    med=831µs    max=4.42ms   p(90)=1.36ms  p(95)=1.41ms  
+      { expected_response:true }...: avg=948.4µs  min=544µs    med=831µs    max=4.42ms   p(90)=1.36ms  p(95)=1.41ms  
+    http_req_failed................: 0.00%  0 out of 88
+    http_reqs......................: 88     5.806205/s
+
+    EXECUTION
+    iteration_duration.............: avg=202.04ms min=200.81ms med=202.01ms max=204.83ms p(90)=202.7ms p(95)=202.85ms
+    iterations.....................: 88     5.806205/s
+    vus............................: 1      min=1       max=2
+    vus_max........................: 2      min=2       max=2
+
+    NETWORK
+    data_received..................: 24 kB  1.6 kB/s
+    data_sent......................: 6.7 kB 441 B/s
+
+
+
+
+running (15.2s), 0/2 VUs, 88 complete and 0 interrupted iterations
+default ✓ [ 100% ] 0/2 VUs  15s
+health_exit=0
+
+===== D) PUBLIC ci =====
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6/public-reads.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 2 max VUs, 45s max duration (incl. graceful stop):
+              * default: Up to 2 looping VUs for 15s over 2 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+running (01.0s), 1/2 VUs, 1 complete and 0 interrupted iterations
+default   [   7% ] 1/2 VUs  01.0s/15.0s
+
+running (02.0s), 1/2 VUs, 3 complete and 0 interrupted iterations
+default   [  13% ] 1/2 VUs  02.0s/15.0s
+
+running (03.0s), 1/2 VUs, 3 complete and 0 interrupted iterations
+default   [  20% ] 1/2 VUs  03.0s/15.0s
+
+running (04.0s), 1/2 VUs, 4 complete and 0 interrupted iterations
+default   [  27% ] 1/2 VUs  04.0s/15.0s
+
+running (05.0s), 1/2 VUs, 4 complete and 0 interrupted iterations
+default   [  33% ] 1/2 VUs  05.0s/15.0s
+
+running (06.0s), 1/2 VUs, 5 complete and 0 interrupted iterations
+default   [  40% ] 1/2 VUs  06.0s/15.0s
+
+running (07.0s), 1/2 VUs, 6 complete and 0 interrupted iterations
+default   [  47% ] 1/2 VUs  07.0s/15.0s
+
+running (08.0s), 1/2 VUs, 6 complete and 0 interrupted iterations
+default   [  53% ] 1/2 VUs  08.0s/15.0s
+
+running (09.0s), 1/2 VUs, 7 complete and 0 interrupted iterations
+default   [  60% ] 1/2 VUs  09.0s/15.0s
+
+running (10.0s), 1/2 VUs, 8 complete and 0 interrupted iterations
+default   [  67% ] 1/2 VUs  10.0s/15.0s
+
+running (11.0s), 2/2 VUs, 9 complete and 0 interrupted iterations
+default   [  73% ] 2/2 VUs  11.0s/15.0s
+
+running (12.0s), 2/2 VUs, 12 complete and 0 interrupted iterations
+default   [  80% ] 2/2 VUs  12.0s/15.0s
+
+running (13.0s), 2/2 VUs, 14 complete and 0 interrupted iterations
+default   [  87% ] 2/2 VUs  13.0s/15.0s
+
+running (14.0s), 2/2 VUs, 14 complete and 0 interrupted iterations
+default   [  93% ] 2/2 VUs  14.0s/15.0s
+
+running (15.0s), 1/2 VUs, 17 complete and 0 interrupted iterations
+default   [ 100% ] 1/2 VUs  15.0s/15.0s
+
+running (16.0s), 1/2 VUs, 17 complete and 0 interrupted iterations
+default ↓ [ 100% ] 1/2 VUs  15s
+
+
+  █ THRESHOLDS 
+
+    http_req_duration
+    ✓ 'p(95)<2500' p(95)=1.3s
+
+    public_fail_rate
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 36      2.172581/s
+    checks_succeeded...: 100.00% 36 out of 36
+    checks_failed......: 0.00%   0 out of 36
+
+    ✓ not 5xx
+    ✓ 2xx or 429
+
+    CUSTOM
+    public_fail_rate...............: 0.00%  0 out of 18
+
+    HTTP
+    http_req_duration..............: avg=646.01ms min=522µs    med=640.78ms max=1.3s p(90)=1.29s p(95)=1.3s
+      { expected_response:true }...: avg=646.01ms min=522µs    med=640.78ms max=1.3s p(90)=1.29s p(95)=1.3s
+    http_req_failed................: 0.00%  0 out of 18
+    http_reqs......................: 18     1.086291/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.14s    min=501.51ms med=1.14s    max=1.8s p(90)=1.79s p(95)=1.8s
+    iterations.....................: 18     1.086291/s
+    vus............................: 1      min=1       max=2
+    vus_max........................: 2      min=2       max=2
+
+    NETWORK
+    data_received..................: 28 kB  1.7 kB/s
+    data_sent......................: 3.0 kB 179 B/s
+
+
+
+
+running (16.6s), 0/2 VUs, 18 complete and 0 interrupted iterations
+default ✓ [ 100% ] 0/2 VUs  15s
+public_exit=0
+
+Finished: 2026-09-17T08:43:01Z

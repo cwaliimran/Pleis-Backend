@@ -680,7 +680,7 @@ const comboMenuItemLookupPipeline = [
 
 const getMenuItemsCombosWithFilters = async ({ query = {} } = {}) => {
   return MenuItemsCombos.find({ ...query, status: "active" })
-    .select("name description subCategory priceMode price status menuItems creator")
+    .select("name image description subCategory priceMode price status menuItems creator")
     .populate("subCategory", "name status category")
     .lean();
 };
@@ -773,6 +773,7 @@ const getMenuItemsCombos = async (
     {
       $project: {
         name: 1,
+        image: 1,
         description: 1,
         subCategory: 1,
         priceMode: 1,
@@ -825,6 +826,7 @@ const getMenuItemsCombos = async (
     applicable.push({
       _id: combo._id,
       name: combo.name,
+      image: combo.image,
       description: combo.description,
       subCategory: combo.subCategory,
       priceMode: combo.priceMode,

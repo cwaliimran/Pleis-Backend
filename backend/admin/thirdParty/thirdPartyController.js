@@ -370,8 +370,11 @@ const updateUserThirdpartyStatus = async (req, res) => {
   const { id, value } = req.params;
   const validStatuses = ["confirmed", "rejected", "pending", "cancelled"];
   if (!validStatuses.includes(value)) {
-    return res.status(404).json({
-      message: "Invalid Thirdparty status value. Accepted values are: confirmed, rejected, pending, cancelled.",
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "invalid_thirdparty_status",
+      values: { statuses: validStatuses.join(", ") },
     });
   }
   if (

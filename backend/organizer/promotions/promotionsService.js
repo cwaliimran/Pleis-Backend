@@ -6,7 +6,7 @@ const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");
 const {
   resolvePromotionTimes,
-} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
+} = require("../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 const create = async (data,timezone) => {
   let promotion = await repository.create(data);

@@ -13,7 +13,6 @@ const createVenue = async (data) => {
 };
 const mongoose = require("mongoose");
 const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../../admin/organizations/organizationService");
-const { ACTIVE_VENUES_CACHE_KEY } = require("../../admin/venues/venuesRepository");
 
 const getVenues = async ({
   page,
@@ -207,7 +206,6 @@ const getUnassignedVenues = async (userId) => {
 
 const updateVenue = async (id, data) => {
   let venue = await venueRepo.findVenueById(id);
-  await invalidate(ACTIVE_VENUES_CACHE_KEY);
   if (!venue) return null;
 
   const allowedFields = [

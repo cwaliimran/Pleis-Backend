@@ -433,10 +433,18 @@ const getOrganizationsGroupedByTagsService = async ({
   userId,
   category
 }) => {
+  const {
+    TAG_ORGS_SCAN,
+    TAG_LIMIT_PER_GROUP,
+    TAG_GROUPS_MAX,
+  } = require("../home/utils/homeFeedLimits");
+
   const results = await getOrganizationsGroupedByTagsRepo({
     userLocation,
     radiusKm,
-    limitPerTag: 10,
+    limitPerTag: TAG_LIMIT_PER_GROUP,
+    maxOrgsScan: TAG_ORGS_SCAN,
+    maxTagGroups: TAG_GROUPS_MAX,
     category
   });
 

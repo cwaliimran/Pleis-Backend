@@ -1,0 +1,1377 @@
+{
+  "summary": {
+    "base": "http://127.0.0.1:4020/api/v1",
+    "totalGetsInCollection": 253,
+    "exercised": 100,
+    "skipped": 55,
+    "byFolder": {
+      "App": {
+        "n": 48,
+        "ok": 39,
+        "statuses": {
+          "200": 39,
+          "400": 3,
+          "404": 4,
+          "500": 2
+        },
+        "lat": [
+          1873,
+          1890,
+          1904,
+          5171,
+          2025,
+          1880,
+          1893,
+          1851,
+          1724,
+          1123,
+          1477,
+          2236,
+          798,
+          801,
+          1626,
+          2151,
+          1760,
+          1358,
+          830,
+          1596,
+          2103,
+          1665,
+          1710,
+          811,
+          1617,
+          1381,
+          1344,
+          1399,
+          806,
+          842,
+          1666,
+          826,
+          1609,
+          1844,
+          1334,
+          1341,
+          1357,
+          820,
+          810,
+          847,
+          1609,
+          835,
+          811,
+          808,
+          809,
+          845,
+          1592,
+          809
+        ]
+      },
+      "Organizer": {
+        "n": 22,
+        "ok": 18,
+        "statuses": {
+          "200": 18,
+          "400": 2,
+          "404": 2
+        },
+        "lat": [
+          1069,
+          1593,
+          1610,
+          1610,
+          1349,
+          1414,
+          1430,
+          1608,
+          1513,
+          1347,
+          1614,
+          1333,
+          1456,
+          796,
+          812,
+          1644,
+          1334,
+          4633,
+          1341,
+          1495,
+          1073,
+          804
+        ]
+      },
+      "Staff": {
+        "n": 8,
+        "ok": 0,
+        "statuses": {
+          "403": 8
+        },
+        "lat": [
+          813,
+          797,
+          799,
+          803,
+          822,
+          888,
+          845,
+          813
+        ]
+      },
+      "Manager": {
+        "n": 2,
+        "ok": 0,
+        "statuses": {
+          "404": 2
+        },
+        "lat": [
+          833,
+          793
+        ]
+      },
+      "Admin Panel": {
+        "n": 20,
+        "ok": 18,
+        "statuses": {
+          "200": 18,
+          "400": 2
+        },
+        "lat": [
+          1917,
+          2349,
+          844,
+          4019,
+          1450,
+          800,
+          816,
+          1389,
+          1332,
+          802,
+          837,
+          3198,
+          1606,
+          1686,
+          1868,
+          1632,
+          1643,
+          1387,
+          1649,
+          1640
+        ]
+      }
+    },
+    "sample5xx": [
+      {
+        "folder": "App",
+        "name": "App/Monri Payments/redirect to walletPay",
+        "path": "/app/payments/monri/wallet-pay",
+        "status": 500,
+        "ms": 809
+      },
+      {
+        "folder": "App",
+        "name": "App/Monri Payments/create web-pay-session",
+        "path": "/app/payments/monri/web-pay-session",
+        "status": 500,
+        "ms": 845
+      }
+    ],
+    "sample404": [
+      {
+        "folder": "App",
+        "name": "App/Auth/Interests/get interests",
+        "path": "/app/users/interests",
+        "status": 404,
+        "ms": 1893
+      },
+      {
+        "folder": "App",
+        "name": "App/Recently Viewed Items/get",
+        "path": "/app/recently-viewed",
+        "status": 404,
+        "ms": 798
+      },
+      {
+        "folder": "App",
+        "name": "App/Monri Payments/Monri webhook/orders-transactions",
+        "path": "/app/webhooks/orders-transactions",
+        "status": 404,
+        "ms": 835
+      },
+      {
+        "folder": "App",
+        "name": "App/app-settings",
+        "path": "/app/app-settings",
+        "status": 404,
+        "ms": 809
+      },
+      {
+        "folder": "Organizer",
+        "name": "Organizer/Loyalty/Loyalty Club Collaboration/get",
+        "path": "/admin/loyalty/club-collaborations",
+        "status": 404,
+        "ms": 796
+      },
+      {
+        "folder": "Organizer",
+        "name": "Organizer/features",
+        "path": "/organizer/features/global",
+        "status": 404,
+        "ms": 804
+      },
+      {
+        "folder": "Manager",
+        "name": "Manager/organizations",
+        "path": "/organizations",
+        "status": 404,
+        "ms": 833
+      },
+      {
+        "folder": "Manager",
+        "name": "Manager/all users",
+        "path": "/users",
+        "status": 404,
+        "ms": 793
+      }
+    ]
+  },
+  "results": [
+    {
+      "folder": "App",
+      "name": "App/Auth/Locations - Countries/Cities/countries",
+      "path": "/app/locations/countries",
+      "status": 200,
+      "ms": 1873
+    },
+    {
+      "folder": "App/Auth/Locations - Countries/Cities",
+      "name": "App/Auth/Locations - Countries/Cities/cities",
+      "method": "GET",
+      "raw": "{{url}}locations/cities/country/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Auth/Locations - Countries/Cities/cities - nearby",
+      "path": "/app/locations/cities/nearby",
+      "status": 200,
+      "ms": 1890
+    },
+    {
+      "folder": "App/Auth/Account Management",
+      "name": "App/Auth/Account Management/profile",
+      "method": "GET",
+      "raw": "{{url}}app/users/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Auth/Interests/categories",
+      "path": "/app/categories/global",
+      "status": 200,
+      "ms": 1904
+    },
+    {
+      "folder": "App",
+      "name": "App/Auth/Interests/venue types",
+      "path": "/app/venue-types/global",
+      "status": 200,
+      "ms": 5171
+    },
+    {
+      "folder": "App",
+      "name": "App/Auth/Interests/tags",
+      "path": "/app/tags/global",
+      "status": 200,
+      "ms": 2025
+    },
+    {
+      "folder": "App",
+      "name": "App/Auth/Interests/tags types - genre",
+      "path": "/app/tags-types/global",
+      "status": 200,
+      "ms": 1880
+    },
+    {
+      "folder": "App",
+      "name": "App/Auth/Interests/get interests",
+      "path": "/app/users/interests",
+      "status": 404,
+      "ms": 1893
+    },
+    {
+      "folder": "App",
+      "name": "App/Home/Search Suggestions/trending",
+      "path": "/app/search-suggestions/trending",
+      "status": 400,
+      "ms": 1851
+    },
+    {
+      "folder": "App",
+      "name": "App/Home/Search Suggestions/user searches *testing only",
+      "path": "/app/search-suggestions/user",
+      "status": 200,
+      "ms": 1724
+    },
+    {
+      "folder": "App",
+      "name": "App/Home/nearby organizations",
+      "path": "/app/organizations/nearby",
+      "status": 200,
+      "ms": 1123
+    },
+    {
+      "folder": "App/Events",
+      "name": "App/Events/get details",
+      "method": "GET",
+      "raw": "{{url}}app/events/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Map/categories",
+      "path": "/app/categories/global",
+      "status": 200,
+      "ms": 1477
+    },
+    {
+      "folder": "App/Organization Profile",
+      "name": "App/Organization Profile/get profile",
+      "method": "GET",
+      "raw": "{{url}}app/organizations/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Favorites/get",
+      "path": "/app/favorites",
+      "status": 200,
+      "ms": 2236
+    },
+    {
+      "folder": "App",
+      "name": "App/Recently Viewed Items/get",
+      "path": "/app/recently-viewed",
+      "status": 404,
+      "ms": 798
+    },
+    {
+      "folder": "App/Share",
+      "name": "App/Share/share link",
+      "method": "GET",
+      "raw": "{{url}}share/:type/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Share/share link test",
+      "path": "/app/share",
+      "status": 400,
+      "ms": 801
+    },
+    {
+      "folder": "App/Loyalty/Challenges",
+      "name": "App/Loyalty/Challenges/challenges of company",
+      "method": "GET",
+      "raw": "{{url}}app/loyalty/challenges/by-company/:companyOrganizer?page=1&limit=10",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/Challenges/challenges of joined clubs",
+      "path": "/app/loyalty/challenges/joined-clubs",
+      "status": 200,
+      "ms": 1626
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/Challenges/orders",
+      "path": "/app/loyalty/challenges-orders",
+      "status": 200,
+      "ms": 2151
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/Club/joined clubs",
+      "path": "/app/loyalty/club/joined-clubs",
+      "status": 200,
+      "ms": 1760
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/Club/suggested clubs",
+      "path": "/app/loyalty/club/suggested-clubs",
+      "status": 200,
+      "ms": 1358
+    },
+    {
+      "folder": "App/Loyalty/Club",
+      "name": "App/Loyalty/Club/company wallet",
+      "method": "GET",
+      "raw": "{{url}}app/loyalty/club/wallet/:companyOrganizer",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App/Loyalty/Club",
+      "name": "App/Loyalty/Club/company profile",
+      "method": "GET",
+      "raw": "{{url}}app/loyalty/club/:companyOrganizer",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/Rewards/Orders/orders loyalty-global-combined",
+      "path": "/app/loyalty/rewards-orders/loyalty-global-combined",
+      "status": 200,
+      "ms": 830
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/Rewards/Orders/orders",
+      "path": "/app/loyalty/rewards-orders",
+      "status": 200,
+      "ms": 1596
+    },
+    {
+      "folder": "App/Loyalty/Rewards/Orders",
+      "name": "App/Loyalty/Rewards/Orders/orders details",
+      "method": "GET",
+      "raw": "{{url}}app/loyalty/rewards-orders/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App/Loyalty/Rewards",
+      "name": "App/Loyalty/Rewards/rewards of company",
+      "method": "GET",
+      "raw": "{{url}}app/loyalty/rewards/by-company/:companyOrganizer",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/Rewards/rewards of joined clubs",
+      "path": "/app/loyalty/rewards/joined-clubs",
+      "status": 200,
+      "ms": 2103
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/Promotions/promotions",
+      "path": "/app/loyalty/promotions",
+      "status": 200,
+      "ms": 1665
+    },
+    {
+      "folder": "App",
+      "name": "App/Loyalty/dashboard",
+      "path": "/app/loyalty/dashboard",
+      "status": 200,
+      "ms": 1710
+    },
+    {
+      "folder": "App",
+      "name": "App/GlobalLoyalty/Challenges/challenges",
+      "path": "/app/global-loyalty/challenges",
+      "status": 200,
+      "ms": 811
+    },
+    {
+      "folder": "App",
+      "name": "App/GlobalLoyalty/Status Levels/status-levels",
+      "path": "/app/global-loyalty/status-levels",
+      "status": 200,
+      "ms": 1617
+    },
+    {
+      "folder": "App",
+      "name": "App/GlobalLoyalty/Promotions/promotions",
+      "path": "/app/global-loyalty/promotions",
+      "status": 200,
+      "ms": 1381
+    },
+    {
+      "folder": "App",
+      "name": "App/GlobalLoyalty/Rewards/Orders/orders",
+      "path": "/app/global-loyalty/rewards-orders",
+      "status": 200,
+      "ms": 1344
+    },
+    {
+      "folder": "App/GlobalLoyalty/Rewards/Orders",
+      "name": "App/GlobalLoyalty/Rewards/Orders/details",
+      "method": "GET",
+      "raw": "{{url}}app/global-loyalty/rewards-orders/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/GlobalLoyalty/Rewards/rewards",
+      "path": "/app/global-loyalty/rewards",
+      "status": 200,
+      "ms": 1399
+    },
+    {
+      "folder": "App",
+      "name": "App/GlobalLoyalty/wallet",
+      "path": "/app/global-loyalty/wallet",
+      "status": 200,
+      "ms": 806
+    },
+    {
+      "folder": "App",
+      "name": "App/GlobalLoyalty/reward categories",
+      "path": "/app/global-loyalty/reward-categories",
+      "status": 200,
+      "ms": 842
+    },
+    {
+      "folder": "App",
+      "name": "App/GlobalLoyalty/dashboard",
+      "path": "/app/global-loyalty/dashboard",
+      "status": 200,
+      "ms": 1666
+    },
+    {
+      "folder": "App",
+      "name": "App/Menu and Ordering/Orders/get",
+      "path": "/app/menu/orders",
+      "status": 200,
+      "ms": 826
+    },
+    {
+      "folder": "App/Menu and Ordering/Orders",
+      "name": "App/Menu and Ordering/Orders/get details",
+      "method": "GET",
+      "raw": "{{url}}app/menu/orders/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App/Menu and Ordering/Orders",
+      "name": "App/Menu and Ordering/Orders/pickup options",
+      "method": "GET",
+      "raw": "{{url}}app/menu/items/pickup-options/:organization",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Menu and Ordering/Menu Items/get",
+      "path": "/app/menu/items",
+      "status": 200,
+      "ms": 1609
+    },
+    {
+      "folder": "App",
+      "name": "App/Menu and Ordering/Menu Items/get v2",
+      "path": "/app/menu/items/v2",
+      "status": 200,
+      "ms": 1844
+    },
+    {
+      "folder": "App",
+      "name": "App/Menu and Ordering/Menu Items/recommended",
+      "path": "/app/menu/items/recommended",
+      "status": 200,
+      "ms": 1334
+    },
+    {
+      "folder": "App",
+      "name": "App/Menu and Ordering/Menu Items/recommended v2",
+      "path": "/app/menu/items/recommended-v2",
+      "status": 200,
+      "ms": 1341
+    },
+    {
+      "folder": "App",
+      "name": "App/Menu and Ordering/Menu Items/upsell v2",
+      "path": "/app/menu/items/upsell-v2",
+      "status": 200,
+      "ms": 1357
+    },
+    {
+      "folder": "App/Menu and Ordering/Menu Items",
+      "name": "App/Menu and Ordering/Menu Items/get details",
+      "method": "GET",
+      "raw": "{{url}}app/menu/items/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App/Menu and Ordering/Menu Items",
+      "name": "App/Menu and Ordering/Menu Items/get details v2",
+      "method": "GET",
+      "raw": "{{url}}app/menu/items/v2/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Ticketings/Bookings/get",
+      "path": "/app/ticketing-bookings",
+      "status": 200,
+      "ms": 820
+    },
+    {
+      "folder": "App/Ticketings/Bookings",
+      "name": "App/Ticketings/Bookings/get details",
+      "method": "GET",
+      "raw": "{{url}}app/ticketing-bookings/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App/Ticketings",
+      "name": "App/Ticketings/get event tickets",
+      "method": "GET",
+      "raw": "{{url}}app/events/:eventId/ticketings",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Reservations/get available  slots",
+      "path": "/app/reservations",
+      "status": 400,
+      "ms": 810
+    },
+    {
+      "folder": "App",
+      "name": "App/Reservations/get all user reservations",
+      "path": "/app/reservations/all",
+      "status": 200,
+      "ms": 847
+    },
+    {
+      "folder": "App/Reservations",
+      "name": "App/Reservations/get user reservation details",
+      "method": "GET",
+      "raw": "{{url}}app/reservations/details/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Transactions/get",
+      "path": "/app/transactions",
+      "status": 200,
+      "ms": 1609
+    },
+    {
+      "folder": "App/Transactions",
+      "name": "App/Transactions/get Details",
+      "method": "GET",
+      "raw": "{{url}}app/transactions/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Monri Payments/Monri webhook/orders-transactions",
+      "path": "/app/webhooks/orders-transactions",
+      "status": 404,
+      "ms": 835
+    },
+    {
+      "folder": "App/Monri Payments/Monri webhook",
+      "name": "App/Monri Payments/Monri webhook/orders-transaction details",
+      "method": "GET",
+      "raw": "{{url}}webhooks/orders-transactions/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "App",
+      "name": "App/Monri Payments/Manage Saved Cards/get",
+      "path": "/app/payments/cards",
+      "status": 200,
+      "ms": 811
+    },
+    {
+      "folder": "App",
+      "name": "App/Monri Payments/redirect to webPay",
+      "path": "/app/payments/monri/redirect",
+      "status": 200,
+      "ms": 808
+    },
+    {
+      "folder": "App",
+      "name": "App/Monri Payments/redirect to walletPay",
+      "path": "/app/payments/monri/wallet-pay",
+      "status": 500,
+      "ms": 809
+    },
+    {
+      "folder": "App",
+      "name": "App/Monri Payments/create web-pay-session",
+      "path": "/app/payments/monri/web-pay-session",
+      "status": 500,
+      "ms": 845
+    },
+    {
+      "folder": "App",
+      "name": "App/Notifications/get",
+      "path": "/app/notifications",
+      "status": 200,
+      "ms": 1592
+    },
+    {
+      "folder": "App",
+      "name": "App/app-settings",
+      "path": "/app/app-settings",
+      "status": 404,
+      "ms": 809
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Auth/Signup/Login/suppliers",
+      "path": "/organizer/suppliers/global",
+      "status": 200,
+      "ms": 1069
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Auth/Locations - Countries/Cities/countries",
+      "path": "/organizer/locations/countries",
+      "status": 200,
+      "ms": 1593
+    },
+    {
+      "folder": "Organizer/Auth/Locations - Countries/Cities",
+      "name": "Organizer/Auth/Locations - Countries/Cities/cities",
+      "method": "GET",
+      "raw": "{{url}}organizer/locations/cities/country/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Auth/Verification Via Link/Reset password/reset password verify link",
+      "path": "/organizer/auth/link/reset-password/verify",
+      "status": 400,
+      "ms": 1610
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Auth/Verification Via Link/verify email via link",
+      "path": "/organizer/auth/link/verify-email",
+      "status": 400,
+      "ms": 1610
+    },
+    {
+      "folder": "Organizer/Auth/Account Management",
+      "name": "Organizer/Auth/Account Management/profile",
+      "method": "GET",
+      "raw": "{{url}}organizer/users/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Organizations/get",
+      "path": "/organizer/organizations",
+      "status": 200,
+      "ms": 1349
+    },
+    {
+      "folder": "Organizer/Organizations",
+      "name": "Organizer/Organizations/get details",
+      "method": "GET",
+      "raw": "{{url}}organizer/organizations/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Venues/get",
+      "path": "/organizer/venues",
+      "status": 200,
+      "ms": 1414
+    },
+    {
+      "folder": "Organizer/Venues",
+      "name": "Organizer/Venues/get details",
+      "method": "GET",
+      "raw": "{{url}}organizer/venues/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Events/get",
+      "path": "/organizer/events",
+      "status": 200,
+      "ms": 1430
+    },
+    {
+      "folder": "Organizer/Events",
+      "name": "Organizer/Events/get details",
+      "method": "GET",
+      "raw": "{{url}}organizer/events/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Highlights/get",
+      "path": "/organizer/highlights",
+      "status": 200,
+      "ms": 1608
+    },
+    {
+      "folder": "Organizer/Highlights",
+      "name": "Organizer/Highlights/get details",
+      "method": "GET",
+      "raw": "{{url}}organizer/highlights/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Users Management/all users",
+      "path": "/organizer/users",
+      "status": 200,
+      "ms": 1513
+    },
+    {
+      "folder": "Organizer/Users Management",
+      "name": "Organizer/Users Management/get profile",
+      "method": "GET",
+      "raw": "{{url}}organizer/users/:userId",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Loyalty/Challenges/get",
+      "path": "/admin/loyalty/challenges",
+      "status": 200,
+      "ms": 1347
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Loyalty/Listings/get",
+      "path": "/admin/loyalty/listings",
+      "status": 200,
+      "ms": 1614
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Loyalty/Promotions/get",
+      "path": "/admin/loyalty/promotions",
+      "status": 200,
+      "ms": 1333
+    },
+    {
+      "folder": "Organizer/Loyalty/Promotions",
+      "name": "Organizer/Loyalty/Promotions/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/loyalty/promotions/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Loyalty/Rewards/get",
+      "path": "/organizer/loyalty/rewards",
+      "status": 200,
+      "ms": 1456
+    },
+    {
+      "folder": "Organizer/Loyalty/Rewards",
+      "name": "Organizer/Loyalty/Rewards/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/loyalty/rewards/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Loyalty/Loyalty Club Collaboration/get",
+      "path": "/admin/loyalty/club-collaborations",
+      "status": 404,
+      "ms": 796
+    },
+    {
+      "folder": "Organizer/Loyalty/Loyalty Club Collaboration",
+      "name": "Organizer/Loyalty/Loyalty Club Collaboration/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/endpoint/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Loyalty/Streaks/get",
+      "path": "/organizer/loyalty/streaks",
+      "status": 200,
+      "ms": 812
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Loyalty/Users Streaks/get",
+      "path": "/organizer/loyalty/users-streaks",
+      "status": 200,
+      "ms": 1644
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/Loyalty/Club members/get",
+      "path": "/admin/loyalty/club-members",
+      "status": 200,
+      "ms": 1334
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/venue types",
+      "path": "/organizer/venue-types/global",
+      "status": 200,
+      "ms": 4633
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/tags",
+      "path": "/organizer/tags/global",
+      "status": 200,
+      "ms": 1341
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/categories",
+      "path": "/organizer/categories/global",
+      "status": 200,
+      "ms": 1495
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/suppliers",
+      "path": "/organizer/suppliers/global",
+      "status": 200,
+      "ms": 1073
+    },
+    {
+      "folder": "Organizer",
+      "name": "Organizer/features",
+      "path": "/organizer/features/global",
+      "status": 404,
+      "ms": 804
+    },
+    {
+      "folder": "Staff",
+      "name": "Staff/Auth/organizations",
+      "path": "/app/staff/organizations",
+      "status": 403,
+      "ms": 813
+    },
+    {
+      "folder": "Staff",
+      "name": "Staff/Menu and Ordering/Menu Items/get",
+      "path": "/app/staff/menu-items",
+      "status": 403,
+      "ms": 797
+    },
+    {
+      "folder": "Staff",
+      "name": "Staff/Menu and Ordering/Menu Items/get v2",
+      "path": "/app/staff/menu-items/v2",
+      "status": 403,
+      "ms": 799
+    },
+    {
+      "folder": "Staff",
+      "name": "Staff/Menu and Ordering/Manage Menu Items/get",
+      "path": "/app/staff/menu-items/manage",
+      "status": 403,
+      "ms": 803
+    },
+    {
+      "folder": "Staff",
+      "name": "Staff/Menu and Ordering/Manage Orders/get",
+      "path": "/app/staff/in-app-ordering",
+      "status": 403,
+      "ms": 822
+    },
+    {
+      "folder": "Staff/Menu and Ordering/Manage Orders",
+      "name": "Staff/Menu and Ordering/Manage Orders/get details",
+      "method": "GET",
+      "raw": "{{url}}app/staff/menu/orders/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Staff/Events/Offline scanning",
+      "name": "Staff/Events/Offline scanning/offline tickets",
+      "method": "GET",
+      "raw": "{{url}}app/staff/events/:id/offline-tickets",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Staff",
+      "name": "Staff/Events/get",
+      "path": "/app/staff/events",
+      "status": 403,
+      "ms": 888
+    },
+    {
+      "folder": "Staff/Events",
+      "name": "Staff/Events/attendees",
+      "method": "GET",
+      "raw": "{{url}}app/staff/events/:eventId/attendees?page=1&limit=10",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Staff",
+      "name": "Staff/Reservations/get reservations by date",
+      "path": "/app/staff/reservations",
+      "status": 403,
+      "ms": 845
+    },
+    {
+      "folder": "Staff",
+      "name": "Staff/Reservations/get reservations",
+      "path": "/app/staff/reservations",
+      "status": 403,
+      "ms": 813
+    },
+    {
+      "folder": "Manager",
+      "name": "Manager/organizations",
+      "path": "/organizations",
+      "status": 404,
+      "ms": 833
+    },
+    {
+      "folder": "Manager",
+      "name": "Manager/all users",
+      "path": "/users",
+      "status": 404,
+      "ms": 793
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Feed config/get",
+      "path": "/admin/feed-config/quick-action",
+      "status": 200,
+      "ms": 1917
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Suppliers/get",
+      "path": "/admin/suppliers",
+      "status": 200,
+      "ms": 2349
+    },
+    {
+      "folder": "Admin Panel/Suppliers",
+      "name": "Admin Panel/Suppliers/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/suppliers/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Tags/get",
+      "path": "/admin/tags",
+      "status": 200,
+      "ms": 844
+    },
+    {
+      "folder": "Admin Panel/Tags",
+      "name": "Admin Panel/Tags/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/tags/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Venues Types/get",
+      "path": "/admin/venue-types",
+      "status": 200,
+      "ms": 4019
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Venues/get",
+      "path": "/admin/venues",
+      "status": 200,
+      "ms": 1450
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Venues/get unassigned",
+      "path": "/admin/venues/unassigned",
+      "status": 200,
+      "ms": 800
+    },
+    {
+      "folder": "Admin Panel/Venues",
+      "name": "Admin Panel/Venues/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/venues/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Categories/get",
+      "path": "/admin/categories",
+      "status": 200,
+      "ms": 816
+    },
+    {
+      "folder": "Admin Panel/Categories",
+      "name": "Admin Panel/Categories/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/categories/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Organizations/Delivery options",
+      "name": "Admin Panel/Organizations/Delivery options/get",
+      "method": "GET",
+      "raw": "{{url}}admin//organizations/:organizationId/delivery-options",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Organizations/Delivery options",
+      "name": "Admin Panel/Organizations/Delivery options/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/organizations/:organizationId/delivery-options/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Organizations/get",
+      "path": "/admin/organizations",
+      "status": 200,
+      "ms": 1389
+    },
+    {
+      "folder": "Admin Panel/Organizations",
+      "name": "Admin Panel/Organizations/get by tag",
+      "method": "GET",
+      "raw": "{{url}}admin/organizations/tag/:tagId",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Organizations",
+      "name": "Admin Panel/Organizations/get by venue type",
+      "method": "GET",
+      "raw": "{{url}}admin/organizations/venue-type/:venuTypeId",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Organizations",
+      "name": "Admin Panel/Organizations/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/organizations/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Organizations",
+      "name": "Admin Panel/Organizations/organizations by-company-organizer",
+      "method": "GET",
+      "raw": "{{url}}admin/organizations/names/by-company-organizer/:companyOrganizer",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Events/get",
+      "path": "/admin/events",
+      "status": 200,
+      "ms": 1332
+    },
+    {
+      "folder": "Admin Panel/Events",
+      "name": "Admin Panel/Events/events by venue type",
+      "method": "GET",
+      "raw": "{{url}}admin/events/venue-type/:venueTypeId",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Events",
+      "name": "Admin Panel/Events/events by tag",
+      "method": "GET",
+      "raw": "{{url}}admin/events/tag/:tagId",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Events",
+      "name": "Admin Panel/Events/get events minimal info",
+      "method": "GET",
+      "raw": "{{url}}admin/events/organization/:organizationId",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Events",
+      "name": "Admin Panel/Events/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/events/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Events",
+      "name": "Admin Panel/Events/get analytics",
+      "method": "GET",
+      "raw": "{{url}}admin/events/:id/analytics",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Events",
+      "name": "Admin Panel/Events/get ticket analytics",
+      "method": "GET",
+      "raw": "{{url}}admin/events/:id/tickets-analytics",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Events",
+      "name": "Admin Panel/Events/get notifications",
+      "method": "GET",
+      "raw": "{{url}}admin/events/:id/notifications",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Ticketing/Transactions/transactions",
+      "path": "/admin/ticketing/bookings-transactions",
+      "status": 400,
+      "ms": 802
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Ticketing/get",
+      "path": "/admin/ticketing",
+      "status": 200,
+      "ms": 837
+    },
+    {
+      "folder": "Admin Panel/Ticketing",
+      "name": "Admin Panel/Ticketing/get organization events tickets",
+      "method": "GET",
+      "raw": "{{url}}admin/ticketing/organization/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Ticketing",
+      "name": "Admin Panel/Ticketing/get details",
+      "method": "GET",
+      "raw": "{{url}}admin/ticketing/:id",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Menu Presets/get",
+      "path": "/admin/menu/presets",
+      "status": 200,
+      "ms": 3198
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Menu Presets Types/get",
+      "path": "/admin/menu/preset-type",
+      "status": 200,
+      "ms": 1606
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Menu/get",
+      "path": "/admin/menu",
+      "status": 200,
+      "ms": 1686
+    },
+    {
+      "folder": "Admin Panel/Menu Management/Menu",
+      "name": "Admin Panel/Menu Management/Menu/get names by by-company-organizer",
+      "method": "GET",
+      "raw": "{{url}}admin/menu/names/by-company-organizer/:companyOrganizer",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Categories/get",
+      "path": "/admin/menu/categories",
+      "status": 200,
+      "ms": 1868
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Sub Categories/get",
+      "path": "/admin/menu/sub-categories",
+      "status": 200,
+      "ms": 1632
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Sub Categories Types/get",
+      "path": "/admin/menu/sub-categories/types",
+      "status": 200,
+      "ms": 1643
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Items/get",
+      "path": "/admin/menu/items",
+      "status": 400,
+      "ms": 1387
+    },
+    {
+      "folder": "Admin Panel/Menu Management/Items",
+      "name": "Admin Panel/Menu Management/Items/get items by menuId",
+      "method": "GET",
+      "raw": "{{url}}admin/menu/items/menu/:menuId?companyOrganizer=6a0462c80dd707bc19cb03c0",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel/Menu Management/Items",
+      "name": "Admin Panel/Menu Management/Items/delete impact",
+      "method": "GET",
+      "raw": "{{url}}admin/menu/items/:id/delete-impact",
+      "skipped": true,
+      "reason": "path-params"
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Discounts/get",
+      "path": "/admin/menu/discounts",
+      "status": 200,
+      "ms": 1649
+    },
+    {
+      "folder": "Admin Panel",
+      "name": "Admin Panel/Menu Management/Combos/get",
+      "path": "/admin/menu/combos",
+      "status": 200,
+      "ms": 1640
+    }
+  ]
+}

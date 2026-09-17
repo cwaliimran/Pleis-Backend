@@ -33,6 +33,14 @@ const withOrderItemImageUrls = (order) => {
     combos: Array.isArray(order.combos)
       ? order.combos.map((combo) => ({
           ...combo,
+          comboSnapShot: combo.comboSnapShot
+            ? {
+                ...combo.comboSnapShot,
+                image: getFullImageUrl(
+                  combo.comboSnapShot.image || "noimage.png",
+                ),
+              }
+            : combo.comboSnapShot,
           items: Array.isArray(combo.items)
             ? combo.items.map(withFullItemImage)
             : combo.items,

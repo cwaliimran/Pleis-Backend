@@ -62,9 +62,12 @@ const getCustomCategories = async ({
     return true;
   });
 
-  // Apply transformations to objects
+  const { CUSTOM_CATEGORY_OBJECTS } = require("../home/utils/homeFeedLimits");
+
+  // Apply transformations to objects (capped for home feed payload size)
   customCategories.forEach((category) => {
-    category.objects = category.objects.map((obj) => {
+    const limited = (category.objects || []).slice(0, CUSTOM_CATEGORY_OBJECTS);
+    category.objects = limited.map((obj) => {
       if (!obj) return null;
       let mObj = transformCustomCategoryObjects(obj, category.type, userLocation, timezone);
       return mObj;
