@@ -28,9 +28,12 @@
 
   "challenge_title_earn_points_win_points": "Earn {taskValue} points to win {rewardValue} points",
   "challenge_title_earn_points_win_ticket": "Earn {taskValue} points to win an event ticket",
+  "challenge_title_earn_points_win_reward": "Earn {taskValue} points to win {rewardTitle}",
   "challenge_title_refer_users_earn_points": "Refer {taskValue} user(s) to earn {rewardValue} points",
   "challenge_title_visit_win_reward": "Visit {taskValue} time(s) to win {rewardTitle}",
+  "challenge_title_visit_win_menu_item": "Visit {taskValue} time(s) to win a menu item",
   "challenge_title_visit_earn_ticket": "Visit {taskValue} time(s) to earn an event ticket",
+  "challenge_title_visit_earn_points": "Visit {taskValue} time(s) to earn {rewardValue} points",
   "challenge_title_buy_menu_win_ticket": "Buy {taskValue} menu item(s) to win a ticket",
   "challenge_title_buy_menu_earn_points": "Buy {taskValue} menu item(s) to earn {rewardValue} points",
   "challenge_title_buy_menu_win_reward": "Buy {taskValue} menu item(s) to win {rewardTitle}",
@@ -124,7 +127,7 @@
   "highlight_created_title": "A new highlight \"{highlightTitle}\" has been created.",
   "highlight_created_body": "A new highlight \"{highlightTitle}\" is now available in the system.",
 
-  "review_updated_title": "there is an update on your review",
+  "review_updated_title": "There is an update on your review",
   "review_updated_body": "The admin responded to your review.",
   "review_created_title": "Review Created",
   "review_created_body": "Your review  has been sent successfully.",

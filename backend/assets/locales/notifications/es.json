@@ -28,9 +28,12 @@
 
   "challenge_title_earn_points_win_points": "Gana {taskValue} puntos para ganar {rewardValue} puntos",
   "challenge_title_earn_points_win_ticket": "Gana {taskValue} puntos para ganar una entrada al evento",
+  "challenge_title_earn_points_win_reward": "Gana {taskValue} puntos para ganar {rewardTitle}",
   "challenge_title_refer_users_earn_points": "Recomienda a {taskValue} usuario(s) para ganar {rewardValue} puntos",
   "challenge_title_visit_win_reward": "Visita {taskValue} vez/veces para ganar {rewardTitle}",
+  "challenge_title_visit_win_menu_item": "Visita {taskValue} vez/veces para ganar un artículo del menú",
   "challenge_title_visit_earn_ticket": "Visita {taskValue} vez/veces para ganar una entrada al evento",
+  "challenge_title_visit_earn_points": "Visita {taskValue} vez/veces para ganar {rewardValue} puntos",
   "challenge_title_buy_menu_win_ticket": "Compra {taskValue} artículo(s) del menú para ganar una entrada",
   "challenge_title_buy_menu_earn_points": "Compra {taskValue} artículo(s) del menú para ganar {rewardValue} puntos",
   "challenge_title_buy_menu_win_reward": "Compra {taskValue} artículo(s) del menú para ganar {rewardTitle}",
