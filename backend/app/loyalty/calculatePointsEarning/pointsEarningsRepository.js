@@ -19,10 +19,14 @@ const calculatePointsRepo = async (
   const [
     globalWallet,
     userCompanyWallet,
+    userDoc,
   ] = await Promise.all([
     getUserWallet(userId),
     getUserCompanyWallet(userId, companyOrganizer),
+    User.findById(userId).select("timezone").lean(),
   ]);
+
+  const timezone = userDoc?.timezone || "UTC";
 
   const [
     globalLoyaltyHappyHourPromotion,
@@ -32,12 +36,14 @@ const calculatePointsRepo = async (
       userId,
       userTierEntryPoints:
         globalWallet?.global?.level?.entryPoints,
+      timezone,
     }),
     getActiveLoyaltyHappyHourPromotion({
       companyOrganizer,
       userId,
       userTierEntryPoints:
-        userCompanyWallet?.level?.entryPoints,
+        userCompanyWallet?.level?.entryPoints ?? 0,
+      timezone,
     }),
   ]);
 

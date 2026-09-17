@@ -443,7 +443,9 @@ const getOrderDetails = async (orderId) => {
 };
 
 /* 
-Fetches both loyalty/global reward orders together
+Fetches both loyalty/global reward orders together.
+Queries each collection independently so loyalty-only (or global-only)
+users still get results even if the other collection is empty/missing.
 */
 const getCombinedRewardOrders = async ({
   userId,
@@ -453,6 +455,8 @@ const getCombinedRewardOrders = async ({
   limit,
   sort = -1
 }) => {
+  const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
+
   const baseMatch = {
     user: new mongoose.Types.ObjectId(userId),
   };
@@ -466,17 +470,13 @@ const getCombinedRewardOrders = async ({
     };
   }
 
-  const pipeline = [
+  const loyaltyPipeline = [
     { $match: baseMatch },
-
-    // identify source
     {
       $addFields: {
         rewardScope: "company"
       }
     },
-
-    // ---- populate organizer ----
     {
       $lookup: {
         from: "users",
@@ -504,42 +504,35 @@ const getCombinedRewardOrders = async ({
         preserveNullAndEmptyArrays: true
       }
     },
-
-    // ---- merge global orders ----
-    {
-      $unionWith: {
-        coll: "globalrewardsorders",
-        pipeline: [
-          { $match: baseMatch },
-          {
-            $addFields: {
-              rewardScope: "global",
-              companyOrganizer: null
-            }
-          }
-        ]
-      }
-    },
-
-    // ---- unified sorting ----
-    { $sort: { createdAt: sort } },
-
-    // ---- pagination ----
-    {
-      $facet: {
-        data: [
-          { $skip: skip },
-          ...(limit !== 0 ? [{ $limit: limit }] : [])
-        ],
-        total: [{ $count: "count" }]
-      }
-    }
   ];
 
-  const result = await RewardsOrders.aggregate(pipeline);
+  const globalPipeline = [
+    { $match: baseMatch },
+    {
+      $addFields: {
+        rewardScope: "global",
+        companyOrganizer: null
+      }
+    },
+  ];
 
-  const data = result[0]?.data || [];
-  const total = result[0]?.total?.[0]?.count || 0;
+  const [loyaltyOrders, globalOrders] = await Promise.all([
+    RewardsOrders.aggregate(loyaltyPipeline),
+    GlobalRewardsOrders.aggregate(globalPipeline).catch((err) => {
+      console.error("[REWARDS] globalrewardsorders query failed:", err.message);
+      return [];
+    }),
+  ]);
+
+  const combined = [...loyaltyOrders, ...globalOrders].sort((a, b) => {
+    const aTime = new Date(a.createdAt || 0).getTime();
+    const bTime = new Date(b.createdAt || 0).getTime();
+    return sort === 1 ? aTime - bTime : bTime - aTime;
+  });
+
+  const total = combined.length;
+  const data =
+    limit === 0 ? combined.slice(skip) : combined.slice(skip, skip + limit);
 
   return { data, total };
 };
