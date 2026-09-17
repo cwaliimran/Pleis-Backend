@@ -57,61 +57,49 @@ const handleLoyaltyEarningConsequences = ({
       );
   }
 
-  // 🎯 Buy Menu Item Challenge
   const items = collectPurchasedMenuItems(menuOrder);
 
-  if (items.length) {
-    awardMenuItemPromotionsForOrder({
-      userId,
-      companyOrganizer,
-      menuOrder,
-    })
-      .then(() => {})
-      .catch((err) =>
-        console.error("[PROMOTION] Menu item promotion failed:", err)
-      );
+  // Run challenge side-effects sequentially — parallel completions write the same
+  // club wallet and abort each other's Mongo transactions (TransientTransactionError).
+  void (async () => {
+    try {
+      if (items.length) {
+        await awardMenuItemPromotionsForOrder({
+          userId,
+          companyOrganizer,
+          menuOrder,
+        }).catch((err) =>
+          console.error("[PROMOTION] Menu item promotion failed:", err)
+        );
 
-    resolveChallengeByTaskTypeService({
-      userId,
-      companyOrganizer,
-      taskType: "buyMenuItem",
-      items,
-    })
-      .then(() => {
-      })
-      .catch(err =>
-        console.error("[CHALLENGE] Menu item challenge failed:", err)
-      );
-  }
+        await resolveChallengeByTaskTypeService({
+          userId,
+          companyOrganizer,
+          taskType: "buyMenuItem",
+          items,
+        });
+      }
 
-  // 🎯 Company Earn Challenge
-  if (companyPoints?.total > 0) {
-    resolveChallengeByTaskTypeService({
-      userId,
-      companyOrganizer,
-      taskType: "earnPoints",
-      value: companyPoints.total,
-    })
-      .then(() => {
-      })
-      .catch(err =>
-        console.error("[CHALLENGE] Company earn challenge failed:", err)
-      );
-  }
+      if (companyPoints?.total > 0) {
+        await resolveChallengeByTaskTypeService({
+          userId,
+          companyOrganizer,
+          taskType: "earnPoints",
+          value: companyPoints.total,
+        });
+      }
 
-  // 🎯 Global Earn Challenge
-  if (globalPoints?.total > 0) {
-    resolveGlobalChallengeByTaskTypeService({
-      userId,
-      taskType: "globalEarnPoints",
-      value: globalPoints.total,
-    })
-      .then(() => {
-      })
-      .catch(err =>
-        console.error("[GLOBAL CHALLENGE] Global earn challenge failed:", err)
-      );
-  }
+      if (globalPoints?.total > 0) {
+        await resolveGlobalChallengeByTaskTypeService({
+          userId,
+          taskType: "globalEarnPoints",
+          value: globalPoints.total,
+        });
+      }
+    } catch (err) {
+      console.error("[CHALLENGE] Loyalty challenge side effects failed:", err);
+    }
+  })();
 };
 
 module.exports = { handleLoyaltyEarningConsequences };

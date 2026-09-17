@@ -562,6 +562,23 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Heal legacy bad values before validation (e.g. email:"active").
+// Older docs sometimes stored accountState.status values in verificationStatus.
+userSchema.pre("validate", function (next) {
+  const user = this;
+  const emailStatus = user.verificationStatus?.email;
+  if (emailStatus && !["pending", "verified"].includes(emailStatus)) {
+    user.verificationStatus.email =
+      emailStatus === "active" ? "verified" : "pending";
+  }
+  const phoneStatus = user.verificationStatus?.phoneNumber;
+  if (phoneStatus && !["pending", "verified"].includes(phoneStatus)) {
+    user.verificationStatus.phoneNumber =
+      phoneStatus === "active" ? "verified" : "pending";
+  }
+  next();
+});
+
 // Hash password before saving to database
 userSchema.pre("save", async function (next) {
   const user = this;
