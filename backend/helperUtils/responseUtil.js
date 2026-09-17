@@ -25,8 +25,10 @@ const sendResponse = ({
   // Prepare the response object
   const response = {};
   if (translateMessage) {
-    // Get the translation key from the locale file and replace the placeholders using the provided values
-    let message = res?.req?.__(translationKey);
+    // i18n may be missing on early pipeline errors (e.g. body-parser) — never throw here
+    const translate =
+      typeof res?.req?.__ === "function" ? res.req.__.bind(res.req) : null;
+    let message = translate ? translate(translationKey) : translationKey;
 
     // If the message is missing, undefined, or equals the raw translationKey, fall back to translationKey
     if (!message || message.trim() === "" || message === translationKey) {

@@ -108,7 +108,7 @@ const getPublicTags = async ({ page, limit, keyword }) => {
 get the tags which are currently being used in events or organizations
 */
 const getActiveTagsService = async () => {
-  let tags = await tagRepo.getActiveTags(15);
+  let tags = await tagRepo.getActiveTags();
   return {
     tags,
   };

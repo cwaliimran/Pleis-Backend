@@ -99,6 +99,23 @@ const getPublicVenueTypes = async ({ page = 1, limit, keyword, date, categories 
     baseQuery.categories = { $in: categories };
   }
 
+  // Full catalog path for filters/home — no artificial limit (Redis-cached)
+  const wantsFullCatalog =
+    page === 1 &&
+    !keyword &&
+    !date &&
+    (!categories || categories.length === 0) &&
+    (limit === undefined || limit === null);
+
+  if (wantsFullCatalog) {
+    const all = await venuetypeRepo.getAllActiveVenueTypes();
+    const formattedVenueTypes = (all || []).map((item) => formatVenueType(item));
+    return {
+      venueTypes: formattedVenueTypes,
+      meta: generateMeta(1, formattedVenueTypes.length || 1, formattedVenueTypes.length),
+    };
+  }
+
   const [venueTypes, totalFiltered] =
     await Promise.all([
       page === 1

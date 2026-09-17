@@ -38,7 +38,7 @@ const getTagsTypesWithFilters = async (query, page, limit, sortBy, sortOrder) =>
   });
 };
 
-const getActiveTagTypes = async (limit = 15) => {
+const getActiveTagTypes = async () => {
 
   return cache({
     namespace: "tagsTypes:activeTypes",
@@ -91,6 +91,7 @@ const getActiveTagTypes = async (limit = 15) => {
 
       //
       // STEP 2 — Map those tags → Tag Types + sort by usage
+      // (no limit — full catalog, Redis-cached)
       //
       const pipeline = [
         {
@@ -140,8 +141,6 @@ const getActiveTagTypes = async (limit = 15) => {
         },
 
         { $sort: { usage: -1 } },
-
-        ...(limit ? [{ $limit: limit }] : [])
       ];
 
       return Tags.aggregate(pipeline);
