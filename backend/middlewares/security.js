@@ -5,7 +5,7 @@ const hpp = require("hpp");
 const cors = require("cors");
 const compression = require("compression");
 const express = require("express");
-const { isDev, connectSrc } = require("../config/origins");
+const { connectSrc, isOriginAllowed } = require("../config/origins");
 const { createRateLimitStore } = require("../helperUtils/rateLimitStore");
 const { clientKey, shouldSkipRateLimit } = require("../helperUtils/rateLimiter");
 const { ipBlockMiddleware } = require("./ipBlockMiddleware");
@@ -29,13 +29,13 @@ const securityMiddleware = (app, options = {}) => {
       // Same-origin / non-browser / mobile clients may omit Origin
       if (!origin) return callback(null, true);
 
-      if (isDev) {
-        // Local + mobile apps: allow any origin (localhost ports vary)
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
+      // Keep allowlist logging useful when debugging tunnel / LAN previews
+      if (process.env.NODE_ENV !== "prod") {
+        console.log("🚫 CORS blocked origin:", origin, "| allowlist:", allowedOrigins);
       }
 
       return callback(new Error("CORS Forbidden"), false);
