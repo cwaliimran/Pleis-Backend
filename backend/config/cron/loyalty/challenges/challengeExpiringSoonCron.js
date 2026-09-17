@@ -1,8 +1,8 @@
-const mongoose = require("mongoose");
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
 const LoyaltyChallengeNotificationLogsModel = require("@LoyaltyChallengeNotificationLogsModel");
 const { sendUserNotifications } = require("../../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { getChallengeNotificationTitle } = require("../../../../helperUtils/challengeNotificationTitle");
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -40,11 +40,12 @@ const runLoyaltyChallengeExpiringSoonCron = async () => {
 
       await sendUserNotifications({
         recipientIds: [order.user.toString()],
-        title: order.challengeSnapshot.title,
-        body: "Your challenge is expiring soon. Complete it before time runs out!",
+        ...getChallengeNotificationTitle(order.challengeSnapshot || {}),
+        bodyKey: "challenge_expiring_soon_body",
         data: {
           type: NotificationTypes.CHALLENGE_EXPIRING_SOON,
-          objectType: "challengesorders"
+          objectType: "challengesorders",
+          challengeTitle: order.challengeSnapshot?.title,
         },
         sender: order.companyOrganizer,
         objectId: order._id

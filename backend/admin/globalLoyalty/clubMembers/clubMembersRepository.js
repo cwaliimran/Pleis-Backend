@@ -260,8 +260,9 @@ const checkGlobalLoyaltyTierPromotion = async (userId, session = null) => {
 
   sendUserNotifications({
     recipientIds: [userId],
-    title: `Level upgraded`,
-    body: `You have been promoted to ${promotionTarget.title}.`,
+    titleKey: "level_upgraded_title",
+    bodyKey: "level_upgraded_body",
+    bodyValues: { levelTitle: promotionTarget.title },
     data: {
       type: NotificationTypes.LEVEL_PROMOTED,
       levelId: promotionTarget._id,

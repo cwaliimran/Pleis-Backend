@@ -921,8 +921,8 @@ const createReservation = async (data, session) => {
   if (userReservation.userId) {
     sendUserNotifications({
       recipientIds: [userReservation.userId.toString()],
-      title: "Reservation Created",
-      body: `Your reservation has been created successfully.`,
+      titleKey: "reservation_created_title",
+      bodyKey: "reservation_created_body",
       data: {
         type: NotificationTypes.RESERVATION_UPDATE,
         objectType: "userreservations",
@@ -939,8 +939,8 @@ const createReservation = async (data, session) => {
 
   await sendUserNotifications({
     recipientIds: staffIds,
-    title: "A New Reservation Created",
-    body: `A new reservation has been created successfully.`,
+    titleKey: "new_reservation_created_title",
+    bodyKey: "new_reservation_created_body",
     data: {
       type: NotificationTypes.RESERVATION_UPDATE,
       objectType: "userreservations",

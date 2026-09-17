@@ -82,7 +82,8 @@ const createUpdates = async (data) => {
     await sendUserNotifications({
       recipientIds: userIds, // Send notification to each participant
       title: data.title,
-      body: `You received a new message: ${data.description}`,
+      bodyKey: "update_message_body",
+      bodyValues: { description: data.description },
       data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
       sender: data.companyOrganizer,
       objectId: data.event,

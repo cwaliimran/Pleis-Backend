@@ -551,8 +551,9 @@ const evaluateBadges = async ({
             notifications.push(
                 sendUserNotifications({
                     recipientIds: [userId.toString()],
-                    title: "New Badge Earned 🎉",
-                    body: `Congratulations! You earned the "${badge.title}" badge.`,
+                    titleKey: "new_badge_earned_title",
+                    bodyKey: "new_badge_earned_body",
+                    bodyValues: { badgeTitle: badge.title },
                     data: {
                         type: NotificationTypes.GLOBAL_BADGE_EARNED,
                         badgeId: badgeRecord._id,

@@ -498,8 +498,12 @@ const placeOrder = async ({
 
     sendUserNotifications({
       recipientIds: staffIds,
-      title: "New Order Placed",
-      body: `New Order Has been placed : and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
+      titleKey: "new_order_placed_title",
+      bodyKey: "new_order_placed_body",
+      bodyValues: {
+        status: formattedOrder.status,
+        amount: formattedOrder.totalPrice,
+      },
       data: {
         type: NotificationTypes.NEW_MENU_ITEMS_ORDER,
         objectType: "menuorders",

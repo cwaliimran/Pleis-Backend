@@ -8,6 +8,10 @@ const adminFireBConfig = require("../config/firebaseAdmin"); // Firebase admin S
 const { getFullImageUrl } = require("@utils/imageHelper");
 
 const { NotificationExp } = require("../models/Notifications");
+const {
+  getUsersNotificationLanguages,
+  resolveNotificationCopy,
+} = require("../helperUtils/notificationTranslationUtil");
 
 /**
  * Send an email using AWS SES
@@ -122,13 +126,23 @@ const sendNotificationControllerForTesting = async (req, res) => {
 /**
  * Sends a notification to multiple users based on their user IDs.
  *
- * @param {Object} param0 - Object containing recipientIds (array), title (string), body (string), and optional data (object).
+ * Static copy: pass titleKey / bodyKey (like sendResponse translationKey).
+ * Dynamic copy (e.g. challenge title): pass title / body as plain strings.
+ * Language: explicit `language`, else recipient map (req lang only if recipient
+ * is the requester; otherwise cache → DB).
  */
 
 const sendUserNotifications = async ({
   recipientIds,
   title,
   body,
+  titleKey = null,
+  bodyKey = null,
+  titleValues = {},
+  bodyValues = {},
+  values = {},
+  language = null,
+  req = null,
   data = {},
   sender = null, // Optional: sender ID
   objectId = null, // Optional: object ID
@@ -136,16 +150,18 @@ const sendUserNotifications = async ({
   saveNotification = true, // send false if you don't want to save notification in db
   image = null, // optional image url
 }) => {
-  // 
-
   setImmediate(async () => {
     try {
+      // Always resolve copy: static *Key strings + dynamic title/body via locale catalog
+      const languageByUser = await getUsersNotificationLanguages(recipientIds, {
+        req,
+        language,
+      });
+
       // Fetch devices for all the user IDs
       const recipientDevices = await Devices.find({
         userId: { $in: recipientIds },
       }).select("userId devices");
-
-
 
       // Check if recipientDevices exist
       if (recipientDevices && recipientDevices.length > 0) {
@@ -178,6 +194,20 @@ const sendUserNotifications = async ({
             })
           ); // Convert Set to Array and include deviceType
 
+          const recipientLang =
+            languageByUser[userId.toString()] || languageByUser[userId];
+          const resolved = resolveNotificationCopy({
+            title,
+            body,
+            titleKey,
+            bodyKey,
+            titleValues,
+            bodyValues,
+            values,
+            language: recipientLang,
+            // Avoid re-applying actor locale for admin/cron → user sends
+            req: null,
+          });
 
           //apply .toString to all values in data object
           const dataWithStringValues = Object.fromEntries(
@@ -199,8 +229,8 @@ const sendUserNotifications = async ({
 
           try {
             const sendNotificationResponse = await sendNotification(userDevices, {
-              title,
-              body,
+              title: resolved.title,
+              body: resolved.body,
               data: {
                 ...dataWithStringValues,
                 subjectId: sender ? sender.toString() : null,
@@ -208,7 +238,12 @@ const sendUserNotifications = async ({
               },
               image
             });
-            responses.push({ userId, sendNotificationResponse });
+            responses.push({
+              userId,
+              sendNotificationResponse,
+              title: resolved.title,
+              body: resolved.body,
+            });
           } catch (notifyErr) {
             console.error(
               "Error sending FCM notification for user",
@@ -228,17 +263,19 @@ const sendUserNotifications = async ({
         }
 
         // Once all notifications are sent, prepare notifications to save
-        const notificationsToSave = responses.map(({ userId }) => ({
-          type: data.type || "system", // Assign a default type if not provided
-          subjectId: sender,
-          objectId: objectId,
-          objectType: data.objectType,
-          receiverId: userId,
-          image,
-          title,
-          body,
-          meta,
-        }));
+        const notificationsToSave = responses.map(
+          ({ userId, title: resolvedTitle, body: resolvedBody }) => ({
+            type: data.type || "system", // Assign a default type if not provided
+            subjectId: sender,
+            objectId: objectId,
+            objectType: data.objectType,
+            receiverId: userId,
+            image,
+            title: resolvedTitle,
+            body: resolvedBody,
+            meta,
+          })
+        );
         // Save all notifications in a batch to the database
         await NotificationExp.insertMany(notificationsToSave);
       } else {

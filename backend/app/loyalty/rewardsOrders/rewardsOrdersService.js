@@ -122,8 +122,8 @@ const completeRewardOrderService = async ({
   if (wasCompletedNow) {
     sendUserNotifications({
       recipientIds: [order.user.toString()],
-      title: "Reward Redeemed",
-      body: `Your reward has been successfully redeemed.`,
+      titleKey: "reward_redeemed_title",
+      bodyKey: "reward_redeemed_body",
       data: {
         type: NotificationTypes.REWARD_REDEEMED,
         objectType: "loyaltyrewardsorders",

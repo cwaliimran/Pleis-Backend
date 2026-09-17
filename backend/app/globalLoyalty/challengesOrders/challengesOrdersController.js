@@ -20,7 +20,8 @@ const resolveGlobalChallenge = async (req, res) => {
         userId,
         taskType,
         value,
-        timezone
+        timezone,
+        req,
       });
 
     return sendResponse({

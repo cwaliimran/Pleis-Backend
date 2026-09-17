@@ -4,6 +4,7 @@ const ordersRepo =
   require("./challengesOrdersRepository");
 
 const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { getChallengeNotificationTitle } = require("../../../helperUtils/challengeNotificationTitle");
 const { NotificationTypes } = require("@NotificationsModel");
 const { GlobalChallengesOrders } = require("@GlobalChallengesOrdersModel");
 const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
@@ -242,7 +243,8 @@ const resolveGlobalChallengeByTaskTypeService = async ({
   userId,
   taskType,
   value = 1,
-  timezone = "UTC"
+  timezone = "UTC",
+  req = null,
 }) => {
 
   const session = await mongoose.startSession();
@@ -441,7 +443,8 @@ const resolveGlobalChallengeByTaskTypeService = async ({
 
     await flushGlobalNotifications({
       userId,
-      buffer
+      buffer,
+      req,
     });
 
     return {
@@ -470,12 +473,17 @@ const resolveGlobalChallengeByTaskTypeService = async ({
 
 const flushGlobalNotifications = async ({
   userId,
-  buffer
+  buffer,
+  req = null,
 }) => {
 
   const sendSingle = async ({
     title,
     body,
+    titleKey,
+    titleValues,
+    bodyKey,
+    bodyValues,
     type,
     orderId
   }) => {
@@ -483,6 +491,11 @@ const flushGlobalNotifications = async ({
       recipientIds: [userId.toString()],
       title,
       body,
+      titleKey,
+      titleValues,
+      bodyKey,
+      bodyValues,
+      req,
       data: {
         type,
         objectType: "globalchallengeorders"
@@ -495,6 +508,9 @@ const flushGlobalNotifications = async ({
   const sendBatch = async ({
     title,
     body,
+    titleKey,
+    bodyKey,
+    bodyValues,
     type,
     orders
   }) => {
@@ -505,6 +521,10 @@ const flushGlobalNotifications = async ({
       recipientIds: [userId.toString()],
       title,
       body,
+      titleKey,
+      bodyKey,
+      bodyValues,
+      req,
       data: {
         type,
         objectType: "globalchallengeorders"
@@ -568,8 +588,11 @@ const flushGlobalNotifications = async ({
       const { challenge, orderId } = filteredCompleted[0];
 
       await sendSingle({
-        title: challenge.title,
-        body: "Congratulations! You completed this global challenge.",
+        ...getChallengeNotificationTitle({
+          ...challenge,
+          title: challenge.title || challenge.name,
+        }),
+        bodyKey: "global_challenge_completed_body",
         type: NotificationTypes.GLOBAL_CHALLENGE_COMPLETED,
         orderId
       });
@@ -578,8 +601,9 @@ const flushGlobalNotifications = async ({
     if (filteredCompleted.length > 1) {
 
       await sendBatch({
-        title: "Multiple Global Challenges Completed 🎉",
-        body: `🎉 ${filteredCompleted.length} global challenges completed successfully!`,
+        titleKey: "global_challenge_batch_completed_title",
+        bodyKey: "global_challenge_batch_completed_body",
+        bodyValues: { count: filteredCompleted.length },
         type: NotificationTypes.GLOBAL_CHALLENGE_BATCH_UPDATE,
         orders: filteredCompleted
       });
@@ -595,8 +619,11 @@ const flushGlobalNotifications = async ({
     const { challenge, orderId } = buffer.started[0];
 
     await sendSingle({
-      title: challenge.title,
-      body: "Your global challenge has started. Good luck!",
+      ...getChallengeNotificationTitle({
+        ...challenge,
+        title: challenge.title || challenge.name,
+      }),
+      bodyKey: "global_challenge_started_body",
       type: NotificationTypes.GLOBAL_CHALLENGE_STARTED,
       orderId
     });
@@ -605,8 +632,9 @@ const flushGlobalNotifications = async ({
   if (buffer.started.length > 1) {
 
     await sendBatch({
-      title: "New Global Challenges Started",
-      body: `🚀 ${buffer.started.length} global challenges started.`,
+      titleKey: "global_challenge_batch_started_title",
+      bodyKey: "global_challenge_batch_started_body",
+      bodyValues: { count: buffer.started.length },
       type: NotificationTypes.GLOBAL_CHALLENGE_BATCH_UPDATE,
       orders: buffer.started
     });
@@ -622,8 +650,12 @@ const flushGlobalNotifications = async ({
       buffer.milestones[0];
 
     await sendSingle({
-      title: challenge.title,
-      body: `You're ${milestone}% done! Keep going.`,
+      ...getChallengeNotificationTitle({
+        ...challenge,
+        title: challenge.title || challenge.name,
+      }),
+      bodyKey: "global_challenge_milestone_body",
+      bodyValues: { percentage: milestone },
       type: NotificationTypes.GLOBAL_CHALLENGE_PROGRESS_MILESTONE,
       orderId
     });
@@ -632,8 +664,9 @@ const flushGlobalNotifications = async ({
   if (buffer.milestones.length > 1) {
 
     await sendBatch({
-      title: "Global Challenge Milestones Reached",
-      body: `🔥 ${buffer.milestones.length} milestone(s) reached.`,
+      titleKey: "global_challenge_batch_milestones_title",
+      bodyKey: "global_challenge_batch_milestones_body",
+      bodyValues: { count: buffer.milestones.length },
       type: NotificationTypes.GLOBAL_CHALLENGE_BATCH_UPDATE,
       orders: buffer.milestones
     });

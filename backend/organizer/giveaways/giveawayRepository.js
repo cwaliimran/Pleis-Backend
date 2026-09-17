@@ -93,8 +93,9 @@ const createGiveaway = async (data) => {
     await giveaway.save();
     await sendUserNotifications({
       recipientIds: clubMemberUserIds,
-      title: "A new giveaway has been created!",
-      body: `You have a chance to win: ${giveaway.title}`,
+      titleKey: "giveaway_created_title",
+      bodyKey: "giveaway_created_body",
+      bodyValues: { giveawayTitle: giveaway.title },
       data: {
         type: NotificationTypes.GIVEAWAY_UPDATE,
         objectType: "Giveaway",
