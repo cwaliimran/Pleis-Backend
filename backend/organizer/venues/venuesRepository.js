@@ -4,6 +4,9 @@ const mongoose = require("mongoose");
 const Organizations = require("@OrganizationModel");
 const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../../admin/organizations/organizationService");
 const { cache, invalidate } = require("@redisCache");
+const {
+  invalidateVenueCaches,
+} = require("../../admin/venues/venuesRepository");
 
 // Create venue in a transaction and update organization
 const createVenue = async (data) => {
@@ -42,6 +45,7 @@ const createVenue = async (data) => {
     if (data.organization) {
       await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
     }
+    await invalidateVenueCaches();
 
     return venue;
 
@@ -83,17 +87,23 @@ const findVenueById = async (id, select = []) => {
 // Update and save
 const updateVenueData = async (venue, data) => {
   Object.assign(venue, data);
-  return await venue.save();
+  const updated = await venue.save();
+  await invalidateVenueCaches();
+  return updated;
 };
 
 // Delete
 const deleteVenueById = async (venue) => {
-  return await venue.deleteOne();
+  const result = await venue.deleteOne();
+  await invalidateVenueCaches();
+  return result;
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  return Venues.findByIdAndUpdate(id, data, { new: true });
+  const updated = await Venues.findByIdAndUpdate(id, data, { new: true });
+  await invalidateVenueCaches();
+  return updated;
 };
 
 //get venues for menu options dropdown where organization is not assigned yet

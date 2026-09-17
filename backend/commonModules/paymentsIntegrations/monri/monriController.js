@@ -231,7 +231,14 @@ exports.redirectToMonriWalletPay = async (req, res) => {
     const currency = getMonriCurrency();
     let { amount, orderType, orderNumber } = req.query;
 
+    if (!orderNumber || !orderType || amount === undefined || amount === "") {
+      return res.status(400).send("Missing required query params: amount, orderType, orderNumber");
+    }
+
     amount = Number(amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).send("Invalid amount");
+    }
 
     // Save transaction
     await monriRepository.createTransaction({
@@ -426,7 +433,18 @@ googlePay.on("paymentError", function() {
 `);
   } catch (err) {
     console.error("Wallet pay init failed:", err.response?.data || err);
-    res.status(500).send("Payment init failed");
+    const msg =
+      err.response?.data?.message ||
+      err.message ||
+      "Payment init failed";
+    // Client/config problems should not look like unexplained 500s
+    const status =
+      err.response?.status >= 400 && err.response?.status < 500
+        ? 400
+        : err.code === "ENOTFOUND" || err.code === "ECONNREFUSED"
+          ? 502
+          : 500;
+    res.status(status).send(typeof msg === "string" ? msg : "Payment init failed");
   }
 };
 
@@ -686,6 +704,24 @@ exports.createWebPaySession = async (req, res) => {
     const currency = getMonriCurrency();
     const { amount, orderType, orderNumber, paymentMethod } = req.query;
     const userId = req.user._id;
+
+    if (!orderNumber || !orderType || amount === undefined || amount === "") {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "missing_payment_params",
+        error: { message: "amount, orderType and orderNumber are required" },
+      });
+    }
+
+    const amountNum = Number(amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_payment_amount",
+      });
+    }
 
     await assertBillkoReadyForMonriOrder(orderType, orderNumber);
 

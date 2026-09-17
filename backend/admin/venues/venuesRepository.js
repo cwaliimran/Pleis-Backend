@@ -1,21 +1,19 @@
 // repositories/venueRepository.js
 const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
-const { cache, invalidate } = require("@redisCache");
 const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
 const Organizations = require("../../commonModules/organizations/Organization");
-const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../organizations/organizationService");
-const ACTIVE_VENUES_CACHE_KEY = "venues:active";
-const buildVenuesCacheKey = ({
-  scope = "admin", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_VENUES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-}
+const { cache, invalidate } = require("@redisCache");
+
+const ACTIVE_VENUES_TYPE_MAP_KEY = "venues:active:typeMap";
+
+const invalidateVenueCaches = async () => {
+  await invalidate(ACTIVE_VENUES_TYPE_MAP_KEY);
+  await invalidate("home:pinned-content");
+};
+
 // Create venue in a transaction and update organization
 const createVenue = async (data) => {
-  await invalidate(ACTIVE_VENUES_CACHE_KEY);
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -45,15 +43,10 @@ const createVenue = async (data) => {
       );
     }
 
-    // 🚀 Outside transaction (non-DB side effects only)
-    if (data.organization) {
-      await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
-    }
-
-
     await session.commitTransaction();
     session.endSession();
 
+    await invalidateVenueCaches();
 
     return venue;
   } catch (err) {
@@ -69,33 +62,20 @@ const getVenuesWithFilters = async (
   skip = 0,
   limit = 10
 ) => {
-  const cacheKey = buildVenuesCacheKey({
-    scope: "admin",
-    skip,
-    limit,
-  });
+  const venues = await Venues.find(query)
+    .populate({
+      path: "organization",
+      select: "basicInfo otherInfo",
+    })
+    .populate({
+      path: "venueType",
+    })
+    .sort({ title: 1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
 
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
-      const venues = await Venues.find(query)
-        .populate({
-          path: "organization",
-          select: "basicInfo otherInfo",
-        })
-        .populate({
-          path: "venueType",
-        })
-        .sort({ title: 1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
-
-      return venues;
-    },
-  });
+  return venues;
 };
 
 // Count by condition
@@ -116,20 +96,23 @@ const findVenueById = async (id, select = []) => {
 // Update and save
 const updateVenueData = async (venue, data) => {
   Object.assign(venue, data);
-  await invalidate(ACTIVE_VENUES_CACHE_KEY);
-  return await venue.save();
+  const updated = await venue.save();
+  await invalidateVenueCaches();
+  return updated;
 };
 
 // Delete
 const deleteVenueById = async (venue) => {
-  await invalidate(ACTIVE_VENUES_CACHE_KEY);
-  return await venue.deleteOne();
+  const result = await venue.deleteOne();
+  await invalidateVenueCaches();
+  return result;
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_VENUES_CACHE_KEY);
-  return Venues.findByIdAndUpdate(id, data, { new: true });
+  const updated = await Venues.findByIdAndUpdate(id, data, { new: true });
+  await invalidateVenueCaches();
+  return updated;
 };
 
 //get venues for menu options dropdown where organization is not assigned yet
@@ -143,6 +126,32 @@ const getUnassignedVenues = async (userId) => {
   }).sort({ title: 1 });
 };
 
+/**
+ * Slim active venue → venueType map (full catalog, Redis-cached).
+ * Used by pinned/home batch queries instead of uncapped Venues.find per request.
+ */
+const getActiveVenueTypeMap = async () => {
+  return cache({
+    namespace: ACTIVE_VENUES_TYPE_MAP_KEY,
+    ttl: 86400,
+    fetchFn: async () => {
+      const venues = await Venues.find({
+        status: "active",
+        venueType: { $exists: true, $ne: [] },
+      })
+        .select("_id venueType organization")
+        .lean();
+
+      return (venues || []).map((v) => ({
+        _id: String(v._id),
+        organization: v.organization ? String(v.organization) : null,
+        venueType: Array.isArray(v.venueType)
+          ? v.venueType.map((x) => String(x))
+          : [],
+      }));
+    },
+  });
+};
 
 module.exports = {
   createVenue,
@@ -153,5 +162,7 @@ module.exports = {
   updateVenueData,
   deleteVenueById,
   findByIdAndUpdate,
-  ACTIVE_VENUES_CACHE_KEY
+  getActiveVenueTypeMap,
+  ACTIVE_VENUES_TYPE_MAP_KEY,
+  invalidateVenueCaches,
 };

@@ -85,7 +85,7 @@ const getPublicTagsTypes = async ({ page, limit, keyword }) => {
 };
 
 const getActiveTagsTypes = async () => {
-  const tagTypes = await TagstypeRepo.getActiveTagTypes(15);
+  const tagTypes = await TagstypeRepo.getActiveTagTypes();
   return {
     tagTypes
   };

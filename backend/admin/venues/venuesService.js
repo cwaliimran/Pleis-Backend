@@ -7,214 +7,176 @@ const { formatVenue } = require("./formatter/formatVenue");
 const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
 const venueRepo = require("./venuesRepository");
-const { cache, invalidate } = require("@redisCache");
-const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../organizations/organizationService");
 
-const buildVenuesCacheKey = ({
-  scope = "admin", // public | admin
-  skip = 0,
-  limit = 10,
-  sortBy,
-  sortOrder,
-}) => {
-  return `${venueRepo.ACTIVE_VENUES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
-}
 const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
 };
 
 const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, organization, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  let cacheKey = buildVenuesCacheKey({
-    scope: "admin",
-    skip,
-    limit,
-    sortBy,
-    sortOrder,
-    sortBy: sortBy || "createdAt",
-    sortOrder: sortOrder || "desc"
-  });
-  const filters = [];
-  if (keyword) filters.push(`keyword=${keyword}`);
-  if (status) filters.push(`status=${status}`);
-  if (date) filters.push(`date=${date}`);
-  if (userId) filters.push(`userId=${userId}`);
-  if (organization) filters.push(`organization=${organization}`);
-  if (pinned !== undefined) filters.push(`pinned=${pinned}`);
-  // Concatenate filters to the cache key if they are applied
-  if (filters.length > 0) {
-    cacheKey = `${cacheKey}:${filters.join(":")}`;
+
+  const pipeline = [
+    // Join with Organizations collection
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "organizationData",
+        pipeline: [
+          { $project: { basicInfo: 1 } }
+        ]
+      }
+    },
+    // Flatten organizationData array for easier matching
+    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
+    // Match user access (venue creator OR org creator OR org staff)
+    // {
+    //   $match: {
+    //     $or: [
+    //       { creator: new mongoose.Types.ObjectId(userId) },
+    //       { "organizationData.creator": new mongoose.Types.ObjectId(userId) },
+    //       { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
+    //     ]
+    //   }
+    // }
+  ];
+
+  // Apply filters
+  if (organization) {
+    pipeline.push({
+      $match: {
+        organization: new mongoose.Types.ObjectId(organization)
+      }
+    });
   }
 
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
+  if (status) {
+    pipeline.push({ $match: { status } });
+  } else {
+    pipeline.push({ $match: { status: { $ne: "deleted" } } });
+  }
 
-    fetchFn: async () => {
-      const pipeline = [
-        // Join with Organizations collection
-        {
-          $lookup: {
-            from: "organizations",
-            localField: "organization",
-            foreignField: "_id",
-            as: "organizationData",
-            pipeline: [
-              { $project: { basicInfo: 1 } }
-            ]
-          }
-        },
-        // Flatten organizationData array for easier matching
-        { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
-        // Match user access (venue creator OR org creator OR org staff)
-        // {
-        //   $match: {
-        //     $or: [
-        //       { creator: new mongoose.Types.ObjectId(userId) },
-        //       { "organizationData.creator": new mongoose.Types.ObjectId(userId) },
-        //       { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
-        //     ]
-        //   }
-        // }
-      ];
-
-      // Apply filters
-      if (organization) {
-        pipeline.push({
-          $match: {
-            organization: new mongoose.Types.ObjectId(organization)
-          }
-        });
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
       }
+    });
+  }
 
-      if (status) {
-        pipeline.push({ $match: { status } });
-      } else {
-        pipeline.push({ $match: { status: { $ne: "deleted" } } });
+  const keywordMatch = buildKeywordQueryFromModels(
+    [
+      { schema: Venues.schema },                       // Venue fields
+      { schema: Organizations.schema, prefix: 'organizationData.' } // Organization fields (with prefix)
+    ],
+    keyword
+  );
+
+  if (Object.keys(keywordMatch).length) {
+    pipeline.push({ $match: keywordMatch });
+  }
+
+
+  if (pinned !== undefined) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { pinned: false },
+          { pinned: null },
+          { pinned: { $exists: false } }
+        ]
       }
+    });
+  }
 
-      if (date) {
-        const start = new Date(date);
-        const end = new Date(new Date(date).setDate(start.getDate() + 1));
-        pipeline.push({
-          $match: {
-            createdAt: { $gte: start, $lt: end }
-          }
-        });
-      }
-
-      const keywordMatch = buildKeywordQueryFromModels(
-        [
-          { schema: Venues.schema },                       // Venue fields
-          { schema: Organizations.schema, prefix: 'organizationData.' } // Organization fields (with prefix)
-        ],
-        keyword
-      );
-
-      if (Object.keys(keywordMatch).length) {
-        pipeline.push({ $match: keywordMatch });
-      }
-
-
-      if (pinned !== undefined) {
-        pipeline.push({
-          $match: {
-            $or: [
-              { pinned: false },
-              { pinned: null },
-              { pinned: { $exists: false } }
-            ]
-          }
-        });
-      }
-
-      // Map organizationName to nested field
-      if (sortBy && sortOrder) {
-        if (sortBy === "organizationName") {
-          pipeline.push({
-            $addFields: {
-              organizationNameSort: {
-                $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] },
-              },
-            },
-          });
-          pipeline.push({
-            $sort: { organizationNameSort: sortOrder === "asc" ? 1 : -1 },
-          });
-        } else if (sortBy === "lastUpdatedAt") {
-          pipeline.push({
-            $sort: { updatedAt: sortOrder === "asc" ? 1 : -1 },
-          });
-        } else if (sortBy === "status") {
-          pipeline.push({
-            $addFields: {
-              _statusRank: {
-                $switch: {
-                  branches: [
-                    { case: { $eq: ["$status", "active"] }, then: 1 },
-                    { case: { $eq: ["$status", "inactive"] }, then: 2 },
-                    { case: { $eq: ["$status", "completed"] }, then: 3 },
-                    { case: { $eq: ["$status", "deleted"] }, then: 4 },
-                  ],
-                  default: 99,
-                },
-              },
-            },
-          });
-          pipeline.push({ $sort: { _statusRank: sortOrder === "asc" ? 1 : -1 } });
-        } else {
-          pipeline.push({
-            $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
-          });
-        }
-      }
-
-
-      // Apply pagination + counts using $facet
+  // Map organizationName to nested field
+  if (sortBy && sortOrder) {
+    if (sortBy === "organizationName") {
       pipeline.push({
-        $facet: {
-          data: [
-            { $skip: skip },
-            ...(limit === 0 ? [] : [{ $limit: limit }])
-          ],
-          totalFiltered: [{ $count: "count" }]
-        }
+        $addFields: {
+          organizationNameSort: {
+            $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] },
+          },
+        },
       });
-
-
-      const result = await Venues.aggregate(pipeline)
-
-
-      const venues = result[0]?.data || [];
-      const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-      // Additional counts for meta (active/inactive/total by userId as creator)
-      const [total, active, inactive] = await Promise.all([
-        Venues.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
-        Venues.countDocuments({ status: "active", creator: userId }),
-        Venues.countDocuments({ status: "inactive", creator: userId })
-      ]);
-
-      const formattedVenues = venues.map(venue => {
-        const venueDoc = new Venues(venue);
-        const formattedVenue = venueDoc.formatResponse();
-        if (venue.organizationData) {
-          formattedVenue.organization = formatOrganization(venue.organizationData);
-        }
-
-        return formattedVenue;
-
+      pipeline.push({
+        $sort: { organizationNameSort: sortOrder === "asc" ? 1 : -1 },
       });
+    } else if (sortBy === "lastUpdatedAt") {
+      pipeline.push({
+        $sort: { updatedAt: sortOrder === "asc" ? 1 : -1 },
+      });
+    } else if (sortBy === "status") {
+      pipeline.push({
+        $addFields: {
+          _statusRank: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$status", "active"] }, then: 1 },
+                { case: { $eq: ["$status", "inactive"] }, then: 2 },
+                { case: { $eq: ["$status", "completed"] }, then: 3 },
+                { case: { $eq: ["$status", "deleted"] }, then: 4 },
+              ],
+              default: 99,
+            },
+          },
+        },
+      });
+      pipeline.push({ $sort: { _statusRank: sortOrder === "asc" ? 1 : -1 } });
+    } else {
+      pipeline.push({
+        $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
+      });
+    }
+  }
 
-      const meta = generateMeta(page, limit, totalFiltered);
-      meta.venuesCount = { total, active, inactive };
 
-      return {
-        venues: formattedVenues,
-        meta
-      };
-    },
+  // Apply pagination + counts using $facet
+  pipeline.push({
+    $facet: {
+      data: [
+        { $skip: skip },
+        ...(limit === 0 ? [] : [{ $limit: limit }])
+      ],
+      totalFiltered: [{ $count: "count" }]
+    }
   });
+
+
+  const result = await Venues.aggregate(pipeline)
+
+
+  const venues = result[0]?.data || [];
+  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
+  // Additional counts for meta (active/inactive/total by userId as creator)
+  const [total, active, inactive] = await Promise.all([
+    Venues.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
+    Venues.countDocuments({ status: "active", creator: userId }),
+    Venues.countDocuments({ status: "inactive", creator: userId })
+  ]);
+
+  const formattedVenues = venues.map(venue => {
+    const venueDoc = new Venues(venue);
+    const formattedVenue = venueDoc.formatResponse();
+    if (venue.organizationData) {
+      formattedVenue.organization = formatOrganization(venue.organizationData);
+    }
+
+    return formattedVenue;
+
+  });
+
+  const meta = generateMeta(page, limit, totalFiltered);
+  meta.venuesCount = { total, active, inactive };
+
+  return {
+    venues: formattedVenues,
+    meta
+  };
 };
 
 //get venues for menu options dropdown where organization is not assigned yet
@@ -228,7 +190,6 @@ const getUnassignedVenues = async (userId) => {
 
 const updateVenue = async (id, data) => {
   let venue = await venueRepo.findVenueById(id);
-  await invalidate(venueRepo.ACTIVE_VENUES_CACHE_KEY);
   if (!venue) return null;
 
   const allowedFields = [
@@ -296,8 +257,6 @@ const updateVenue = async (id, data) => {
       { _id: updateData.organization },
       { $set: { location: updateData.location } }
     );
-
-    await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   }
 
   //get updated venue with venueDetails
