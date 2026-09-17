@@ -11,30 +11,30 @@ const { NotificationTypes } = require("../../models/Notifications");
 const MENU_NOTIFICATION_MAP = {
   MENU_ORDER_CONFIRMED: {
     type: NotificationTypes.MENU_ORDER_CONFIRMED,
-    title: () => `Order Confirmed`,
-    body: (order) =>
-      `Your order ${order.orderNumber} has been confirmed.`,
+    titleKey: "menu_order_confirmed_title",
+    bodyKey: "menu_order_confirmed_body",
+    bodyValues: (order) => ({ orderNumber: order.orderNumber }),
   },
 
   MENU_ORDER_CANCELLED: {
     type: NotificationTypes.MENU_ORDER_CANCELLED,
-    title: () => `Order Cancelled`,
-    body: (order) =>
-      `Your order ${order.orderNumber} has been cancelled.`,
+    titleKey: "menu_order_cancelled_title",
+    bodyKey: "menu_order_cancelled_body",
+    bodyValues: (order) => ({ orderNumber: order.orderNumber }),
   },
 
   MENU_ORDER_SENT: {
     type: NotificationTypes.MENU_ORDER_SENT,
-    title: () => `Order Sent`,
-    body: (order) =>
-      `Your order ${order.orderNumber} is on the way.`,
+    titleKey: "menu_order_sent_title",
+    bodyKey: "menu_order_sent_body",
+    bodyValues: (order) => ({ orderNumber: order.orderNumber }),
   },
 
   MENU_ORDER_COMPLETED: {
     type: NotificationTypes.MENU_ORDER_COMPLETED,
-    title: () => `Order Completed`,
-    body: (order) =>
-      `Your order ${order.orderNumber} has been completed. Enjoy!`,
+    titleKey: "menu_order_completed_title",
+    bodyKey: "menu_order_completed_body",
+    bodyValues: (order) => ({ orderNumber: order.orderNumber }),
   },
 };
 
@@ -79,8 +79,9 @@ const sendMenuOrderNotification = async ({
 
     sendUserNotifications({
       recipientIds: userIds,
-      title: config.title(order),
-      body: config.body(order),
+      titleKey: config.titleKey,
+      bodyKey: config.bodyKey,
+      bodyValues: config.bodyValues ? config.bodyValues(order) : {},
       data: {
         type: config.type,
         orderId,

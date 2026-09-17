@@ -90,11 +90,6 @@ const getWithFilters = async (
   return await GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
 };
 
-
-module.exports = {
-  getWithFilters,
-};
-
 /* ==========================================================
    FIND BY ID
 ========================================================== */
@@ -247,10 +242,155 @@ const count = async (query = {}) => {
   return GlobalBasePromotion.countDocuments(query);
 };
 
+/**
+ * Claim a globalClaimPromotion:
+ * - eligibility check
+ * - create GlobalPromotionsOrders
+ * - deduct claimPoints
+ * - issue linked GlobalReward (without charging points again)
+ */
+const claimPromotion = async (promotionId, userId, timezone = "UTC") => {
+  const mongoose = require("mongoose");
+  const { createTransactionService } = require(
+    "../../userWalletService/transactions/services/unifiedTransactionsService"
+  );
+  const { createGlobalRewardOrderService } = require(
+    "../rewardsOrders/rewardsOrdersService"
+  );
+  const { getUserWallet } = require(
+    "../../userWalletService/global/walletManagement/userWalletService"
+  );
+
+  const now = new Date();
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const promotion = await GlobalBasePromotion.findById(promotionId)
+      .populate("tierLimit")
+      .populate("reward")
+      .session(session)
+      .lean();
+
+    if (!promotion) {
+      throw new Error("promotion_not_found");
+    }
+
+    if (promotion.promotionType !== "globalClaimPromotion") {
+      throw new Error("promotion_not_claimable");
+    }
+
+    if (promotion.status !== "active") {
+      throw new Error("promotion_not_active");
+    }
+
+    const [eligiblePromo] = await applyEligibility({
+      promotions: [promotion],
+      userId,
+      timezone,
+      now,
+    });
+
+    if (!eligiblePromo?.canClaim) {
+      const reason =
+        eligiblePromo?.cannotClaimReasons?.[0] || "promotion_cannot_be_claimed";
+      throw new Error(reason);
+    }
+
+    const wallet = await getUserWallet(userId);
+    const tierSnapshot = {
+      title: wallet?.global?.level?.title || null,
+      entryPoints: wallet?.global?.level?.entryPoints ?? 0,
+    };
+
+    const [order] = await GlobalPromotionsOrders.create(
+      [
+        {
+          user: userId,
+          promotion: promotionId,
+          promotionType: promotion.promotionType,
+          pointsSpent: promotion.claimPoints || 0,
+          tierSnapshot,
+          status: "claimed",
+        },
+      ],
+      { session }
+    );
+
+    const claimPoints = promotion.claimPoints || 0;
+    if (claimPoints > 0) {
+      const trx = await createTransactionService(
+        {
+          user: userId,
+          type: "redeem",
+          domainType: "globalpromotionorders",
+          entityId: order._id,
+          globalPoints: {
+            base: claimPoints,
+            total: -claimPoints,
+          },
+          allowNegative: false,
+          description: `Claimed global promotion ${promotion.title}`,
+        },
+        session
+      );
+
+      if (!trx?.success) {
+        throw new Error(trx?.message || "transaction_failed");
+      }
+    }
+
+    let rewardResult = null;
+    const rewardId = promotion.reward?._id || promotion.reward;
+    if (rewardId) {
+      rewardResult = await createGlobalRewardOrderService(
+        userId,
+        rewardId,
+        {
+          firstName: "n/a",
+          surName: "n/a",
+          dob: "n/a",
+          pid: "n/a",
+        },
+        timezone,
+        {
+          session,
+          skipPointsCharge: true,
+          metaExtra: {
+            promotionId: promotion._id,
+            promotionOrderId: order._id,
+            via: "globalpromotionorders",
+          },
+        }
+      );
+
+      if (!rewardResult?.success) {
+        throw new Error(
+          rewardResult?.message || "promotion_reward_issue_failed"
+        );
+      }
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      order,
+      reward: rewardResult?.order || null,
+    };
+  } catch (err) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
+    throw err;
+  }
+};
 
 module.exports = {
   getWithFilters,
   count,
   findById,
   applyEligibility,
+  claimPromotion,
 };

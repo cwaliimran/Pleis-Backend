@@ -109,6 +109,10 @@ const getDetails = async (
   return eligibleItem;
 };
 
+const claimPromotion = async (promotionId, userId, timezone) => {
+  return repository.claimPromotion(promotionId, userId, timezone);
+};
+
 /* ==========================================================
    HOME PROMOTIONS
 ========================================================== */
@@ -153,5 +157,6 @@ const getGlobalPromotionsForHomeService =
 module.exports = {
   getGlobalPromotionsService,
   getDetails,
+  claimPromotion,
   getGlobalPromotionsForHomeService,
 };

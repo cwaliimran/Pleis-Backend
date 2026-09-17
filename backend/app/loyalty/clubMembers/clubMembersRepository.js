@@ -192,8 +192,9 @@ const checkLoyaltyTierPromotion = async (
   // 5️⃣ Fire-and-forget notification
   sendUserNotifications({
     recipientIds: [userId],
-    title: `🎉 Level upgraded!`,
-    body: `You have been promoted to ${promotionTarget.title}.`,
+    titleKey: "level_upgraded_celebration_title",
+    bodyKey: "level_upgraded_body",
+    bodyValues: { levelTitle: promotionTarget.title },
     data: {
       type: NotificationTypes.LEVEL_PROMOTED,
       levelId: promotionTarget._id,
@@ -288,8 +289,9 @@ const checkDemotion = async (
   // 5️⃣ Fire-and-forget notification
   sendUserNotifications({
     recipientIds: [userId],
-    title: `Level updated`,
-    body: `Your membership level is now ${fallbackTier.title}.`,
+    titleKey: "level_updated_title",
+    bodyKey: "level_updated_body",
+    bodyValues: { levelTitle: fallbackTier.title },
     data: {
       type: NotificationTypes.LEVEL_DEMOTED,
       levelId: fallbackTier._id,

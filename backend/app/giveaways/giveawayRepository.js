@@ -116,8 +116,8 @@ const createGiveaway = async (data) => {
     await update.save();
     await sendUserNotifications({
       recipientIds: [update.user.toString()],
-      title: "Successful Participate in giveaway",
-      body: `You have successfully participated in the giveaway.`,
+      titleKey: "giveaway_participated_title",
+      bodyKey: "giveaway_participated_body",
       data: {
         type: NotificationTypes.GIVEAWAY_UPDATE,
         objectType: "Giveaway",

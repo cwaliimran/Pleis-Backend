@@ -27,7 +27,8 @@ const updateChallengeByTaskType = async (req, res) => {
       companyOrganizer,
       taskType,
       value,
-      items
+      items,
+      req,
     });
 
 

@@ -1,55 +1,45 @@
-const { Events } = require("@EventsModel");
-const { TicketingBookings } = require("@TicketingBookingsModel");
-const { sendUserNotifications } = require("../communicationController");
-const { NotificationTypes } = require("../../models/Notifications");
 const { subscriptionExpiryEmailTemplate, subscriptionExpiredEmailTemplate } = require("@utils/emailTemplates");
 const { sendEmailViaMailgun } = require("@utils/emailUtil");
+const { translateNotification } = require("../../helperUtils/notificationTranslationUtil");
 const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
 /**
  * =====================================================
- * EVENT NOTIFICATION MAP
+ * SUBSCRIPTION NOTIFICATION MAP
  * =====================================================
  */
 
 const SUBSCRIPTION_NOTIFICATION_MAP = {
     SUBSCRIPTION_EXPIRED_10D: {
-        type: NotificationTypes.SUBSCRIPTION_EXPIRED_10D,
-        title: () => `Subscription Expiring Soon`,
-        body: () => `Your subscription will expire in 10 days.`,
+        titleKey: "subscription_expiring_soon_title",
+        bodyKey: "subscription_expiring_10d_body",
     },
     SUBSCRIPTION_EXPIRED_5D: {
-        type: NotificationTypes.SUBSCRIPTION_EXPIRED_5D,
-        title: () => `Subscription Expiring Soon`,
-        body: () => `Your subscription will expire in 5 days.`,
+        titleKey: "subscription_expiring_soon_title",
+        bodyKey: "subscription_expiring_5d_body",
     },
     SUBSCRIPTION_EXPIRED_1D: {
-        type: NotificationTypes.SUBSCRIPTION_EXPIRED_1D,
-        title: () => `Subscription Expiring Soon`,
-        body: () => `Your subscription will expire in 1 day.`,
+        titleKey: "subscription_expiring_soon_title",
+        bodyKey: "subscription_expiring_1d_body",
     },
     SUBSCRIPTION_EXPIRED_24H: {
-        type: NotificationTypes.SUBSCRIPTION_EXPIRED_24H,
-        title: () => `Subscription Expiring Soon`,
-        body: () => `Your subscription will expire in 24 hours.`,
+        titleKey: "subscription_expiring_soon_title",
+        bodyKey: "subscription_expiring_24h_body",
     },
     SUBSCRIPTION_EXPIRED: {
-        type: NotificationTypes.SUBSCRIPTION_EXPIRED,
-        title: () => `Subscription Expired`,
-        body: () => `Your subscription has been Expired.`,
+        titleKey: "subscription_expired_title",
+        bodyKey: "subscription_expired_body",
     },
 };
 
 /**
  * =====================================================
- * GENERIC EVENT NOTIFICATION DISPATCHER
+ * GENERIC SUBSCRIPTION NOTIFICATION DISPATCHER
  * =====================================================
  */
 const sendSubscriptionNotification = async ({
     userId,
     action,
-    userIds = [],
-    context = {},
     username,
     expiryDate,
     email
@@ -62,41 +52,30 @@ const sendSubscriptionNotification = async ({
             console.warn(`[NOTIFICATION] Unknown action: ${action}`);
             return;
         }
-        await sendUserNotifications({
-            recipientIds: userIds,
-            title: config.title(context),
-            body: config.body(context),
-            data: {
-                type: config.type,
-                userId,
-                objectType: "users",
-            },
-            sender: null,
-            objectId: userId,
-            image: null,
-        });
 
-        const formattedExpiryDate = formatDate(expiryDate); // Format the expiry date
+        const formattedExpiryDate = formatDate(expiryDate);
 
-        // Prepare email body using the appropriate email template
+        // Keep email copy in English to minimize scope
+        const emailTitle = translateNotification(config.titleKey, { language: "en" });
+        const emailMessage = translateNotification(config.bodyKey, { language: "en" });
+
         let mBody;
         if (action === "SUBSCRIPTION_EXPIRED") {
             mBody = subscriptionExpiredEmailTemplate({
                 username,
-                title: config.title(context),
-                message: config.body(context),
+                title: emailTitle,
+                message: emailMessage,
             });
         } else {
             mBody = subscriptionExpiryEmailTemplate({
                 username,
                 expiryDate: formattedExpiryDate,
-                title: config.title(context),
-                message: config.body(context),
+                title: emailTitle,
+                message: emailMessage,
             });
         }
 
-        // Send Email via Mailgun if not expired
-        await sendEmailViaMailgun([email], config.title(context), mBody);
+        await sendEmailViaMailgun([email], emailTitle, mBody);
 
     } catch (err) {
         console.error("[NOTIFICATION] Failed:", err);

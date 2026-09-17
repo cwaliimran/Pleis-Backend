@@ -140,8 +140,12 @@ const applyPoints = async (req, res) => {
     /* ---------- SEND NOTIFICATION (OUTSIDE TX) ---------- */
     sendUserNotifications({
       recipientIds: [user.toString()],
-      title: "Points Applied",
-      body: `You earn ${pointsCalculation.organizer.earnedPoints} company points and ${pointsCalculation.global.earnedPoints} global points.`,
+      titleKey: "points_applied_title",
+      bodyKey: "points_applied_body",
+      bodyValues: {
+        companyPoints: pointsCalculation.organizer.earnedPoints,
+        globalPoints: pointsCalculation.global.earnedPoints,
+      },
       data: {
         type: NotificationTypes.POINTS_UPDATE,
         objectType: "ApplyPointsByStaff",
@@ -149,6 +153,7 @@ const applyPoints = async (req, res) => {
       image: "noimage",
       sender: companyOrganizer,
       objectId: applyRecord._id,
+      req,
     }).catch(err =>
       console.error("Notification failed:", err.message)
     );

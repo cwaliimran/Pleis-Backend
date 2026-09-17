@@ -3,8 +3,6 @@ const mongoose = require("mongoose");
 const BadgeCategoriesModel = require("@BadgeCategoriesModel");
 const UserGlobalBadgesModel = require("@UserGlobalBadgesModel");
 const { getFullImageUrl } = require('@utils/imageHelper');
-const { sendUserNotifications } = require('@notificationsUtil');
-const { NotificationTypes } = require('@NotificationsModel');
 const { getUserMaxStreak } = require('../usersStreaks/usersStreaksService');
 
 const addUserBadges = async (data) => {
@@ -20,18 +18,6 @@ const addUserBadges = async (data) => {
     const userBadge = await UserGlobalBadgesModel.create({
       user: data.userId,
       badgeCategory: data.badageId
-    });
-    await sendUserNotifications({
-      recipientIds: [data.userId.toString()],
-      title: "Badge Earned!",
-      body: `Congratulations! You've earned a new badge.`,
-      data: {
-        type: NotificationTypes.BADAGE_EARNED,
-        objectType: "BadgeCategories",
-      },
-      image: "noimage",
-      sender: data.userId,
-      objectId: data.badageId,
     });
     return userBadge;
   } catch (err) {

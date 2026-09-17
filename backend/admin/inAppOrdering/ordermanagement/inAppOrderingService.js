@@ -341,11 +341,15 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
      NOTIFICATIONS
   =============================== */
 
-  if (statusChanged || paymentChanged || deliveryChanged) {
+  if ((statusChanged || deliveryChanged) && !(paymentChanged && order.paymentStatus === "paid")) {
     sendUserNotifications({
       recipientIds: [order.user.toString()],
-      title: "Order Updated",
-      body: `Your order ${order.orderNumber} status is now ${order.status}`,
+      titleKey: "order_updated_title",
+      bodyKey: "order_updated_body",
+      bodyValues: {
+        orderNumber: order.orderNumber,
+        status: order.status,
+      },
       data: {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "menuorders",
@@ -362,8 +366,9 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   if (paymentChanged && order.paymentStatus === "paid") {
     sendUserNotifications({
       recipientIds: [order.user.toString()],
-      title: "Order Paid",
-      body: `Order ${order.orderNumber} has been paid`,
+      titleKey: "order_paid_title",
+      bodyKey: "order_paid_body",
+      bodyValues: { orderNumber: order.orderNumber },
       data: {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "menuorders",
@@ -422,8 +427,9 @@ const sendPaymentReminder = async (orderId) => {
 
     await sendUserNotifications({
       recipientIds: [order.user.toString()],
-      title: "Payment Reminder",
-      body: `Reminder: Please complete the payment for order ${order.orderNumber} to avoid cancellation.`,
+      titleKey: "payment_reminder_title",
+      bodyKey: "payment_reminder_body",
+      bodyValues: { orderNumber: order.orderNumber },
       data: {
         type: NotificationTypes.REMINDER,
         objectType: "menuorders",

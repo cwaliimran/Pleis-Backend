@@ -157,8 +157,13 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
     /* SEND NOTIFICATION IN BACKGROUND */
     sendUserNotifications({
       recipientIds: [userId.toString()],
-      title: `Claimed reward ${reward.title}`,
-      body: `You have successfully claimed the reward ${reward.title} using ${reward.minPointsRequiredToClaim || 0} points.`,
+      titleKey: "reward_claimed_title",
+      bodyKey: "reward_claimed_body",
+      titleValues: { rewardTitle: reward.title },
+      bodyValues: {
+        rewardTitle: reward.title,
+        points: reward.minPointsRequiredToClaim || 0,
+      },
       data: { type: NotificationTypes.REWARD_CLAIMED, rewardId: reward._id, objectType: "loyaltyrewardsorders" },
       sender: orderDoc.companyOrganizer,
       objectId: orderDoc._id,

@@ -232,7 +232,8 @@ const createNotifications = async (data) => {
       await sendUserNotifications({
         recipientIds: userIds,
         title: data.title,
-        body: `You received a new message: ${data.description}`,
+        bodyKey: "update_message_body",
+        bodyValues: { description: data.description },
         data: {
           type: notificationSystemType,
           objectType: "GlobalNotification",

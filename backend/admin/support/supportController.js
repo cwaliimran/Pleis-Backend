@@ -177,13 +177,16 @@ const updateSupportRequest = async (req, res) => {
     }
     await sendUserNotifications({
       recipientIds: [updatedRecord.user.toString()],
-      title: `Support request updated and closed`,
-      body: `Your support request has been responded to and closed by the admin.${response ? ' Response: ' + response : ''}`,
+      titleKey: "support_request_closed_title",
+      bodyKey: response
+        ? "support_request_closed_with_response_body"
+        : "support_request_closed_body",
+      bodyValues: response ? { response } : {},
       data: { type: NotificationTypes.SUPPORT_REQUEST, supportRequestId: updatedRecord._id, objectType: "supportrequests" },
       sender: updatedRecord.user,
       objectId: updatedRecord._id,
       image: null,
-
+      req,
     });
     return sendResponse({
       res,

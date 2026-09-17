@@ -10,8 +10,6 @@ const {
 } = require("../../helperUtils/responseUtil");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { formatCategories } = require("./formatters/categoryFormatter");
-const { NotificationTypes } = require("@NotificationsModel");
-const { sendUserNotifications } = require("../../controllers/communicationController");
 const createGlobalReferral = async (data) => {
   try {
 
@@ -270,31 +268,6 @@ const createUserReferradrecord = async (data) => {
       userId,
       expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
     });
-    await sendUserNotifications({
-      recipientIds: [userId.toString()],
-      title: "Referral Successful",
-      body: `You have successfully referred by ${username}.`,
-      data: {
-        type: NotificationTypes.REFERRAL_UPDATE,
-        objectType: "User",
-      },
-      image: "noimage",
-      sender: userId,
-      objectId: userId,
-    });
-    await sendUserNotifications({
-      recipientIds: [referrer._id.toString()],
-      title: "Someone Joined PLEIS through your Referral",
-      body: `Congratulations! someone has joined PLEIS using your referral.`,
-      data: {
-        type: NotificationTypes.REFERRAL_UPDATE,
-        objectType: "User",
-      },
-      image: "noimage",
-      sender: userId,
-      objectId: userId,
-    });
-
 
     return {
       userId: newRecord.userId,

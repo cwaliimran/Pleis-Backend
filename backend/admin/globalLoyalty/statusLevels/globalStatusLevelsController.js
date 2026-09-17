@@ -66,7 +66,8 @@ const createStatusLevel = async (req, res) => {
 
 const getStatusLevels = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, sortBy, sortOrder } = req.query;
+  const { keyword, date, sortBy, sortOrder } = req.query;
+  const status = req.query.status || "active";
   try {
     const SORT_FIELDS = ["title", "entryPoints", "retainPoints"];
     const SORT_ORDERS = ["asc", "desc"];
@@ -246,7 +247,8 @@ const deleteStatusLevel = async (req, res) => {
 };
 const getTitleStatusLevels = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date } = req.query;
+  const { keyword, date } = req.query;
+  const status = req.query.status || "active";
   try {
     const { statusLevels, meta } = await statusLevelsService.getTitleStatusLevels({
       page,

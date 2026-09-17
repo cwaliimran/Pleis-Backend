@@ -44,8 +44,8 @@ const updateReviews = async (id, data) => {
   const companyOrganizer = await getOrgCompanyOrganizer(review.organization);
   await sendUserNotifications({
     recipientIds: [review.user.toString()],
-    title: `there is an update on your review`,
-    body: `The admin responded to your review.`,
+    titleKey: "review_updated_title",
+    bodyKey: "review_updated_body",
     data: { type: NotificationTypes.REVIEW_UPDATED, reviewId: review._id, objectType: "reviews" },
     sender: companyOrganizer,
     objectId: review._id,
