@@ -334,13 +334,16 @@ const getActiveGlobalLoyaltyHappyHourPromotion = async ({
         as: "tierLimit",
       },
     },
-    { $unwind: "$tierLimit" },
+    { $unwind: { path: "$tierLimit", preserveNullAndEmptyArrays: true } },
 
-    // tier eligibility
+    // tier eligibility (missing tierLimit = open to all)
     {
       $match: {
         $expr: {
-          $lte: ["$tierLimit.entryPoints", userTierEntryPoints],
+          $lte: [
+            { $ifNull: ["$tierLimit.entryPoints", 0] },
+            userTierEntryPoints,
+          ],
         },
       },
     },

@@ -217,6 +217,8 @@ const createUsersStreak = async (data) => {
   }
   const session = await mongoose.startSession();
   session.startTransaction();
+  let savedStreak = null;
+  let visitCounted = false;
   try {
     const existingStreak = await UsersStreaks.findOne(
       {
@@ -230,17 +232,34 @@ const createUsersStreak = async (data) => {
     const result = computeStreakUpdate(streakRule, existingStreak, new Date());
 
     if (result.isNew) {
-      const created = new UsersStreaks({ ...data, ...result });
-      await created.save({ session });
+      savedStreak = new UsersStreaks({ ...data, ...result });
+      await savedStreak.save({ session });
+      visitCounted = true;
     } else if (!result.unchanged) {
       Object.assign(existingStreak, result);
-      await existingStreak.save({ session });
+      savedStreak = await existingStreak.save({ session });
+      visitCounted = true;
     } else {
       existingStreak.lastVisitAt = new Date();
-      await existingStreak.save({ session }); // just bump timestamp
+      savedStreak = await existingStreak.save({ session }); // just bump timestamp
     }
     await session.commitTransaction();
     session.endSession();
+
+    // Progress visit challenges only when a real visit was counted
+    if (visitCounted) {
+      fireAndForget(
+        resolveChallengeByTaskTypeService({
+          userId: data.user,
+          companyOrganizer: data.companyOrganizer,
+          taskType: "visit",
+          value: 1,
+        }),
+        "VISIT_CHALLENGE"
+      );
+    }
+
+    return savedStreak;
   } catch (err) {
     await session.abortTransaction();
     session.endSession();

@@ -11,9 +11,121 @@ const { createTransactionService } = require(
 );
 const TicketingsModel = require("@TicketingsModel"); // adjust path if needed
 const MenuItems = require("@MenuItemsModel");
+const Reward = require("@RewardModel");
+const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 
 const mongoose = require("mongoose");
 const { createTicketingBookingService } = require("../../bookings/ticketings/ticketingBookingService");
+
+/**
+ * Issue a pending loyalty reward order from a completed challenge
+ * (menuItem / customReward / linkedReward). Points & tickets are handled separately.
+ */
+const issueChallengeRewardOrder = async ({
+  lockedOrder,
+  challenge,
+  session,
+}) => {
+  const reward = challenge?.reward || {};
+  const rewardType = reward.rewardType;
+  const companyOrganizer = challenge.companyOrganizer;
+  const userId = lockedOrder.user;
+
+  // Avoid double-issuing if completion is retried
+  const existing = await RewardsOrders.findOne({
+    user: userId,
+    sourceType: "loyaltychallengesorders",
+    sourceId: lockedOrder._id,
+  }).session(session);
+
+  if (existing) return existing;
+
+  let snapshot = null;
+
+  if (rewardType === "linkedReward") {
+    const linkedId = reward.linkedReward?._id || reward.linkedReward;
+    if (!linkedId) {
+      throw new Error("challenge_linked_reward_missing");
+    }
+
+    // Register discriminators (buyMenuItemReward / customReward / ticketReward)
+    require("../../../commonModules/loyalty/rewards/models/index");
+
+    const linkedReward = await Reward.findById(linkedId).session(session).lean();
+
+    if (!linkedReward) {
+      throw new Error("challenge_linked_reward_not_found");
+    }
+
+    if (linkedReward.menuItem) {
+      linkedReward.menuItem = await MenuItems.findById(linkedReward.menuItem)
+        .session(session)
+        .lean();
+    }
+
+    snapshot = {
+      ...linkedReward,
+      fromChallenge: true,
+      challengeId: challenge._id,
+      challengeTitle: challenge.title,
+    };
+  } else if (rewardType === "menuItem") {
+    const menuItemIds = (reward.rewardMenuItem || [])
+      .map((item) => item?._id || item)
+      .filter(Boolean);
+
+    const menuItems = menuItemIds.length
+      ? await MenuItems.find({ _id: { $in: menuItemIds } })
+          .session(session)
+          .lean()
+      : [];
+
+    snapshot = {
+      title: challenge.title,
+      image: challenge.image || "",
+      description: challenge.description || "",
+      rewardType: "buyMenuItemReward",
+      menuItem: menuItems.length === 1 ? menuItems[0] : menuItems,
+      companyOrganizer,
+      minPointsRequiredToClaim: 0,
+      fromChallenge: true,
+      challengeId: challenge._id,
+      challengeTitle: challenge.title,
+    };
+  } else if (rewardType === "customReward") {
+    snapshot = {
+      title: reward.customReward?.title || challenge.title,
+      image: reward.customReward?.image || challenge.image || "",
+      description: reward.customReward?.description || challenge.description || "",
+      rewardType: "customReward",
+      customReward: reward.customReward || {},
+      companyOrganizer,
+      minPointsRequiredToClaim: 0,
+      fromChallenge: true,
+      challengeId: challenge._id,
+      challengeTitle: challenge.title,
+    };
+  } else {
+    return null;
+  }
+
+  const [orderDoc] = await RewardsOrders.create(
+    [
+      {
+        user: userId,
+        companyOrganizer,
+        sourceType: "loyaltychallengesorders",
+        sourceId: lockedOrder._id,
+        snapshot,
+        pointsUsed: 0,
+        status: "pending",
+      },
+    ],
+    { session }
+  );
+
+  return orderDoc;
+};
 
 /**
  * Unified challenge progress service.
@@ -55,7 +167,7 @@ const updateChallengeProgressByTaskTypeService = async ({
   }
 
   if (!existingOrder) {
-    await sendUserNotifications({
+    void sendUserNotifications({
       recipientIds: [userId.toString()],
       title: challenge.title,
       body: "Your challenge has started. Good luck!",
@@ -343,10 +455,9 @@ const resolveGenericTaskTypeService = async ({
       if (!canStart) continue;
     }
 
-    // 🔔 Send STARTED if first cycle
+    // 🔔 Send STARTED if first cycle (do not block progress on notifications)
     if (order.progress.current === 0) {
-
-      await sendUserNotifications({
+      void sendUserNotifications({
         recipientIds: [userId.toString()],
         title: challenge.title,
         body: "Your challenge has started. Good luck!",
@@ -394,9 +505,10 @@ const resolveGenericTaskTypeService = async ({
       // ✅ Completion
       if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
 
- 
-
         await finalizeChallengeCompletion(updated);
+
+        // Only open another cycle when there is leftover progress to apply
+        if (remaining <= 0) break;
 
         // Check if another cycle allowed
         const allowed = await repo.canStartNewCycle(userId, challenge);
@@ -425,230 +537,273 @@ const resolveGenericTaskTypeService = async ({
 };
 
 
-const finalizeChallengeCompletion = async (order) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+const isTransientTxnError = (err) =>
+  err?.errorLabels?.has?.("TransientTransactionError") ||
+  err?.code === 112 ||
+  err?.code === 251 ||
+  err?.codeName === "NoSuchTransaction" ||
+  err?.codeName === "WriteConflict";
 
-  try {
-    const challenge = order.challengeSnapshot;
+const finalizeChallengeCompletion = async (order, { maxRetries = 3 } = {}) => {
+  let lastError = null;
 
-    // 🔒 Lock order atomically
-    const lockedOrder = await LoyaltyChallengesOrders.findOneAndUpdate(
-      { _id: order._id, rewardClaimed: false },
-      {
-        status: "completed",
-        rewardClaimed: true,
-        rewardClaimedAt: new Date()
-      },
-      { new: true, session }
-    );
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    if (!lockedOrder) {
-      await session.abortTransaction();
-      session.endSession();
-      return;
-    }
+    try {
+      const challenge = order.challengeSnapshot;
 
-    let ticketOrderId = null;
-    let ticketStatus = null;
-    let protectionRequired = false;
-    let protectionType = null;
+      // 🔒 Lock order atomically
+      const lockedOrder = await LoyaltyChallengesOrders.findOneAndUpdate(
+        { _id: order._id, rewardClaimed: false },
+        {
+          status: "completed",
+          rewardClaimed: true,
+          rewardClaimedAt: new Date()
+        },
+        { new: true, session }
+      );
 
-    // =====================================================
-    // 🎟 SPECIAL TICKET REWARD
-    // =====================================================
-
-    if (
-      challenge.reward?.rewardType === "specialTicket" &&
-      challenge.reward?.specialTicket?.ticket
-    ) {
-      ticketStatus = "failed";
-
-      const rawTicket =
-        challenge.reward.specialTicket.ticket;
-
-      let ticketId = null;
-
-      if (mongoose.Types.ObjectId.isValid(rawTicket)) {
-        ticketId = rawTicket;
-      } else if (
-        typeof rawTicket === "object" &&
-        mongoose.Types.ObjectId.isValid(rawTicket._id)
-      ) {
-        ticketId = rawTicket._id;
+      if (!lockedOrder) {
+        await session.abortTransaction();
+        session.endSession();
+        return { success: true, message: "already_claimed" };
       }
 
-      if (ticketId) {
-        try {
-          // 🔎 Fetch ticket inside same session
-          const ticketDoc = await TicketingsModel.findById(
-            ticketId,
-            null,
-            { session }
-          ).lean();
+      let ticketOrderId = null;
+      let ticketStatus = null;
+      let protectionRequired = false;
+      let protectionType = null;
 
-          if (ticketDoc && ticketDoc.resaleProtection !== "none") {
-            protectionRequired = true;
-            protectionType = ticketDoc.resaleProtection;
-          }
+      // =====================================================
+      // 🎟 SPECIAL TICKET REWARD
+      // =====================================================
 
-          const bookingResult =
-            await createTicketingBookingService(
-              {
-                user: lockedOrder.user,
-                ticketings: [
-                  {
-                    ticketId,
-                    timeSlot:
-                      challenge.reward.specialTicket.timeSlot || null,
-                    isFastTrack:
-                      challenge.reward.specialTicket.isFastTrack || false,
-                    protectionUserDetails: {
-                      firstName: "n/a",
-                      surName: "n/a",
-                      dob: "n/a",
-                      pid: "n/a"
-                    }
-                  }
-                ],
-                bookingReference: "loyaltychallengesorders",
-                meta: {
-                  id: challenge._id,
-                  type: "loyaltychallengesorders"
-                }
-              },
-              "UTC",
-              session
-            );
+      if (
+        challenge.reward?.rewardType === "specialTicket" &&
+        challenge.reward?.specialTicket?.ticket
+      ) {
+        ticketStatus = "failed";
 
-          if (bookingResult?._id) {
-            ticketOrderId = bookingResult._id;
-            ticketStatus = "issued";
-          }
+        const rawTicket =
+          challenge.reward.specialTicket.ticket;
 
-        } catch (err) {
-          console.error(
-            "[LOYALTY] Ticket creation failed",
-            {
-              challengeId: challenge._id,
-              error: err.message
+        let ticketId = null;
+
+        if (mongoose.Types.ObjectId.isValid(rawTicket)) {
+          ticketId = rawTicket;
+        } else if (
+          typeof rawTicket === "object" &&
+          mongoose.Types.ObjectId.isValid(rawTicket._id)
+        ) {
+          ticketId = rawTicket._id;
+        }
+
+        if (ticketId) {
+          try {
+            // 🔎 Fetch ticket inside same session
+            const ticketDoc = await TicketingsModel.findById(
+              ticketId,
+              null,
+              { session }
+            ).lean();
+
+            if (ticketDoc && ticketDoc.resaleProtection !== "none") {
+              protectionRequired = true;
+              protectionType = ticketDoc.resaleProtection;
             }
+
+            const bookingResult =
+              await createTicketingBookingService(
+                {
+                  user: lockedOrder.user,
+                  ticketings: [
+                    {
+                      ticketId,
+                      timeSlot:
+                        challenge.reward.specialTicket.timeSlot || null,
+                      isFastTrack:
+                        challenge.reward.specialTicket.isFastTrack || false,
+                      protectionUserDetails: {
+                        firstName: "n/a",
+                        surName: "n/a",
+                        dob: "n/a",
+                        pid: "n/a"
+                      }
+                    }
+                  ],
+                  bookingReference: "loyaltychallengesorders",
+                  meta: {
+                    id: challenge._id,
+                    type: "loyaltychallengesorders"
+                  }
+                },
+                "UTC",
+                session
+              );
+
+            if (bookingResult?._id) {
+              ticketOrderId = bookingResult._id;
+              ticketStatus = "issued";
+            }
+
+          } catch (err) {
+            console.error(
+              "[LOYALTY] Ticket creation failed",
+              {
+                challengeId: challenge._id,
+                error: err.message
+              }
+            );
+          }
+
+        }
+
+        // Persist ticket result
+        if (ticketStatus !== null) {
+          await LoyaltyChallengesOrders.updateOne(
+            { _id: lockedOrder._id },
+            {
+              rewardTicketOrder: ticketOrderId,
+              ticketStatus
+            },
+            { session }
           );
         }
 
-      }
 
-      // Persist ticket result
-      if (ticketStatus !== null) {
-        await LoyaltyChallengesOrders.updateOne(
-          { _id: lockedOrder._id },
-          {
-            rewardTicketOrder: ticketOrderId,
-            ticketStatus
-          },
-        );
-      }
+        // =====================================================
+        // 🔐 PROTECTION DETAILS NOTIFICATION
+        // =====================================================
+        if (ticketStatus === "issued" && protectionRequired) {
 
+          let protectionMessage = "";
 
-      // =====================================================
-      // 🔐 PROTECTION DETAILS NOTIFICATION
-      // =====================================================
-      if (ticketStatus === "issued" && protectionRequired) {
+          if (protectionType === "nameSurname") {
+            protectionMessage =
+              "Please enter the attendee's name and surname to activate your ticket.";
+          }
 
-        let protectionMessage = "";
+          if (protectionType === "nameSurnamePid") {
+            protectionMessage =
+              "Please enter the attendee's name, surname, and PID to activate your ticket.";
+          }
 
-        if (protectionType === "nameSurname") {
-          protectionMessage =
-            "Please enter the attendee's name and surname to activate your ticket.";
+          sendUserNotifications({
+            recipientIds: [lockedOrder.user.toString()],
+            title: "Additional Ticket Details Required",
+            body: protectionMessage,
+            data: {
+              type: NotificationTypes.TICKET_PROTECTION_REQUIRED,
+              objectType: "ticketingorders",
+              challengeOrderId: lockedOrder._id,
+              ticketOrderId
+            },
+            sender: challenge.companyOrganizer,
+            objectId: ticketOrderId
+          });
         }
 
-        if (protectionType === "nameSurnamePid") {
-          protectionMessage =
-            "Please enter the attendee's name, surname, and PID to activate your ticket.";
-        }
+      } else if (challenge.reward?.rewardType === "points") {
 
-        sendUserNotifications({
-          recipientIds: [lockedOrder.user.toString()],
-          title: "Additional Ticket Details Required",
-          body: protectionMessage,
-          data: {
-            type: NotificationTypes.TICKET_PROTECTION_REQUIRED,
-            objectType: "ticketingorders",
-            challengeOrderId: lockedOrder._id,
-            ticketOrderId
-          },
-          sender: challenge.companyOrganizer,
-          objectId: ticketOrderId
+
+        // =====================================================
+        // 💎 POINTS REWARD
+        // =====================================================
+
+        const points = challenge.reward.rewardValue || 0;
+
+        if (points > 0) {
+          const trx = await createTransactionService(
+            {
+              user: lockedOrder.user,
+              companyOrganizer: challenge.companyOrganizer,
+              companyPoints: {
+                base: points,
+                multiplier: 1,
+                total: points,
+                pointsPerEuro: 1
+              },
+              allowNegative: false,
+              type: "earn",
+              description: `Points awarded for completing challenge: ${challenge.title}`,
+              entityId: lockedOrder._id,
+              domainType: "loyaltychallengesorders"
+            },
+            session
+          );
+
+          if (!trx?.success) {
+            throw new Error(trx?.message || "challenge_reward_transaction_failed");
+          }
+        }
+      } else if (
+        ["menuItem", "customReward", "linkedReward"].includes(
+          challenge.reward?.rewardType
+        )
+      ) {
+        // =====================================================
+        // 🎁 MENU / CUSTOM / LINKED REWARD → loyalty reward order
+        // =====================================================
+        await issueChallengeRewardOrder({
+          lockedOrder,
+          challenge,
+          session,
         });
       }
 
-    } else if (challenge.reward?.rewardType === "points") {
+      await session.commitTransaction();
+      session.endSession();
 
-  
       // =====================================================
-      // 💎 POINTS REWARD
+      // 🔔 COMPLETION NOTIFICATION
       // =====================================================
+      sendUserNotifications({
+        recipientIds: [lockedOrder.user.toString()],
+        title: challenge.title,
+        body: "Congratulations! Your challenge has been completed.",
+        data: {
+          type: NotificationTypes.CHALLENGE_COMPLETED,
+          objectType: "challengesorders"
+        },
+        sender: challenge.companyOrganizer,
+        objectId: lockedOrder._id
+      });
 
-      const points = challenge.reward.rewardValue || 0;
 
-      if (points > 0) {
-        await createTransactionService(
-          {
-            user: lockedOrder.user,
-            companyOrganizer: challenge.companyOrganizer,
-            companyPoints: {
-              base: points,
-              multiplier: 1,
-              total: points,
-              pointsPerEuro: 1
-            },
-            allowNegative: false,
-            type: "earn",
-            description: `Points awarded for completing challenge: ${challenge.title}`,
-            entityId: lockedOrder._id,
-            domainType: "loyaltychallengesorders"
-          },
-          session
-        );
+      return { success: true };
+
+    } catch (err) {
+      lastError = err;
+
+      if (session.inTransaction()) {
+        try {
+          await session.abortTransaction();
+        } catch (_) {
+          /* already aborted by server */
+        }
       }
+      session.endSession();
+
+      if (isTransientTxnError(err) && attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, 50 * attempt));
+        continue;
+      }
+
+      console.error("[LOYALTY] Completion transaction failed", err);
+
+      return {
+        success: false,
+        message: err.message
+      };
     }
-
-    await session.commitTransaction();
-    session.endSession();
-
-    // =====================================================
-    // 🔔 COMPLETION NOTIFICATION
-    // =====================================================
-    sendUserNotifications({
-      recipientIds: [lockedOrder.user.toString()],
-      title: challenge.title,
-      body: "Congratulations! Your challenge has been completed.",
-      data: {
-        type: NotificationTypes.CHALLENGE_COMPLETED,
-        objectType: "challengesorders"
-      },
-      sender: challenge.companyOrganizer,
-      objectId: lockedOrder._id
-    });
-
-
-    return { success: true };
-
-  } catch (err) {
-
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
-
-    session.endSession();
-
-    console.error("[LOYALTY] Completion transaction failed", err);
-
-    return {
-      success: false,
-      message: err.message
-    };
   }
+
+  return {
+    success: false,
+    message: lastError?.message || "challenge_completion_failed"
+  };
 };
 
 /**
@@ -703,7 +858,7 @@ const handleChallengeMilestones = async ({
       );
 
     if (milestoneUpdate) {
-      await sendUserNotifications({
+      void sendUserNotifications({
         recipientIds: [userId.toString()],
         title: challenge.title,
         body: `You're ${milestone}% done! Keep going.`,

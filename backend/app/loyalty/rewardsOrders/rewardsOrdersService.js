@@ -67,9 +67,11 @@ const getAllRewardOrdersService = async ({
   limit = 10,
   status,
   keyword,
-  sort = "desc"
+  sort = "desc",
+  orderSort,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const sortDir = (orderSort || sort) === "asc" ? 1 : -1;
 
   const { data, total } =
     await rewardRepo.getCombinedRewardOrders({
@@ -78,19 +80,25 @@ const getAllRewardOrdersService = async ({
       keyword,
       skip,
       limit,
-      sort: sort === "asc" ? 1 : -1
+      sort: sortDir
     });
 
   const meta = generateMeta(page, limit, total);
 
-  const formattedOrders = data.map(order => {
-    if (order.rewardScope === "global") {
-      return formatGlobalLoyaltyRewardOrder(order);
-    }
-    return formatLoyaltyRewardOrders(order);
-  });
+  const formattedOrders = data
+    .map(order => {
+      if (order.rewardScope === "global") {
+        return formatGlobalLoyaltyRewardOrder(order);
+      }
+      return formatLoyaltyRewardOrders(order);
+    })
+    .filter(Boolean);
 
-  return { orders: formattedOrders, meta };
+  return {
+    orders: formattedOrders,
+    globalRewards: formattedOrders.filter((o) => o.rewardScope === "global"),
+    meta,
+  };
 };
 
 const completeRewardOrderService = async ({

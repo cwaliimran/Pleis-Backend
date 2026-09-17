@@ -9,6 +9,7 @@ const LoyaltyReferralSettings = require("@LoyaltyReferralSettingsModel");
 const { LoyaltyReferredRecord, LoyaltyReferredRecords } = require("@LoyaltyReferredRecordModel");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("../../../models/Notifications");
+const { fireAndForget } = require("../../../helperUtils/responseUtil");
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
 // ==========================================================
@@ -767,6 +768,21 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
     await User.findByIdAndUpdate(referrerId, {
       $inc: { loyaltyReferralsCount: 1 }, // Increment referrer's referral count
     });
+
+    // Progress referrer's "referUsers" challenges after a successful join referral
+    // Lazy-require to avoid circular dep with unifiedTransactions → isClubMember
+    fireAndForget(
+      (async () => {
+        const { resolveChallengeByTaskTypeService } = require("../challengesOrders/challengeOrdersService");
+        return resolveChallengeByTaskTypeService({
+          userId: referrerId,
+          companyOrganizer,
+          taskType: "referUsers",
+          value: 1,
+        });
+      })(),
+      "REFER_USERS_CHALLENGE"
+    );
 
     // Return a success response with relevant data
     return {

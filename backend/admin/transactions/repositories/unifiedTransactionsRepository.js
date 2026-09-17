@@ -259,8 +259,10 @@ const getTransactionsWithFilters = async ({
       idPipeline.push({ $match: match });
     }
 
+    const createdAtDir = sortOrder === "asc" ? 1 : -1;
+
     idPipeline.push(
-      { $sort: { createdAt: -1, _id: -1 } },
+      { $sort: { createdAt: createdAtDir, _id: createdAtDir } },
       { $skip: skip }
     );
 
@@ -357,6 +359,7 @@ const getTransactionsWithFilters = async ({
           }
         }
       },
+      { $sort: { __order: 1 } },
     ];
 
     const txList = await UnifiedWalletTransactions.aggregate(pipeline, {
