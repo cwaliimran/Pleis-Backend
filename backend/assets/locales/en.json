@@ -734,6 +734,7 @@
   "global_challenge_progress_updated": "Global challenge progress updated",
   "loyalty_fetched_successfully": "Loyalty fetched successfully",
   "reward_claimed_successfully": "Reward claimed successfully",
+  "reward_not_available_for_claim": "This reward is not available to claim directly",
   "reward_orders_fetched_successfully": "Reward orders fetched successfully",
   "reward_order_not_found": "Reward order not found",
   "reward_order_details_fetched_successfully": "Reward order details fetched successfully",

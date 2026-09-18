@@ -29,6 +29,7 @@ if(!req.body.companyOrganizer){
     objectIdFields.push("menuItem")
   }
 
+  // availableAsReward / challengeOnly are optional body flags (R2/R5), normalized in service
   if (!validateParams(req, res, {
     rawData,
     dateFields,

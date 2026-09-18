@@ -209,6 +209,7 @@ async function excludeEntry(req, res) {
 
 const fiscalizeService = require("./fiscalizeService");
 const offAppFiscalizeService = require("./offAppFiscalizeService");
+const billkoB2bDocumentsService = require("./billkoB2bDocumentsService");
 
 async function fiscalize(req, res) {
   try {
@@ -395,6 +396,120 @@ async function cancelOffApp(req, res) {
   }
 }
 
+async function billkoLakeStatus(req, res) {
+  try {
+    const data = await billkoB2bDocumentsService.getLakeStatus();
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "billko_lake_status",
+      translateMessage: false,
+      data,
+    });
+  } catch (err) {
+    return sendResponse({
+      res,
+      statusCode: err.statusCode || 500,
+      translationKey: err.code || err.message || "billko_lake_status_failed",
+      translateMessage: false,
+      error: err.message,
+    });
+  }
+}
+
+async function billkoIncoming(req, res) {
+  try {
+    const data = await billkoB2bDocumentsService.listIncoming(req.query);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "billko_incoming_documents",
+      translateMessage: false,
+      data: data.items,
+      meta: { count: data.count },
+    });
+  } catch (err) {
+    return sendResponse({
+      res,
+      statusCode: err.statusCode || 500,
+      translationKey: err.code || err.message || "billko_incoming_failed",
+      translateMessage: false,
+      error: err.message,
+    });
+  }
+}
+
+async function billkoOutgoing(req, res) {
+  try {
+    const data = await billkoB2bDocumentsService.listOutgoing(req.query);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "billko_outgoing_documents",
+      translateMessage: false,
+      data: data.items,
+      meta: { count: data.count },
+    });
+  } catch (err) {
+    return sendResponse({
+      res,
+      statusCode: err.statusCode || 500,
+      translationKey: err.code || err.message || "billko_outgoing_failed",
+      translateMessage: false,
+      error: err.message,
+    });
+  }
+}
+
+async function billkoDocumentStatus(req, res) {
+  try {
+    const data = await billkoB2bDocumentsService.getStatus(req.params.documentId);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "billko_document_status",
+      translateMessage: false,
+      data,
+    });
+  } catch (err) {
+    return sendResponse({
+      res,
+      statusCode: err.statusCode || 500,
+      translationKey: err.code || err.message || "billko_document_status_failed",
+      translateMessage: false,
+      error: err.message,
+    });
+  }
+}
+
+async function billkoReportPayment(req, res) {
+  try {
+    const data = await billkoB2bDocumentsService.reportPayment({
+      documentId: req.params.documentId,
+      paymentDate: req.body?.paymentDate,
+      paidAmount: req.body?.paidAmount,
+      paymentType: req.body?.paymentType,
+      invoiceId: req.body?.invoiceId,
+      orderNumber: req.body?.orderNumber,
+    });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "billko_payment_reported",
+      translateMessage: false,
+      data,
+    });
+  } catch (err) {
+    return sendResponse({
+      res,
+      statusCode: err.statusCode || 500,
+      translationKey: err.code || err.message || "billko_report_payment_failed",
+      translateMessage: false,
+      error: err.message,
+    });
+  }
+}
+
 module.exports = {
   generate,
   list,
@@ -410,4 +525,9 @@ module.exports = {
   getOffApp,
   confirmOffApp,
   cancelOffApp,
+  billkoLakeStatus,
+  billkoIncoming,
+  billkoOutgoing,
+  billkoDocumentStatus,
+  billkoReportPayment,
 };

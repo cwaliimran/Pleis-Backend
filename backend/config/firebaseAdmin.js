@@ -16,11 +16,12 @@ if (!fs.existsSync(filePath)) {
 }
 
 const serviceAccount = require("../secretAssets/serviceAccountKey.json");
+const { resolveFirebaseDatabaseUrl } = require("./CONSTANTS");
 
 try {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://pleis-4fb7b.firebaseio.com",
+    databaseURL: resolveFirebaseDatabaseUrl(),
   });
 
   // Log after successful initialization

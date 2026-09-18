@@ -1,5 +1,6 @@
 /**
- * NEW additive admin routes for Phase B payout statements + Phase C Fiscalize.
+ * NEW additive admin routes for Phase B payout statements + Phase C Fiscalize
+ * + Imperial Lake B2B document / payment reporting.
  * Mounted at /api/v1/admin/payout-statements and /api/v1/admin/payouts
  *
  * Phase B:
@@ -19,6 +20,13 @@
  * GET    /off-app-batches/:id
  * POST   /off-app-batches/:id/confirm
  * POST   /off-app-batches/:id/cancel
+ *
+ * Imperial Lake B2B (additive; gated by BILLKO_LAKE_ENABLED + credentials):
+ * GET    /billko/status
+ * GET    /billko/incoming
+ * GET    /billko/outgoing
+ * GET    /billko/documents/:documentId
+ * POST   /billko/documents/:documentId/report-payment
  */
 const express = require("express");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
@@ -43,5 +51,15 @@ router.get("/off-app-batches", rl, controller.listOffApp);
 router.get("/off-app-batches/:id", rl, controller.getOffApp);
 router.post("/off-app-batches/:id/confirm", rl, controller.confirmOffApp);
 router.post("/off-app-batches/:id/cancel", rl, controller.cancelOffApp);
+
+router.get("/billko/status", rl, controller.billkoLakeStatus);
+router.get("/billko/incoming", rl, controller.billkoIncoming);
+router.get("/billko/outgoing", rl, controller.billkoOutgoing);
+router.get("/billko/documents/:documentId", rl, controller.billkoDocumentStatus);
+router.post(
+  "/billko/documents/:documentId/report-payment",
+  rl,
+  controller.billkoReportPayment,
+);
 
 module.exports = router;

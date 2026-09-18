@@ -971,6 +971,167 @@ const getUserReservationChangeLogs = async ({
   };
 };
 
+/**
+ * Loyalty Impact Graph
+ * - Loyalty = order user is an active ClubMembers for the org's company organizer
+ * - Non-loyalty = ordered but has not joined the club
+ * - Order Frequency (Loyalty): share of high-frequency orders from loyalty users
+ * - Average Spend lift: how much more loyalty users spend per order vs non-loyalty
+ */
+const getLoyaltyImpactRaw = async ({ organizations, dateFilter, timezone }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
+  const baseMatch = {
+    user: { $ne: null },
+    ...(organizations?.length && {
+      organization: { $in: organizations },
+    }),
+    ...(ranges && {
+      createdAt: { $gte: ranges.start, $lt: ranges.end },
+    }),
+  };
+
+  const result = await MenuOrders.aggregate([
+    { $match: baseMatch },
+
+    // Resolve company organizer (org creator) for club membership lookup
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "org",
+      },
+    },
+    { $unwind: { path: "$org", preserveNullAndEmptyArrays: true } },
+
+    // Match active club membership for this user + company
+    {
+      $lookup: {
+        from: "clubmembers",
+        let: {
+          userId: "$user",
+          companyOrganizerId: "$org.creator",
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$user", "$$userId"] },
+                  { $eq: ["$companyOrganizer", "$$companyOrganizerId"] },
+                  { $eq: ["$status", "active"] },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+          { $project: { _id: 1 } },
+        ],
+        as: "clubMembership",
+      },
+    },
+    {
+      $addFields: {
+        isLoyalty: { $gt: [{ $size: "$clubMembership" }, 0] },
+      },
+    },
+
+    // Per-user order counts (for high-frequency classification)
+    {
+      $facet: {
+        perUser: [
+          {
+            $group: {
+              _id: "$user",
+              orderCount: { $sum: 1 },
+              isLoyalty: { $max: "$isLoyalty" },
+            },
+          },
+        ],
+        spend: [
+          {
+            $group: {
+              _id: "$isLoyalty",
+              orderCount: { $sum: 1 },
+              totalSpend: { $sum: { $ifNull: ["$totalPrice", 0] } },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  const facet = result[0] || { perUser: [], spend: [] };
+  const perUser = facet.perUser || [];
+  const spendRows = facet.spend || [];
+
+  const loyaltySpend = spendRows.find((r) => r._id === true) || {
+    orderCount: 0,
+    totalSpend: 0,
+  };
+  const nonLoyaltySpend = spendRows.find((r) => r._id === false) || {
+    orderCount: 0,
+    totalSpend: 0,
+  };
+
+  const loyaltyAvgSpend =
+    loyaltySpend.orderCount > 0
+      ? loyaltySpend.totalSpend / loyaltySpend.orderCount
+      : 0;
+  const nonLoyaltyAvgSpend =
+    nonLoyaltySpend.orderCount > 0
+      ? nonLoyaltySpend.totalSpend / nonLoyaltySpend.orderCount
+      : 0;
+
+  // High-frequency = users with more than 1 order (repeat / frequent orderers)
+  const highFrequencyUsers = perUser.filter((u) => u.orderCount > 1);
+  const highFrequencyLoyaltyOrders = highFrequencyUsers
+    .filter((u) => u.isLoyalty)
+    .reduce((sum, u) => sum + u.orderCount, 0);
+  const highFrequencyTotalOrders = highFrequencyUsers.reduce(
+    (sum, u) => sum + u.orderCount,
+    0,
+  );
+
+  // Fallback: if no repeat orderers yet, use all orders share from loyalty
+  const frequencyBaseOrders =
+    highFrequencyTotalOrders > 0
+      ? highFrequencyTotalOrders
+      : loyaltySpend.orderCount + nonLoyaltySpend.orderCount;
+  const frequencyLoyaltyOrders =
+    highFrequencyTotalOrders > 0
+      ? highFrequencyLoyaltyOrders
+      : loyaltySpend.orderCount;
+
+  const orderFrequencyLoyaltyPercent =
+    frequencyBaseOrders > 0
+      ? Math.round((frequencyLoyaltyOrders / frequencyBaseOrders) * 100)
+      : 0;
+
+  const averageSpendLiftPercent =
+    nonLoyaltyAvgSpend > 0
+      ? Math.round(
+          ((loyaltyAvgSpend - nonLoyaltyAvgSpend) / nonLoyaltyAvgSpend) * 100,
+        )
+      : 0;
+
+  return {
+    orderFrequencyLoyalty: {
+      value: orderFrequencyLoyaltyPercent,
+      loyaltyOrders: frequencyLoyaltyOrders,
+      totalOrders: frequencyBaseOrders,
+      usedHighFrequency: highFrequencyTotalOrders > 0,
+    },
+    averageSpend: {
+      value: averageSpendLiftPercent,
+      loyaltyAverage: Math.round(loyaltyAvgSpend * 100) / 100,
+      nonLoyaltyAverage: Math.round(nonLoyaltyAvgSpend * 100) / 100,
+      loyaltyOrders: loyaltySpend.orderCount,
+      nonLoyaltyOrders: nonLoyaltySpend.orderCount,
+    },
+  };
+};
+
 const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
   page = parseInt(page);
   limit = parseInt(limit);
@@ -1101,4 +1262,5 @@ module.exports = {
   getUserReservationChangeLogs,
   getAverageOrderValueOverTimeRaw,
   getMenuItemSalesData,
+  getLoyaltyImpactRaw,
 };

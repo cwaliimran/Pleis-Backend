@@ -16,6 +16,7 @@ const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrde
 const { createTransactionService } = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { getActiveEventsForOrg } = require("../../admin/events/eventRepository");
+const { resolveGlobalChallengeByTaskTypeService } = require("../globalLoyalty/challengesOrders/challengesOrdersService");
 
 /**
  * Returns the start of the "period" a date falls into, based on countBase.
@@ -256,6 +257,15 @@ const createUsersStreak = async (data) => {
           value: 1,
         }),
         "VISIT_CHALLENGE"
+      );
+
+      //resolve global visit challenge
+      fireAndForget(
+        resolveGlobalChallengeByTaskTypeService({
+          userId: data.user,
+          taskType: "globalVisit",
+          value: 1,
+        }),
       );
     }
 

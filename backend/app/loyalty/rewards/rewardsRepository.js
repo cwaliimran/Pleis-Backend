@@ -99,11 +99,18 @@ const populateRewardRelations = (query) =>
     .populate("companyOrganizer", "companyDetails.logo companyDetails.loyaltySettings.title")
     .populate({ path: "tierLimit" });
 
+/** Browseable redeemable rewards only (R2/R5). Challenge-linked rewards stay claimable via challenges. */
+const BROWSEABLE_REWARD_FILTER = {
+  availableAsReward: { $ne: false },
+  challengeOnly: { $ne: true },
+};
+
 // Get ALL rewards by company organizer (no pagination)
 const getRewardsByCompanyOrganizer = async ({ companyOrganizer, timezone = "UTC" }) => {
   const query = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     status: "active",
+    ...BROWSEABLE_REWARD_FILTER,
     ...getActiveRewardEndDateQuery(timezone),
   };
 
@@ -133,7 +140,7 @@ const getRewardsForDashboardPaged = async ({
   const query = {
     companyOrganizer: { $in: clubIds },
     status: "active",
-    isPromotionOnly: false,
+    ...BROWSEABLE_REWARD_FILTER,
     ...getActiveRewardEndDateQuery(timezone),
   };
 
@@ -170,7 +177,7 @@ const countDashboardRewards = async ({ clubIds, keyword = "", timezone = "UTC" }
   const query = {
     companyOrganizer: { $in: clubIds },
     status: "active",
-    isPromotionOnly: false,
+    ...BROWSEABLE_REWARD_FILTER,
     ...getActiveRewardEndDateQuery(timezone),
   };
 

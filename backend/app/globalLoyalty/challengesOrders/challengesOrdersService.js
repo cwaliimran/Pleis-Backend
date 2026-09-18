@@ -246,7 +246,7 @@ const resolveGlobalChallengeByTaskTypeService = async ({
   timezone = "UTC",
   req = null,
 }) => {
-
+console.log("resolveGlobalChallengeByTaskTypeService", userId, taskType, value, timezone, req);
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -487,7 +487,7 @@ const flushGlobalNotifications = async ({
     type,
     orderId
   }) => {
-    await sendUserNotifications({
+    void sendUserNotifications({
       recipientIds: [userId.toString()],
       title,
       body,
@@ -517,7 +517,7 @@ const flushGlobalNotifications = async ({
 
     const ids = orders.map(o => o.orderId.toString());
 
-    await sendUserNotifications({
+    void sendUserNotifications({
       recipientIds: [userId.toString()],
       title,
       body,

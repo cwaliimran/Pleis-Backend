@@ -21,6 +21,10 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
     if (isRewardEndDateExpired(reward.endDate, new Date(), timezone)) {
       throw new Error("reward_expired");
     }
+    // R2/R5: challenge-only / not-available rewards are not directly redeemable
+    if (reward.availableAsReward === false || reward.challengeOnly === true) {
+      throw new Error("reward_not_available_for_claim");
+    }
 
     // 🔒 HARD ENFORCEMENT
     if (reward.claimLimit > 0) {

@@ -18,6 +18,92 @@ const SERVICE_FEE_RATE = 0.08;
  */
 const TAX_RATE_RESERVATION = 0;
 
+/**
+ * App-level defaults for public brand URLs / emails / deep links.
+ * Prefer process.env.* when set; these are fallbacks so call sites never re-hardcode.
+ */
+const PLEIS_WEB = "https://pleis.hr";
+const PLEIS_SUPPORT_EMAIL = "support@pleis.hr";
+const PLEIS_MAIL_DOMAIN = "pleis.ai";
+const PLEIS_APP_SCHEME = "com.pleis";
+const PLEIS_IOS_STORE_URL =
+  "https://apps.apple.com/app/pleisapp/id1234567890";
+const PLEIS_ANDROID_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.pleis";
+const MAILGUN_API_BASE = "https://api.mailgun.net";
+const FIREBASE_DATABASE_URL = "https://pleis-4fb7b.firebaseio.com";
+
+/** Stable CORS allowlist brand origins (machine/LAN IPs belong in EXTRA_CORS_ORIGINS). */
+const CORS_BRAND_ORIGINS = [
+  "https://pleis.com",
+  "https://www.pleis.com",
+  "https://dev.pleis.com",
+  "https://www.dev.pleis.com",
+  "http://localhost:4003",
+  "https://pleis.vercel.app",
+];
+
+/** Default allowlist for createAdmin when ADMIN_SIGNUP_ALLOWED_IPS is unset. */
+const ADMIN_SIGNUP_ALLOWED_IPS = ["127.0.0.1", "::1"];
+
+function envOr(key, fallback) {
+  const v = process.env[key];
+  if (v == null) return fallback;
+  const trimmed = String(v).trim();
+  return trimmed === "" ? fallback : trimmed;
+}
+
+function resolvePleisWeb() {
+  return envOr("PLEIS_WEB", PLEIS_WEB);
+}
+
+function resolvePleisSupportEmail() {
+  return envOr("PLEIS_SUPPORT_EMAIL", PLEIS_SUPPORT_EMAIL);
+}
+
+function resolvePleisMailDomain() {
+  return envOr("MAILGUN_DOMAIN", PLEIS_MAIL_DOMAIN);
+}
+
+function resolvePleisAppScheme() {
+  return envOr("PLEIS_APP_SCHEME", PLEIS_APP_SCHEME);
+}
+
+function resolvePleisIosStoreUrl() {
+  return envOr("PLEIS_IOS_STORE_URL", PLEIS_IOS_STORE_URL);
+}
+
+function resolvePleisAndroidStoreUrl() {
+  return envOr("PLEIS_ANDROID_STORE_URL", PLEIS_ANDROID_STORE_URL);
+}
+
+function resolveMailgunApiBase() {
+  return envOr("MAILGUN_BASE_URL", MAILGUN_API_BASE);
+}
+
+function resolveFirebaseDatabaseUrl() {
+  return envOr("FIREBASE_DATABASE_URL", FIREBASE_DATABASE_URL);
+}
+
+/** Default Mailgun From header: Pleis <noreply@{MAILGUN_DOMAIN}> */
+function resolveMailFrom() {
+  return envOr(
+    "MAIL_FROM",
+    `Pleis <noreply@${resolvePleisMailDomain()}>`,
+  );
+}
+
+function resolveAdminSignupAllowedIps() {
+  const raw = process.env.ADMIN_SIGNUP_ALLOWED_IPS;
+  if (raw == null || String(raw).trim() === "") {
+    return [...ADMIN_SIGNUP_ALLOWED_IPS];
+  }
+  return String(raw)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function computeTicketingServiceFeeCents(itemPriceCents) {
   const price = Math.max(0, Math.round(Number(itemPriceCents) || 0));
   if (price <= 0) return 0;
@@ -39,4 +125,26 @@ module.exports = {
   computeTicketingServiceFeeCents,
   computeTicketingServiceFeeEur,
   TAX_RATE_RESERVATION,
+
+  PLEIS_WEB,
+  PLEIS_SUPPORT_EMAIL,
+  PLEIS_MAIL_DOMAIN,
+  PLEIS_APP_SCHEME,
+  PLEIS_IOS_STORE_URL,
+  PLEIS_ANDROID_STORE_URL,
+  MAILGUN_API_BASE,
+  FIREBASE_DATABASE_URL,
+  CORS_BRAND_ORIGINS,
+  ADMIN_SIGNUP_ALLOWED_IPS,
+
+  resolvePleisWeb,
+  resolvePleisSupportEmail,
+  resolvePleisMailDomain,
+  resolvePleisAppScheme,
+  resolvePleisIosStoreUrl,
+  resolvePleisAndroidStoreUrl,
+  resolveMailgunApiBase,
+  resolveFirebaseDatabaseUrl,
+  resolveMailFrom,
+  resolveAdminSignupAllowedIps,
 };

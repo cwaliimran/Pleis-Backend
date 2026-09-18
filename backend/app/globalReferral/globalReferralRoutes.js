@@ -17,6 +17,8 @@ getUserReferradrecord,
 } = require("./globalReferralController");
 
 const auth = require("../../middlewares/authMiddleware");
+const { resolvePleisAppScheme } = require("../../config/CONSTANTS");
+const { renderSmartOpenHtml } = require("../../helperUtils/appDeepLinkUtil");
 
 
 const router = express.Router();
@@ -117,45 +119,10 @@ router.get("/share", async (req, res) => {
         const username=id;
 
 const result = await saveUserReferralData(username, req.ip);
-        const appLink = `com.pleis://${result}`;
-        const iosFallback = "https://apps.apple.com/app/pleisapp/id1234567890"; // iOS fallback URL
-        const androidFallback = "https://play.google.com/store/apps/details?id=com.pleis"; // Android fallback URL
+        const appLink = `${resolvePleisAppScheme()}://${result}`;
 
         // Smart redirect HTML with the link to the app or store
-        return res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Opening ...</title>
-          <script>
-            function openApp() {
-              const appLink = '${appLink}';
-              const iosFallback = '${iosFallback}';
-              const androidFallback = '${androidFallback}';
-              const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-              window.location = appLink;
-              setTimeout(() => {
-                if (/android/i.test(userAgent)) {
-                  window.location = androidFallback;  // Redirect to Android if on Android
-                } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-                  window.location = iosFallback;  // Redirect to iOS if on iOS
-                } else {
-                  window.location = 'https://pleisapp.com';  // Default fallback if the device is neither
-                }
-              }, 1500);  // Timeout for app redirection after 1.5 seconds
-            }
-            window.onload = openApp;  // Trigger app redirection on page load
-          </script>
-        </head>
-        <body>
-          <p style="text-align:center;margin-top:40vh;font-family:sans-serif;">
-            Opening <b></b>...
-          </p>
-        </body>
-      </html>
-    `);  // Serve the HTML page with the smart redirect logic
+        return res.send(renderSmartOpenHtml({ appLink, title: "PLEIS" }));
     } catch (err) {
    
         return sendResponse({

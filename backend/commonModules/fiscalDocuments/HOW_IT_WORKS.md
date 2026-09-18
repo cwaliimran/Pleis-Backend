@@ -238,7 +238,7 @@ Outside this folder, the module is a dependency of:
 - `backend/commonModules/paymentsIntegrations/billko/` — fiscalization API and callback
 - `backend/commonModules/paymentsIntegrations/monri/` — refund → cancellation confirmation
 - Payment finalizers / webhook — enqueue jobs
-- `backend/commonModules/paymentsIntegrations/ledger/` — Phase A capture ledger + Phase B statement lifecycle + Phase C Fiscalize / off-app. Admin routes under `/api/v1/admin/payouts` (alias `/api/v1/admin/payout-statements`): statements (generate / list / get / pain.001 / confirm / cancel), `POST /fiscalize` + `GET /fiscalize/runs`, off-app batches (generate / list / get / confirm / cancel). Env: `PLEIS_NAME`, `PLEIS_OIB`, `PLEIS_LOCKED_IBAN`, `PLEIS_OPERATING_IBAN`, address fields, optional tip/ordering/ticketing commission rates, `BILLKO_FISCALIZE_ENABLED` (live commission eRačun; default dry-run).
+- `backend/commonModules/paymentsIntegrations/ledger/` — Phase A capture ledger + Phase B statement lifecycle + Phase C Fiscalize / off-app + Imperial Lake B2B document routes. Admin routes under `/api/v1/admin/payouts` (alias `/api/v1/admin/payout-statements`): statements (generate / list / get / pain.001 / confirm / cancel), `POST /fiscalize` + `GET /fiscalize/runs`, off-app batches (generate / list / get / confirm / cancel), `GET /billko/status|incoming|outgoing`, `GET /billko/documents/:id`, `POST /billko/documents/:id/report-payment`. Env: `PLEIS_NAME`, `PLEIS_OIB`, `PLEIS_LOCKED_IBAN`, `PLEIS_OPERATING_IBAN`, address fields, optional tip/ordering/ticketing commission rates, `BILLKO_FISCALIZE_ENABLED` (live commission eRačun; default dry-run), `BILLKO_LAKE_ENABLED` + `BILLKO_LAKE_API_KEY` or username/password (Imperial Lake payment reporting).
 
 ---
 
