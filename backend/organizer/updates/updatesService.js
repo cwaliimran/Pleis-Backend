@@ -74,7 +74,8 @@ const updateUpdates = async (id, data) => {
   await sendUserNotifications({
     recipientIds: userIds,
     title: Updates.title,
-    body: `You received a new message: ${Updates.description}`,
+    bodyKey: "update_message_body",
+    bodyValues: { description: Updates.description },
     data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
     sender: Updates.companyOrganizer,
     objectId: Updates.event,

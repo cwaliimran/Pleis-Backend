@@ -2,6 +2,7 @@ const { GlobalChallengesOrders } = require("@GlobalChallengesOrdersModel");
 const GlobalChallengeNotificationLogs = require("@GlobalChallengeNotificationLogsModel");
 const { sendUserNotifications } = require("../../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { getChallengeNotificationTitle } = require("../../../../helperUtils/challengeNotificationTitle");
 
 const HOUR_MS = 60 * 60 * 1000;
 const EXPIRING_WINDOW_HOURS = 24; // configurable
@@ -35,13 +36,24 @@ const runGlobalChallengeExpiringSoonCron = async () => {
         continue;
       }
 
+      const snapshot = order.challengeSnapshot || {};
+      const titlePayload = getChallengeNotificationTitle({
+        ...snapshot,
+        title: snapshot.title || snapshot.name,
+      });
+
       await sendUserNotifications({
         recipientIds: [order.user.toString()],
-        title: order.challengeSnapshot?.name || "Global Challenge",
-        body: "Your global challenge is expiring soon. Complete it before time runs out!",
+        ...titlePayload,
+        // Prefer structured titleKey; fall back to catalog key when no mapping/title
+        ...(titlePayload.titleKey || titlePayload.title
+          ? {}
+          : { titleKey: "global_challenge_fallback_title" }),
+        bodyKey: "global_challenge_expiring_soon_body",
         data: {
           type: NotificationTypes.GLOBAL_CHALLENGE_EXPIRING_SOON,
-          objectType: "globalchallengeorders"
+          objectType: "globalchallengeorders",
+          challengeTitle: snapshot.name || snapshot.title,
         },
         sender: null, // global system
         objectId: order.challenge

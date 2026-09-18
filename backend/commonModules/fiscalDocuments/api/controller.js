@@ -19,6 +19,10 @@ const {
 } = require("../confirmation/htmlRenderer");
 const { resolveLocale, humanPaymentMethod } = require("../locales");
 const { buildConfirmationOpenUrl } = require("./openAppRedirect");
+const {
+  resolvePleisWeb,
+  resolvePleisSupportEmail,
+} = require("../../../config/CONSTANTS");
 
 async function regenerateConfirmationPdf(doc) {
   const locale = resolveLocale(doc.locale);
@@ -28,8 +32,8 @@ async function regenerateConfirmationPdf(doc) {
     pleisOib: process.env.PLEIS_OIB || "",
     pleisAddress: process.env.PLEIS_ADDRESS || "",
     pleisBrand: process.env.PLEIS_BRAND || "PLEIS",
-    pleisWeb: process.env.PLEIS_WEB || "https://pleis.hr",
-    supportEmail: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
+    pleisWeb: resolvePleisWeb(),
+    supportEmail: resolvePleisSupportEmail(),
     locale,
     confirmationNumber: doc.confirmationNumber,
     issuedAt: doc.issuedAt,

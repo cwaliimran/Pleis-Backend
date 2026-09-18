@@ -31,6 +31,8 @@ if (rewardType === "globalTicketReward") {
   rawData.push("event");
   rawData.push("ticket");
   objectIdFields.push("event");
+  objectIdFields.push("ticket");
+  // timeSlot required when ticket has timingSlots — validated in service
 }
 
 

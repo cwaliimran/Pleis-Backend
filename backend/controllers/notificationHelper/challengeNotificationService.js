@@ -1,6 +1,7 @@
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
 const { sendUserNotifications } = require("../communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { getChallengeNotificationTitle } = require("../../helperUtils/challengeNotificationTitle");
 
 /**
  * =====================================================
@@ -12,36 +13,28 @@ const CHALLENGE_NOTIFICATION_MAP = {
 
   CHALLENGE_STARTED: {
     type: NotificationTypes.CHALLENGE_STARTED,
-    title: (challenge) => `${challenge.title}`,
-    body: () => `Your challenge has started. Start progressing now!`,
+    bodyKey: "challenge_helper_started_body",
   },
 
   CHALLENGE_PROGRESS_MILESTONE: {
     type: NotificationTypes.CHALLENGE_PROGRESS_MILESTONE,
-    title: (challenge) => `${challenge.title}`,
-    body: (_, context) =>
-      `Great progress! You've reached ${context.percentage}% of your challenge.`,
+    bodyKey: "challenge_helper_milestone_body",
+    bodyValues: (_, context) => ({ percentage: context.percentage }),
   },
 
   CHALLENGE_COMPLETED: {
     type: NotificationTypes.CHALLENGE_COMPLETED,
-    title: (challenge) => `${challenge.title}`,
-    body: () =>
-      `Congratulations! You've successfully completed this challenge.`,
+    bodyKey: "challenge_helper_completed_body",
   },
 
   CHALLENGE_REWARD_UNLOCKED: {
     type: NotificationTypes.CHALLENGE_REWARD_UNLOCKED,
-    title: (challenge) => `${challenge.title}`,
-    body: () =>
-      `Your reward has been unlocked. Claim it now!`,
+    bodyKey: "challenge_helper_reward_unlocked_body",
   },
 
   CHALLENGE_EXPIRING_SOON: {
     type: NotificationTypes.CHALLENGE_EXPIRING_SOON,
-    title: (challenge) => `${challenge.title}`,
-    body: () =>
-      `Hurry! Your challenge is expiring soon.`,
+    bodyKey: "challenge_helper_expiring_soon_body",
   },
 };
 
@@ -76,7 +69,7 @@ const sendChallengeNotification = async ({
       return;
     }
 
-    const challenge = order.challengeSnapshot;
+    const challenge = order.challengeSnapshot || {};
 
     if (!userIds.length && order.user) {
       userIds = [order.user];
@@ -86,15 +79,18 @@ const sendChallengeNotification = async ({
 
     await sendUserNotifications({
       recipientIds: userIds,
-      title: config.title(challenge, context),
-      body: config.body(challenge, context),
+      ...getChallengeNotificationTitle(challenge),
+      bodyKey: config.bodyKey,
+      bodyValues: config.bodyValues
+        ? config.bodyValues(challenge, context)
+        : {},
       data: {
         type: config.type,
         challengeOrderId,
         objectType: "challenges",
       },
       sender: order.companyOrganizer,
-      objectId: challenge._id,
+      objectId: challenge._id || challengeOrderId,
       image: null,
     });
 

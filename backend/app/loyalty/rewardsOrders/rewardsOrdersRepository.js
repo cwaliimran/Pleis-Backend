@@ -21,6 +21,10 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
     if (isRewardEndDateExpired(reward.endDate, new Date(), timezone)) {
       throw new Error("reward_expired");
     }
+    // R2/R5: challenge-only / not-available rewards are not directly redeemable
+    if (reward.availableAsReward === false || reward.challengeOnly === true) {
+      throw new Error("reward_not_available_for_claim");
+    }
 
     // 🔒 HARD ENFORCEMENT
     if (reward.claimLimit > 0) {
@@ -157,8 +161,13 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
     /* SEND NOTIFICATION IN BACKGROUND */
     sendUserNotifications({
       recipientIds: [userId.toString()],
-      title: `Claimed reward ${reward.title}`,
-      body: `You have successfully claimed the reward ${reward.title} using ${reward.minPointsRequiredToClaim || 0} points.`,
+      titleKey: "reward_claimed_title",
+      bodyKey: "reward_claimed_body",
+      titleValues: { rewardTitle: reward.title },
+      bodyValues: {
+        rewardTitle: reward.title,
+        points: reward.minPointsRequiredToClaim || 0,
+      },
       data: { type: NotificationTypes.REWARD_CLAIMED, rewardId: reward._id, objectType: "loyaltyrewardsorders" },
       sender: orderDoc.companyOrganizer,
       objectId: orderDoc._id,

@@ -484,10 +484,10 @@ const updateUserReservation = async (data) => {
   if (UserReservation.userId) {
     await sendUserNotifications({
       recipientIds: [UserReservation.userId.toString()],
-      title: "Reservation Updated",
-      body: timingChanged
-        ? "Your reservation timing has been updated."
-        : "Your reservation details have been updated.",
+      titleKey: "reservation_updated_title",
+      bodyKey: timingChanged
+        ? "reservation_updated_timing_body"
+        : "reservation_updated_details_body",
 
       data: {
         type: NotificationTypes.RESERVATION_UPDATE,
@@ -764,8 +764,8 @@ const changeUsersReservationsTiming = async ({
   if (recipientIds.length) {
     sendUserNotifications({
       recipientIds,
-      title: "Reservation Time Updated",
-      body: "Your reservation timing has been updated.",
+      titleKey: "reservation_time_updated_title",
+      bodyKey: "reservation_time_updated_body",
       data: {
         type: NotificationTypes.RESERVATION_UPDATE,
         objectType: "userreservations",

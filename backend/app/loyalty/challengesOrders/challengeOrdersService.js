@@ -6,6 +6,7 @@ const { findBestActiveChallengeByTaskType } = require("../challenges/challengesR
 const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { getChallengeNotificationTitle } = require("../../../helperUtils/challengeNotificationTitle");
 const { createTransactionService } = require(
   "../../userWalletService/transactions/services/unifiedTransactionsService"
 );
@@ -138,7 +139,8 @@ const updateChallengeProgressByTaskTypeService = async ({
   userId,
   companyOrganizer,
   taskType,
-  value = 1
+  value = 1,
+  req = null,
 }) => {
 
   const challenge =
@@ -166,19 +168,7 @@ const updateChallengeProgressByTaskTypeService = async ({
     return { success: false, message: "challenge_claim_limit_reached" };
   }
 
-  if (!existingOrder) {
-    void sendUserNotifications({
-      recipientIds: [userId.toString()],
-      title: challenge.title,
-      body: "Your challenge has started. Good luck!",
-      data: {
-        type: NotificationTypes.CHALLENGE_STARTED,
-        objectType: "challengesorders"
-      },
-      sender: companyOrganizer,
-      objectId: order._id
-    });
-  }
+  const justStarted = !existingOrder;
 
   const previousCurrent = order.progress.current;
 
@@ -198,12 +188,32 @@ const updateChallengeProgressByTaskTypeService = async ({
     updatedOrder: updated,
     challenge,
     userId,
-    companyOrganizer
+    companyOrganizer,
+    req,
   });
 
   // ✅ Check for completion when progress reaches target
-  if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
-    await finalizeChallengeCompletion(updated);
+  const completedThisUpdate =
+    updated.progress.current >= updated.progress.target &&
+    updated.status === "in-progress";
+
+  if (completedThisUpdate) {
+    await finalizeChallengeCompletion(updated, { req });
+  } else if (justStarted) {
+    // Only notify "started" if it did not also complete in this same update
+    void sendUserNotifications({
+      recipientIds: [userId.toString()],
+      ...getChallengeNotificationTitle(challenge),
+      bodyKey: "challenge_started_body",
+      req,
+      data: {
+        type: NotificationTypes.CHALLENGE_STARTED,
+        objectType: "challengesorders",
+        challengeTitle: challenge.title,
+      },
+      sender: companyOrganizer,
+      objectId: order._id
+    });
   }
 
   return { success: true, order: updated };
@@ -256,13 +266,15 @@ const resolveChallengeByTaskTypeService = async ({
   companyOrganizer,
   taskType,
   value = 1,
-  items = []
+  items = [],
+  req = null,
 }) => {
   if (taskType === "buyMenuItem") {
     return resolveBuyMenuItemChallengeService({
       userId,
       companyOrganizer,
-      items
+      items,
+      req,
     });
   }
 
@@ -270,7 +282,8 @@ const resolveChallengeByTaskTypeService = async ({
     userId,
     companyOrganizer,
     taskType,
-    value
+    value,
+    req,
   });
 };
 
@@ -278,7 +291,8 @@ const resolveChallengeByTaskTypeService = async ({
 const resolveBuyMenuItemChallengeService = async ({
   userId,
   companyOrganizer,
-  items = []
+  items = [],
+  req = null,
 }) => {
 
 
@@ -350,20 +364,9 @@ console.log("resolveBuyMenuItemChallengeService===>", JSON.stringify(items, null
 
 
 
-      if (!existingOrder) {
+      if (!order) continue;
 
-        void sendUserNotifications({
-          recipientIds: [userId.toString()],
-          title: challenge.title,
-          body: "Your challenge has started. Good luck!",
-          data: {
-            type: NotificationTypes.CHALLENGE_STARTED,
-            objectType: "loyaltychallengesorders"
-          },
-          sender: companyOrganizer,
-          objectId: order._id
-        });
-      }
+      const justStarted = !existingOrder;
 
       const previousCurrent = order.progress.current;
 
@@ -381,7 +384,8 @@ console.log("resolveBuyMenuItemChallengeService===>", JSON.stringify(items, null
         updatedOrder: updated,
         challenge,
         userId,
-        companyOrganizer
+        companyOrganizer,
+        req,
       });
 
 
@@ -391,10 +395,27 @@ console.log("resolveBuyMenuItemChallengeService===>", JSON.stringify(items, null
         continue;
       }
 
-      if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
+      const completedThisUpdate =
+        updated.progress.current >= updated.progress.target &&
+        updated.status === "in-progress";
 
-
-        await finalizeChallengeCompletion(updated);
+      if (completedThisUpdate) {
+        await finalizeChallengeCompletion(updated, { req });
+      } else if (justStarted) {
+        // Only notify "started" if it did not also complete in this same update
+        void sendUserNotifications({
+          recipientIds: [userId.toString()],
+          ...getChallengeNotificationTitle(challenge),
+          bodyKey: "challenge_started_body",
+          req,
+          data: {
+            type: NotificationTypes.CHALLENGE_STARTED,
+            objectType: "loyaltychallengesorders",
+            challengeTitle: challenge.title,
+          },
+          sender: companyOrganizer,
+          objectId: order._id
+        });
       } else {
       }
     }
@@ -410,7 +431,8 @@ const resolveGenericTaskTypeService = async ({
   userId,
   companyOrganizer,
   taskType,
-  value = 1
+  value = 1,
+  req = null,
 }) => {
 
   let remaining = value;
@@ -455,20 +477,7 @@ const resolveGenericTaskTypeService = async ({
       if (!canStart) continue;
     }
 
-    // 🔔 Send STARTED if first cycle (do not block progress on notifications)
-    if (order.progress.current === 0) {
-      void sendUserNotifications({
-        recipientIds: [userId.toString()],
-        title: challenge.title,
-        body: "Your challenge has started. Good luck!",
-        data: {
-          type: NotificationTypes.CHALLENGE_STARTED,
-          objectType: "challengesorders"
-        },
-        sender: companyOrganizer,
-        objectId: order._id
-      });
-    }
+    const wasAtZero = order.progress.current === 0;
 
     // 4️⃣ Apply overflow logic (multi-cycle)
     while (remaining > 0) {
@@ -499,13 +508,14 @@ const resolveGenericTaskTypeService = async ({
         updatedOrder: updated,
         challenge,
         userId,
-        companyOrganizer
+        companyOrganizer,
+        req,
       });
 
       // ✅ Completion
       if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
 
-        await finalizeChallengeCompletion(updated);
+        await finalizeChallengeCompletion(updated, { req });
 
         // Only open another cycle when there is leftover progress to apply
         if (remaining <= 0) break;
@@ -527,6 +537,24 @@ const resolveGenericTaskTypeService = async ({
         continue; // apply remaining to next cycle
       }
 
+      // Still in progress — notify started only if this update began the cycle
+      // and it did not complete in the same update
+      if (wasAtZero && previousCurrent === 0) {
+        void sendUserNotifications({
+          recipientIds: [userId.toString()],
+          ...getChallengeNotificationTitle(challenge),
+          bodyKey: "challenge_started_body",
+          req,
+          data: {
+            type: NotificationTypes.CHALLENGE_STARTED,
+            objectType: "challengesorders",
+            challengeTitle: challenge.title,
+          },
+          sender: companyOrganizer,
+          objectId: order._id
+        });
+      }
+
       break; // still in progress, no more cycles
     }
   }
@@ -544,7 +572,7 @@ const isTransientTxnError = (err) =>
   err?.codeName === "NoSuchTransaction" ||
   err?.codeName === "WriteConflict";
 
-const finalizeChallengeCompletion = async (order, { maxRetries = 3 } = {}) => {
+const finalizeChallengeCompletion = async (order, { maxRetries = 3, req = null } = {}) => {
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -677,32 +705,32 @@ const finalizeChallengeCompletion = async (order, { maxRetries = 3 } = {}) => {
         // 🔐 PROTECTION DETAILS NOTIFICATION
         // =====================================================
         if (ticketStatus === "issued" && protectionRequired) {
-
-          let protectionMessage = "";
+          let protectionBodyKey = null;
 
           if (protectionType === "nameSurname") {
-            protectionMessage =
-              "Please enter the attendee's name and surname to activate your ticket.";
+            protectionBodyKey = "ticket_protection_name_surname_body";
           }
 
           if (protectionType === "nameSurnamePid") {
-            protectionMessage =
-              "Please enter the attendee's name, surname, and PID to activate your ticket.";
+            protectionBodyKey = "ticket_protection_name_surname_pid_body";
           }
 
-          sendUserNotifications({
-            recipientIds: [lockedOrder.user.toString()],
-            title: "Additional Ticket Details Required",
-            body: protectionMessage,
-            data: {
-              type: NotificationTypes.TICKET_PROTECTION_REQUIRED,
-              objectType: "ticketingorders",
-              challengeOrderId: lockedOrder._id,
-              ticketOrderId
-            },
-            sender: challenge.companyOrganizer,
-            objectId: ticketOrderId
-          });
+          if (protectionBodyKey) {
+            sendUserNotifications({
+              recipientIds: [lockedOrder.user.toString()],
+              titleKey: "ticket_protection_required_title",
+              bodyKey: protectionBodyKey,
+              req,
+              data: {
+                type: NotificationTypes.TICKET_PROTECTION_REQUIRED,
+                objectType: "ticketingorders",
+                challengeOrderId: lockedOrder._id,
+                ticketOrderId
+              },
+              sender: challenge.companyOrganizer,
+              objectId: ticketOrderId
+            });
+          }
         }
 
       } else if (challenge.reward?.rewardType === "points") {
@@ -761,11 +789,13 @@ const finalizeChallengeCompletion = async (order, { maxRetries = 3 } = {}) => {
       // =====================================================
       sendUserNotifications({
         recipientIds: [lockedOrder.user.toString()],
-        title: challenge.title,
-        body: "Congratulations! Your challenge has been completed.",
+        ...getChallengeNotificationTitle(challenge),
+        bodyKey: "challenge_completed_body",
+        req,
         data: {
           type: NotificationTypes.CHALLENGE_COMPLETED,
-          objectType: "challengesorders"
+          objectType: "challengesorders",
+          challengeTitle: challenge.title,
         },
         sender: challenge.companyOrganizer,
         objectId: lockedOrder._id
@@ -821,7 +851,8 @@ const handleChallengeMilestones = async ({
   updatedOrder,
   challenge,
   userId,
-  companyOrganizer
+  companyOrganizer,
+  req = null,
 }) => {
 
   const target = updatedOrder.progress.target;
@@ -860,12 +891,15 @@ const handleChallengeMilestones = async ({
     if (milestoneUpdate) {
       void sendUserNotifications({
         recipientIds: [userId.toString()],
-        title: challenge.title,
-        body: `You're ${milestone}% done! Keep going.`,
+        ...getChallengeNotificationTitle(challenge),
+        bodyKey: "challenge_milestone_body",
+        bodyValues: { percentage: milestone },
+        req,
         data: {
           type: NotificationTypes.CHALLENGE_PROGRESS_MILESTONE,
           objectType: "challengesorders",
-          percentage: milestone
+          percentage: milestone,
+          challengeTitle: challenge.title,
         },
         sender: companyOrganizer,
         objectId: updatedOrder._id

@@ -242,16 +242,16 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         });
 
 
-        let email = "cwaliimrandev@gmail.com"
-        if (process.env.NODE_ENV != "dev") {
-          email = userDetails.email
+        const email = userDetails?.email;
+        if (!email) {
+          console.warn("[EMAIL] Ticket failed: no recipient email");
+        } else {
+          await sendEmailViaMailgun(
+            email,
+            "Ticket payment failed",
+            html
+          );
         }
-
-        await sendEmailViaMailgun(
-          email,
-          "Ticket payment failed (DEV)",
-          html
-        );
 
       } catch (err) {
         console.error("[EMAIL] Ticket failed email error:", err);

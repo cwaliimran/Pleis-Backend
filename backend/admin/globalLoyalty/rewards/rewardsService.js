@@ -4,8 +4,54 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const BaseReward = require("@GlobalLoyaltyReward");
+const TicketingsModel = require("@TicketingsModel");
+
+/**
+ * When the selected ticket has timingSlots.enabled, admin must pick a timeSlot
+ * at reward create/update. Users only claim — they never choose a slot.
+ */
+const assertTicketTimeSlotConfigured = async (data) => {
+  const rewardType = data.rewardType || data.globalRewardType;
+  if (rewardType !== "globalTicketReward") return;
+
+  const ticketId = data.ticket;
+  if (!ticketId) return;
+
+  const ticket = await TicketingsModel.findById(ticketId).lean();
+  if (!ticket) {
+    throw Object.assign(new Error("ticket_not_found"), { statusCode: 400 });
+  }
+
+  if (!ticket.timingSlots?.enabled) {
+    // Clear stale slot if ticket no longer uses slots
+    if (data.timeSlot === undefined) data.timeSlot = null;
+    return;
+  }
+
+  const timeSlot = data.timeSlot || data.timeslot;
+  if (!timeSlot) {
+    throw Object.assign(new Error("time_slot_required_for_ticket_reward"), {
+      statusCode: 400,
+    });
+  }
+
+  const slotIds = (ticket.timingSlots.dateTimeSlots || []).flatMap((day) =>
+    (day.timeSlots || []).map((s) => String(s._id))
+  );
+
+  if (!slotIds.includes(String(timeSlot))) {
+    throw Object.assign(new Error("invalid_time_slot_for_ticket"), {
+      statusCode: 400,
+    });
+  }
+
+  // Normalize casing
+  data.timeSlot = String(timeSlot);
+  delete data.timeslot;
+};
 
 const create = async (data) => {
+  await assertTicketTimeSlotConfigured(data);
   return await repository.create(data);
 };
 
@@ -59,6 +105,15 @@ const get = async ({ page, limit, keyword, status, date, timezone }) => {
 const update = async (id, data) => {
   let item = await repository.findById(id);
   if (!item) return null;
+
+  const merged = {
+    rewardType: data.globalRewardType || data.rewardType || item.rewardType,
+    ticket: data.ticket !== undefined ? data.ticket : item.ticket,
+    timeSlot: data.timeSlot !== undefined ? data.timeSlot : item.timeSlot,
+  };
+  await assertTicketTimeSlotConfigured(merged);
+  if (merged.timeSlot !== undefined) data.timeSlot = merged.timeSlot;
+
   Object.assign(item, data);
   await item.save();
   //fetch updated item and return

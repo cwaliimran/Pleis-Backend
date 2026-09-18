@@ -3,6 +3,8 @@ const { sendResponse, validateParams, convertUtcToTimezone } = require("../helpe
 const { Events } = require("../commonModules/events/Event");
 const Organizations = require("../commonModules/organizations/Organization");
 const Venues = require("../commonModules/venues/Venues");
+const { resolvePleisAppScheme } = require("../config/CONSTANTS");
+const { renderSmartOpenHtml } = require("../helperUtils/appDeepLinkUtil");
 
 
 const router = express.Router();
@@ -138,45 +140,10 @@ router.get("/", async (req, res) => {
             });
         }
 
-        const appLink = `com.pleis://${type}/${doc.publicId}`;
-        const iosFallback = "https://apps.apple.com/app/pleisapp/id1234567890";
-        const androidFallback = "https://play.google.com/store/apps/details?id=com.pleis&referrer=39393939";
+        const appLink = `${resolvePleisAppScheme()}://${type}/${doc.publicId}`;
 
         // Smart redirect HTML
-        return res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Opening ${type}...</title>
-          <script>
-            function openApp() {
-              const appLink = '${appLink}';
-              const iosFallback = '${iosFallback}';
-              const androidFallback = '${androidFallback}';
-              const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-              window.location = appLink;
-              setTimeout(() => {
-                if (/android/i.test(userAgent)) {
-                  window.location = androidFallback;
-                } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-                  window.location = iosFallback;
-                } else {
-                  window.location = 'https://pleisapp.com';
-                }
-              }, 1500);
-            }
-            window.onload = openApp;
-          </script>
-        </head>
-        <body>
-          <p style="text-align:center;margin-top:40vh;font-family:sans-serif;">
-            Opening <b>${type}</b>...
-          </p>
-        </body>
-      </html>
-    `);
+        return res.send(renderSmartOpenHtml({ appLink, title: type }));
     } catch (err) {
    
         return sendResponse({

@@ -31,8 +31,8 @@ const { recordAuthFailure } = require("../services/security/ipThreatService");
 
 const createAdmin = async (req, res) => {
   try {
-    // Whitelist both localhost + your public IP
-    const allowedIPs = ["223.123.44.6", "127.0.0.1", "::1", "192.168.15.40"];
+    const { resolveAdminSignupAllowedIps } = require("../config/CONSTANTS");
+    const allowedIPs = resolveAdminSignupAllowedIps();
 
     // Express behind reverse proxies (like Nginx)
     const ip =

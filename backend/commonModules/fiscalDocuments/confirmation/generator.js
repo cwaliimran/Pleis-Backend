@@ -26,6 +26,11 @@ const { sendEmailViaMailgun } = require("../../../helperUtils/emailUtil");
 const { buildConfirmationOpenUrl } = require("../api/openAppRedirect");
 const { htmlToPdfBuffer } = require("../invoice/htmlToPdf");
 const { logoInlineAttachment, resolveLogoSrc } = require("../shared/logo");
+const {
+  resolvePleisWeb,
+  resolvePleisSupportEmail,
+  resolveMailFrom,
+} = require("../../../config/CONSTANTS");
 
 const PDF_MAGIC = Buffer.from("%PDF");
 function looksLikePdf(buffer) {
@@ -56,8 +61,8 @@ function staticPleisConfig() {
     pleisOib: process.env.PLEIS_OIB || "",
     pleisAddress: process.env.PLEIS_ADDRESS || "",
     pleisBrand: process.env.PLEIS_BRAND || "PLEIS",
-    pleisWeb: process.env.PLEIS_WEB || "https://pleis.hr",
-    supportEmail: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
+    pleisWeb: resolvePleisWeb(),
+    supportEmail: resolvePleisSupportEmail(),
   };
 }
 
@@ -397,8 +402,8 @@ async function emailConfirmation(record, input, view) {
     subject,
     html,
     {
-      fromEmail: `Pleis <noreply@${process.env.MAILGUN_DOMAIN || "pleis.ai"}>`,
-      replyTo: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
+      fromEmail: resolveMailFrom(),
+      replyTo: resolvePleisSupportEmail(),
       attachments,
       inline,
       // Surfaced on Mailgun webhooks as user-variables / v: fields.

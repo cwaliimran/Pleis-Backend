@@ -5,8 +5,24 @@ const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const BaseReward = require("@RewardModel");
 
+/**
+ * R2/R5: normalize visibility flags on create/update.
+ * - challengeOnly implies not available as a browsable reward
+ * - isPromotionOnly is deprecated and ignored on write
+ */
+const normalizeRewardVisibilityFlags = (data = {}) => {
+  const normalized = { ...data };
+  delete normalized.isPromotionOnly;
+
+  if (normalized.challengeOnly === true) {
+    normalized.availableAsReward = false;
+  }
+
+  return normalized;
+};
+
 const create = async (data) => {
-  return await repository.create(data);
+  return await repository.create(normalizeRewardVisibilityFlags(data));
 };
 
 const get = async ({
@@ -243,7 +259,7 @@ const mostClaimedReward =
 const update = async (id, data) => {
   let item = await repository.findById(id);
   if (!item) return null;
-  Object.assign(item, data);
+  Object.assign(item, normalizeRewardVisibilityFlags(data));
   await item.save();
   //fetch updated item and return
   item = await getDetails(id);

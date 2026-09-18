@@ -252,6 +252,24 @@ async function fiscalizePaidOut({ actorId = null, notes = "", forceLive = false 
         remote,
       });
       commissionInvoiceIds.push(invoice._id);
+
+      let paymentReport = null;
+      try {
+        const {
+          reportPaymentForCommissionInvoice,
+        } = require("./billkoB2bDocumentsService");
+        paymentReport = await reportPaymentForCommissionInvoice(invoice);
+      } catch (reportErr) {
+        console.warn(
+          "[fiscalize] lake payment report failed:",
+          reportErr.message,
+        );
+        paymentReport = {
+          failed: true,
+          reason: reportErr.message,
+        };
+      }
+
       await PaymentLedgerEntry.updateMany(
         { _id: { $in: group.entryIds } },
         {
@@ -272,6 +290,7 @@ async function fiscalizePaidOut({ actorId = null, notes = "", forceLive = false 
         invoiceNumber: invoice.invoiceNumber,
         orderNumber,
         billableCommissionEur: centsToEur(group.billableCommissionCents),
+        paymentReport,
       });
     } catch (err) {
       failedCount += group.entryIds.length;
