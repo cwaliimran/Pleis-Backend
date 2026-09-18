@@ -41,29 +41,28 @@ const baseRewardsSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    // When false, reward is hidden from app redeem lists but can still be linked to challenges
     availableAsReward: {
       type: Boolean,
       default: true,
     },
+    // When true, reward can only be used inside a challenge (aligns with availableAsReward=false)
     challengeOnly: {
       type: Boolean,
       default: false,
     },
+    // Deprecated (R2): replaced by challengeOnly. Kept for backward compatibility; no longer read by app.
+    isPromotionOnly: {
+      type: Boolean,
+      default: false,
+    },
+
     status: {
       type: String,
       enum: ["active", "inactive", "completed", "deleted"],
       default: "active",
     },
 
-    //if enabled reward will not show in app loyalty of rewards, but it will be tied to promotions and show in promotions section only
-    isPromotionOnly: {
-      type: Boolean,
-      default: false,
-    },
-    availableAsReward:{
-      type: Boolean,
-      default: true,
-    }
   },
   { timestamps: true, discriminatorKey: "rewardType" },
 );

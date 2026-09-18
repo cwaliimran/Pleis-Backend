@@ -27,9 +27,9 @@ function formatReward(reward, timezone) {
     ? Number((((obj.redeemed || 0) / obj.claimLimit) * 100).toFixed(2))
     : 0;
 
-  // Items not available as a reward are only claimable via challenges,
+  // Non-browseable rewards (R2/R5) are only claimable via challenges,
   // so Views / Favorites / Conversion aren't meaningful for them
-  if (obj.availableAsReward === false) {
+  if (obj.availableAsReward === false || obj.challengeOnly === true) {
     obj.views = "—";
     obj.favoritesCount = "—";
     obj.conversion = "—";

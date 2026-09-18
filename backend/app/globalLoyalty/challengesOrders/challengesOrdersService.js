@@ -246,7 +246,7 @@ const resolveGlobalChallengeByTaskTypeService = async ({
   timezone = "UTC",
   req = null,
 }) => {
-
+console.log("resolveGlobalChallengeByTaskTypeService", userId, taskType, value, timezone, req);
   const session = await mongoose.startSession();
   session.startTransaction();
 
