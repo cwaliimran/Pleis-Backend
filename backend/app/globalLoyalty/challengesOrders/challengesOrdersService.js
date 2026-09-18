@@ -487,7 +487,7 @@ const flushGlobalNotifications = async ({
     type,
     orderId
   }) => {
-    await sendUserNotifications({
+    void sendUserNotifications({
       recipientIds: [userId.toString()],
       title,
       body,
@@ -517,7 +517,7 @@ const flushGlobalNotifications = async ({
 
     const ids = orders.map(o => o.orderId.toString());
 
-    await sendUserNotifications({
+    void sendUserNotifications({
       recipientIds: [userId.toString()],
       title,
       body,

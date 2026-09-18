@@ -236,6 +236,10 @@ function renderTicketingInvoiceEmailHtml({
   const path = require("path");
   const { getCopy, resolveLocale } = require("../locales");
   const { fillRawTokens, fillEscapedTokens } = require("../shared/html");
+  const {
+    resolvePleisWeb,
+    resolvePleisSupportEmail,
+  } = require("../../../config/CONSTANTS");
   const copy = getCopy(resolveLocale(locale));
   const ie = copy.invoiceEmail;
   const numbers = invoiceNumbers || "";
@@ -258,10 +262,10 @@ function renderTicketingInvoiceEmailHtml({
     VENUE_NAME: venueName || "—",
     ORDER_REFERENCE: orderReference || "—",
     INVOICE_NUMBERS: numbers || "—",
-    APP_DEEPLINK: appDeepLink || process.env.PLEIS_WEB || "https://pleis.hr",
-    SUPPORT_EMAIL: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
+    APP_DEEPLINK: appDeepLink || resolvePleisWeb(),
+    SUPPORT_EMAIL: resolvePleisSupportEmail(),
     PLEIS_LEGAL_NAME: process.env.PLEIS_LEGAL_NAME || "Utopia Technologies d.o.o.",
-    PLEIS_WEB: process.env.PLEIS_WEB || "https://pleis.hr",
+    PLEIS_WEB: resolvePleisWeb(),
   });
   return html;
 }
@@ -350,13 +354,17 @@ async function maybeEmailTicketingInvoicePdfs(orderNumber, userId) {
   });
 
   const { sendEmailViaMailgun } = require("../../../helperUtils/emailUtil");
+  const {
+    resolveMailFrom,
+    resolvePleisSupportEmail,
+  } = require("../../../config/CONSTANTS");
   const result = await sendEmailViaMailgun(
     to,
     copy.invoiceEmailSubject(numbers),
     html,
     {
-      fromEmail: `Pleis <noreply@${process.env.MAILGUN_DOMAIN || "pleis.ai"}>`,
-      replyTo: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
+      fromEmail: resolveMailFrom(),
+      replyTo: resolvePleisSupportEmail(),
       attachments,
     },
   );

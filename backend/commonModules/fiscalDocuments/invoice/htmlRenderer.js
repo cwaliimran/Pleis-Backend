@@ -8,6 +8,7 @@ const {
 const { getCopy, resolveLocale } = require("../locales");
 const { formatZagreb, escapeHtml, fillEscapedTokens } = require("../shared/html");
 const { resolveLogoSrc } = require("../shared/logo");
+const { resolvePleisSupportEmail } = require("../../../config/CONSTANTS");
 
 const TEMPLATE_PATH = path.join(__dirname, "../templates/invoice.html");
 
@@ -122,7 +123,7 @@ function renderFiscalInvoiceHtml(invoice, extras = {}) {
     .split("{{ISSUED_AT}}")
     .join(issuedAt)
     .split("{{SUPPORT_EMAIL}}")
-    .join(process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr");
+    .join(resolvePleisSupportEmail());
 
   const fiscalProtectionCode =
     invoice.fiscalProtectionCode ||

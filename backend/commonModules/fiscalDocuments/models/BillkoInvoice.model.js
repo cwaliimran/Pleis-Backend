@@ -66,6 +66,10 @@ const billkoInvoiceSchema = new mongoose.Schema(
     pdfEmailedAt: { type: Date, default: null },
     rawResponse: { type: mongoose.Schema.Types.Mixed },
     lastError: { type: String },
+    /** Imperial Lake document id (integer as string) when known. */
+    lakeDocumentId: { type: String, default: "", index: true },
+    paymentReportedAt: { type: Date, default: null },
+    paymentReport: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { timestamps: true },
 );

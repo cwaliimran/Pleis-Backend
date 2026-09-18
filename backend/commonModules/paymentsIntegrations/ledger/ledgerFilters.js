@@ -28,6 +28,11 @@ function applyLedgerListFilters(match, query = {}) {
  * Phase C (ledger/fiscalizeService + offAppFiscalizeService + admin /payouts):
  *   Fiscalize batch, commission eRačun, off-app batch. Live Billko gated by
  *   BILLKO_FISCALIZE_ENABLED=true (dry-run otherwise).
+ *
+ * Imperial Lake B2B (billkoImperialLakeClient + billkoB2bDocumentsService):
+ *   GET /admin/payouts/billko/incoming|outgoing + POST …/report-payment.
+ *   Gate: BILLKO_LAKE_ENABLED=true + BILLKO_LAKE_API_KEY or username/password.
+ *   Does not move SEPA money — reports tax-side payment on outgoing eInvoices.
  */
 function remainingWiringNotes() {
   return {
@@ -40,6 +45,8 @@ function remainingWiringNotes() {
       "Phase C: POST /admin/payouts/fiscalize (PAID + NOT_FISCALIZED) → Pleis→organizer commission eRačun. Gate: BILLKO_FISCALIZE_ENABLED.",
     offApp:
       "Phase C: /admin/payouts/off-app-batches — ordering cash/external; confirm → commission eRačun; never in pain.001.",
+    billkoLake:
+      "Imperial Lake: /admin/payouts/billko/* — incoming/outgoing list + ereporting/paid. Gate: BILLKO_LAKE_ENABLED + lake credentials. After live Fiscalize, best-effort payment report (ClearingBetweenPartners).",
     organizerGates: {
       billkoReady: "assertOrganizerBillkoReady — blocks create when API key missing",
       payoutReady:
@@ -53,7 +60,15 @@ function remainingWiringNotes() {
         "Fiscalize batch / commission eRačun (BILLKO_FISCALIZE_ENABLED)",
         "off-app batch generate/confirm/cancel",
       ],
+      lakeDelivered: [
+        "Imperial Lake client + admin billko routes",
+        "report-payment after Fiscalize when lake ready",
+      ],
       stillManual: ["bank upload UI (manual — never auto-submit)"],
+      stillOpen: [
+        "UBL document/send for native Lake commission invoices (api-client invoices may not appear in Lake)",
+        "Buyer-side payment record for incoming invoices (not in Imperial Lake public API)",
+      ],
     },
     webhookFilters:
       "Existing /orders-transactions API unchanged. Use applyLedgerListFilters on a new ledger list route.",

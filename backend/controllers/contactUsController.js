@@ -7,9 +7,10 @@ const {
   generateMeta,
 } = require("../helperUtils/responseUtil");
 const validator = require("validator");
-const { sendEmailViaBrevo } = require("../helperUtils/emailUtil");
+const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
 const { config } = require("dotenv");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
+const { resolvePleisSupportEmail } = require("../config/CONSTANTS");
 
 // Create a new contact request
 const createContactRequest = async (req, res) => {
@@ -51,11 +52,11 @@ const createContactRequest = async (req, res) => {
       ? `${description} \n Name: ${name} \n Email: ${email} \n Phone Number: ${phoneNumber}`
       : `${description} \n Name: ${name} \n Email: ${email}`;
 
-    const supportEmail = process.env.SUPPORT_EMAIL;
+    const supportEmail = process.env.SUPPORT_EMAIL || resolvePleisSupportEmail();
 
     await Promise.all([
       contactRequest.save(),
-      //  sendEmailViaBrevo([supportEmail], subject, mDescription, {
+      //  sendEmailViaMailgun([supportEmail], subject, mDescription, {
       // isHtml: false,
       // }),
     ]);

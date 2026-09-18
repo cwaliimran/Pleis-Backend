@@ -3,6 +3,7 @@ const path = require("path");
 const { resolveLocale, getCopy } = require("../locales");
 const { formatZagreb, formatMoney, escapeHtml, fillRawTokens, fillEscapedTokens } = require("../shared/html");
 const { resolveLogoSrc } = require("../shared/logo");
+const { resolvePleisWeb } = require("../../../config/CONSTANTS");
 
 const TEMPLATE_DIR = path.join(__dirname, "../templates");
 const DOCUMENT_TEMPLATE = path.join(TEMPLATE_DIR, "confirmation.html");
@@ -92,8 +93,8 @@ function dataTokens(data) {
     VOUCHER_CODE: data.voucher?.code || "",
     VOUCHER_VALID_FROM: data.voucherValidFromFormatted || "",
     VOUCHER_VALID_TO: data.voucherValidToFormatted || "",
-    APP_DEEPLINK: data.appDeepLink || "https://pleis.hr",
-    APP_DEEP_LINK: data.appDeepLink || "https://pleis.hr",
+    APP_DEEPLINK: data.appDeepLink || resolvePleisWeb(),
+    APP_DEEP_LINK: data.appDeepLink || resolvePleisWeb(),
     DOCUMENT_URL: data.documentUrl || "",
     CANCELLED_CONFIRMATION_NUMBER: data.cancelledConfirmationNumber || "",
   };
