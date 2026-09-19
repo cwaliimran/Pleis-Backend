@@ -3,7 +3,7 @@ name: Deploy Node.js API to Azure Web App - Pleis-backend-dev
 on:
   push:
     branches:
-      - dev
+      - scaling-backend-v1
 
   workflow_dispatch:
 
