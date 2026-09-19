@@ -31,7 +31,7 @@ const getEligibleChallengesForLoyaltyPage = async ({
   timezone
 }) => {
   // 1️⃣ Wallet (tier)
-  let userCompanyWallet = await clubMemberRepo.getWallet(userId, companyOrganizer);
+  let userCompanyWallet = await clubMemberRepo.getWallet(userId, companyOrganizer, null, { autoCreate: false });
   userCompanyWallet = formatUserWallet(userCompanyWallet);
 
   const tierKey = userCompanyWallet?.tierKey || "essential";
@@ -159,7 +159,7 @@ const getChallengesWithPaginationService = async ({
      3️⃣ Wallets (cached / batched)
   ------------------------------ */
   const wallets = await Promise.all(
-    clubIds.map(org => clubMemberRepo.getWallet(userId, org))
+    clubIds.map(org => clubMemberRepo.getWallet(userId, org, null, { autoCreate: false }))
   );
 
   const walletMap = new Map(

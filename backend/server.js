@@ -94,7 +94,11 @@ const { allowedOrigins } = require("./config/origins");
  */
 
 const app = express();
-app.set("trust proxy", 1);
+// Behind Azure App Service / Front Door: req.ip must be the real client,
+// otherwise every user shares one rate-limit bucket (the proxy IP).
+// Set TRUST_PROXY_HOPS=2 if you have Front Door → App Gateway → App.
+const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
+app.set("trust proxy", Number.isFinite(trustProxyHops) ? trustProxyHops : 1);
 
 /**
  * ------------------------------------------------
@@ -124,9 +128,11 @@ app.get("/health", (req, res) => {
 securityMiddleware(app, {
   allowedOrigins,
   adminIPWhitelist: [],
-  maxRequestSize: "10mb",
+  // JSON body cap — uploads should use multer, not huge JSON payloads
+  maxRequestSize: process.env.MAX_REQUEST_SIZE || "1mb",
   rateLimitWindow: 15 * 60 * 1000,
-  rateLimitMax: 200,
+  // Global ceiling per client IP/user; per-route limiters are stricter
+  rateLimitMax: Number(process.env.RATE_LIMIT_MAX || 400),
 });
 
 
@@ -143,7 +149,7 @@ app.use(accessLogger);
 // request line in every env (Azure / PM2 log stream)
 app.use(morgan(process.env.NODE_ENV === "prod" ? "combined" : "dev"));
 
-app.use(express.json());
+// Body parsing is configured in securityMiddleware (with size limits) — do not re-add express.json() here
 app.use(textModerationMiddleware);
 
 /**
@@ -158,8 +164,10 @@ app.use("/api/v1/app/staff", staffRoutes);
 app.use("/api/v1/webhooks", webhooksRoutes);
 app.use("/api/v1", routes);
 
-// Swagger
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
+// Swagger — never expose full API surface on production
+if (process.env.NODE_ENV !== "prod") {
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
+}
 
 // Fallback
 app.use((req, res) => {
@@ -183,8 +191,11 @@ app.use((err, req, res, next) => {
     stack: err.stack,
   });
 
-  res.status(500).json({
-    message: "Internal server error",
+  sendResponse({
+    res,
+    statusCode: 500,
+    translationKey: "internal_server_error",
+    error: err,
   });
 });
 

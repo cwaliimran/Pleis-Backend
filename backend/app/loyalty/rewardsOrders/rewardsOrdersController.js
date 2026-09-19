@@ -3,7 +3,6 @@ const {
   validateParams,
   getReadableErrorMessage,
   parsePaginationParams,
-  getAllRewardOrdersService
 } = require("@utils/responseUtil");
 
 const rewardService = require("./rewardsOrdersService");
@@ -13,13 +12,14 @@ const getUserOrders = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     const { keyword, status, orderSort } = req.query;
     const userId = req.user._id;
-    const { orders, meta,globalRewards } = await rewardService.getUserOrdersService({
+    const { orders, meta } = await rewardService.getUserOrdersService({
       userId,
       page,
       limit,
       keyword,
       status,
-      orderSort
+      orderSort,
+      sort: orderSort,
     });
 
 
@@ -27,7 +27,7 @@ const getUserOrders = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "reward_orders_fetched_successfully",
-      data: {orders, globalRewards},
+      data: { orders },
       meta
     });
   } catch (error) {
@@ -46,13 +46,14 @@ const getAllRewardOrders = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     const { keyword, status, orderSort } = req.query;
     const userId = req.user._id;
-    const { orders, meta,globalRewards } = await rewardService.getAllRewardOrdersService({
+    const { orders, meta, globalRewards } = await rewardService.getAllRewardOrdersService({
       userId,
       page,
       limit,
       keyword,
       status,
-      orderSort
+      orderSort,
+      sort: orderSort,
     });
 
 
@@ -60,7 +61,7 @@ const getAllRewardOrders = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "reward_orders_fetched_successfully",
-      data: {orders, globalRewards},
+      data: { orders, globalRewards },
       meta
     });
   } catch (error) {

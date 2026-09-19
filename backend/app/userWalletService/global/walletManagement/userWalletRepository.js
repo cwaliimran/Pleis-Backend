@@ -57,7 +57,7 @@ const getUserWallet = async (user) => {
 
   let wallet = await UserGlobalWallet.findOne({ user: userId }).populate({
     path: "global.level",
-    select: "image title type entryPoints retainPoints bonusPointsPerEuro"
+    select: "image backgroundImage title type entryPoints retainPoints bonusPointsPerEuro"
   });
 
   if (!wallet) {
@@ -186,8 +186,9 @@ const checkPromotionGlobal = async (userId, session = null) => {
   // Fire and forget notification
   sendUserNotifications({
     recipientIds: [userId],
-    title: `🎉 Congratulations! You've been promoted!`,
-    body: `You have reached ${selected.title} level.`,
+    titleKey: "global_level_promoted_title",
+    bodyKey: "global_level_promoted_body",
+    bodyValues: { levelTitle: selected.title },
     data: {
       type: NotificationTypes.LEVEL_PROMOTED,
       levelId: selected._id,
@@ -239,6 +240,7 @@ const checkDemotionGlobal = async (userId, session = null) => {
     ? earned12MonthsAgg[0].total
     : 0;
 
+
   const wallet = await UserGlobalWallet.findOne({
     user: userId,
   })
@@ -284,8 +286,9 @@ const checkDemotionGlobal = async (userId, session = null) => {
   // Fire-and-forget notification
   sendUserNotifications({
     recipientIds: [userId],
-    title: `Global level updated`,
-    body: `Your global status is now ${fallback.title}.`,
+    titleKey: "global_level_updated_title",
+    bodyKey: "global_level_updated_body",
+    bodyValues: { levelTitle: fallback.title },
     data: {
       type: NotificationTypes.LEVEL_DEMOTED,
       levelId: fallback._id,
@@ -336,5 +339,6 @@ module.exports = {
   updateGlobalPoints,
   getUserWallet,
   getTotalRedeemPurchases,
-  checkPromotionGlobal
+  checkPromotionGlobal,
+  checkDemotionGlobal
 };

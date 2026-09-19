@@ -2,16 +2,14 @@ const mongoose = require("mongoose");
 
 const globalStatusLevelsSchema = new mongoose.Schema(
   {
-
     image: {
       type: String,
       default: "",
     },
-        backgroundImage: {
+    backgroundImage: {
       type: String,
       default: "",
     },
-
 
     title: {
       type: String,
@@ -35,7 +33,8 @@ const globalStatusLevelsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    retainPoints: { //how much you need to stay in this level in an year
+    retainPoints: {
+      //how much you need to stay in this level in an year
       type: Number,
       default: 0,
     },
@@ -48,11 +47,12 @@ const globalStatusLevelsSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-
-  }
+  },
 );
 
-
-const GlobalStatusLevels = mongoose.model("GlobalStatusLevels", globalStatusLevelsSchema);
+const GlobalStatusLevels = mongoose.model(
+  "GlobalStatusLevels",
+  globalStatusLevelsSchema,
+);
 
 module.exports = GlobalStatusLevels;

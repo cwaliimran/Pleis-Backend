@@ -186,6 +186,28 @@ const findByIdAndUpdate = async (id, data) => {
   return VenueTypesModel.findByIdAndUpdate(id, data, { new: true });
 };
 
+/**
+ * Full active venue-types catalog (no pagination). Redis-cached.
+ * Used by home/global filters — these rarely change.
+ */
+const getAllActiveVenueTypes = async () => {
+  return cache({
+    namespace: `${ACTIVE_VENUE_TYPES_CACHE_KEY}:all`,
+    ttl: 86400,
+    fetchFn: async () => {
+      return VenueTypesModel.find({ status: "active" })
+        .sort({ order: 1, title: 1 })
+        .select("_id title image order categories status createdAt")
+        .populate({
+          path: "categories",
+          match: { status: "active" },
+          select: "_id title order",
+        })
+        .lean();
+    },
+  });
+};
+
 module.exports = {
   createVenueType,
   getVenueTypesWithFilters,
@@ -195,4 +217,6 @@ module.exports = {
   deleteVenueTypeById,
   findByIdAndUpdate,
   getCounts,
+  getAllActiveVenueTypes,
+  ACTIVE_VENUE_TYPES_CACHE_KEY,
 };

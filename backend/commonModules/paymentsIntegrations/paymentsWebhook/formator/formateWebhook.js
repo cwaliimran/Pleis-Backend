@@ -32,6 +32,24 @@ const formatImages = (data) => {
             }
         }
 
+        if (data.orderData && data.orderData.combos) {
+            for (let i = 0; i < data.orderData.combos.length; i++) {
+                const combo = data.orderData.combos[i];
+                if (combo.comboSnapShot?.image) {
+                    combo.comboSnapShot.image = getFullImageUrl(combo.comboSnapShot.image);
+                }
+                if (Array.isArray(combo.items)) {
+                    for (const item of combo.items) {
+                        if (item.menuItemSnapShot?.image) {
+                            item.menuItemSnapShot.image = getFullImageUrl(
+                                item.menuItemSnapShot.image,
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
         if (data.orderData && data.orderData.ticket && data.orderData.ticket.ticketId) {
             const ticket = data.orderData.ticket.ticketId;
             if (ticket.snapshot && ticket.snapshot.image) {

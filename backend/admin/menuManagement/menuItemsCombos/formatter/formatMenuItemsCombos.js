@@ -1,3 +1,5 @@
+const { getFullImageUrl } = require("@utils/imageHelper");
+
 function formatMenuItemsCombo(combo) {
   const obj = typeof combo.toObject === "function" ? combo.toObject() : combo;
   if (!obj) return null;
@@ -8,7 +10,22 @@ function formatMenuItemsCombo(combo) {
     return sum + basePrice * quantity;
   }, 0);
 
-  return { ...obj, totalBasePrice };
+  if (Array.isArray(obj.menuItems)) {
+    obj.menuItems = obj.menuItems.map((item) => {
+      if (item?.menuItem?.image !== undefined) {
+        item.menuItem.image = getFullImageUrl(
+          item.menuItem.image || "noimage.png",
+        );
+      }
+      return item;
+    });
+  }
+
+  return {
+    ...obj,
+    image: getFullImageUrl(obj.image || "noimage.png"),
+    totalBasePrice,
+  };
 }
 
 function formatMenuItemsComboList(combos = []) {

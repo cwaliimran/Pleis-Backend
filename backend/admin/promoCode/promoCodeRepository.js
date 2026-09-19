@@ -3,26 +3,11 @@ const { PromoCode } = require("@PromoCodeModel");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const { getAllUsers } = require("../usersManagement/usersService");
-const { sendUserNotifications } = require("@notificationsUtil");
-const { NotificationTypes } = require("@NotificationsModel");
 
 const createPromoCode = async (data) => {
   try {
     const promoCode = new PromoCode(data);
     await promoCode.save();
-    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
-    await sendUserNotifications({
-      recipientIds: userIds,
-      title: `A new promo code "${promoCode.title}" has been created.`,
-      body: `use that promocode  ${promoCode.promoCode} for discounts.`,
-      data: { type: NotificationTypes.PROMO_UPDATE, promoCodeId: promoCode._id, objectType: "promoCode" },
-      sender: promoCode.companyOrganizer,
-      objectId: promoCode._id,
-      image: null,
-
-    });
-
     return promoCode;
   } catch (err) {
     throw err;

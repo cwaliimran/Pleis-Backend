@@ -1,19 +1,25 @@
 const Mailgun = require('mailgun.js');
+const {
+  resolveMailFrom,
+  resolveMailgunApiBase,
+} = require("../config/CONSTANTS");
 
 const mailgun = new Mailgun(FormData);
 const mg = mailgun.client({
   username: "api",
   key: process.env.MAILGUN_API_KEY, // Use Mailgun API key
-  url: process.env.MAILGUN_BASE_URL || "https://api.mailgun.net" // Optional for EU domains
+  url: resolveMailgunApiBase(),
 });
 
 const sendEmailViaMailgun = async (emails, subject, body, config = {}) => {
   try {
     const {
-      fromEmail = "Pleis <noreply@pleis.ai>",
+      fromEmail = resolveMailFrom(),
       attachments = [],
+      inline = [],
       isHtml = true,
       replyTo,
+      variables = null,
     } = config;
 
     const payload = {
@@ -24,8 +30,21 @@ const sendEmailViaMailgun = async (emails, subject, body, config = {}) => {
     };
 
     if (replyTo) payload["h:Reply-To"] = replyTo;
+    if (variables && typeof variables === "object") {
+      for (const [key, value] of Object.entries(variables)) {
+        if (value == null) continue;
+        payload[`v:${key}`] = String(value);
+      }
+    }
     if (attachments.length) {
       payload.attachment = attachments.map((file) => ({
+        filename: file.filename,
+        data: file.data,
+        contentType: file.contentType || "application/octet-stream",
+      }));
+    }
+    if (inline.length) {
+      payload.inline = inline.map((file) => ({
         filename: file.filename,
         data: file.data,
         contentType: file.contentType || "application/octet-stream",

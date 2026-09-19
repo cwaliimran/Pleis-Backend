@@ -21,6 +21,10 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
     if (isRewardEndDateExpired(reward.endDate, new Date(), timezone)) {
       throw new Error("reward_expired");
     }
+    // R2/R5: challenge-only / not-available rewards are not directly redeemable
+    if (reward.availableAsReward === false || reward.challengeOnly === true) {
+      throw new Error("reward_not_available_for_claim");
+    }
 
     // 🔒 HARD ENFORCEMENT
     if (reward.claimLimit > 0) {
@@ -157,8 +161,13 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
     /* SEND NOTIFICATION IN BACKGROUND */
     sendUserNotifications({
       recipientIds: [userId.toString()],
-      title: `Claimed reward ${reward.title}`,
-      body: `You have successfully claimed the reward ${reward.title} using ${reward.minPointsRequiredToClaim || 0} points.`,
+      titleKey: "reward_claimed_title",
+      bodyKey: "reward_claimed_body",
+      titleValues: { rewardTitle: reward.title },
+      bodyValues: {
+        rewardTitle: reward.title,
+        points: reward.minPointsRequiredToClaim || 0,
+      },
       data: { type: NotificationTypes.REWARD_CLAIMED, rewardId: reward._id, objectType: "loyaltyrewardsorders" },
       sender: orderDoc.companyOrganizer,
       objectId: orderDoc._id,
@@ -443,7 +452,9 @@ const getOrderDetails = async (orderId) => {
 };
 
 /* 
-Fetches both loyalty/global reward orders together
+Fetches both loyalty/global reward orders together.
+Queries each collection independently so loyalty-only (or global-only)
+users still get results even if the other collection is empty/missing.
 */
 const getCombinedRewardOrders = async ({
   userId,
@@ -453,6 +464,8 @@ const getCombinedRewardOrders = async ({
   limit,
   sort = -1
 }) => {
+  const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
+
   const baseMatch = {
     user: new mongoose.Types.ObjectId(userId),
   };
@@ -466,17 +479,13 @@ const getCombinedRewardOrders = async ({
     };
   }
 
-  const pipeline = [
+  const loyaltyPipeline = [
     { $match: baseMatch },
-
-    // identify source
     {
       $addFields: {
         rewardScope: "company"
       }
     },
-
-    // ---- populate organizer ----
     {
       $lookup: {
         from: "users",
@@ -504,42 +513,35 @@ const getCombinedRewardOrders = async ({
         preserveNullAndEmptyArrays: true
       }
     },
-
-    // ---- merge global orders ----
-    {
-      $unionWith: {
-        coll: "globalrewardsorders",
-        pipeline: [
-          { $match: baseMatch },
-          {
-            $addFields: {
-              rewardScope: "global",
-              companyOrganizer: null
-            }
-          }
-        ]
-      }
-    },
-
-    // ---- unified sorting ----
-    { $sort: { createdAt: sort } },
-
-    // ---- pagination ----
-    {
-      $facet: {
-        data: [
-          { $skip: skip },
-          ...(limit !== 0 ? [{ $limit: limit }] : [])
-        ],
-        total: [{ $count: "count" }]
-      }
-    }
   ];
 
-  const result = await RewardsOrders.aggregate(pipeline);
+  const globalPipeline = [
+    { $match: baseMatch },
+    {
+      $addFields: {
+        rewardScope: "global",
+        companyOrganizer: null
+      }
+    },
+  ];
 
-  const data = result[0]?.data || [];
-  const total = result[0]?.total?.[0]?.count || 0;
+  const [loyaltyOrders, globalOrders] = await Promise.all([
+    RewardsOrders.aggregate(loyaltyPipeline),
+    GlobalRewardsOrders.aggregate(globalPipeline).catch((err) => {
+      console.error("[REWARDS] globalrewardsorders query failed:", err.message);
+      return [];
+    }),
+  ]);
+
+  const combined = [...loyaltyOrders, ...globalOrders].sort((a, b) => {
+    const aTime = new Date(a.createdAt || 0).getTime();
+    const bTime = new Date(b.createdAt || 0).getTime();
+    return sort === 1 ? aTime - bTime : bTime - aTime;
+  });
+
+  const total = combined.length;
+  const data =
+    limit === 0 ? combined.slice(skip) : combined.slice(skip, skip + limit);
 
   return { data, total };
 };

@@ -75,6 +75,7 @@ const OrdersSchema = new mongoose.Schema(
         "rejected",
         "preorder",
         "ready",
+        "expired",
       ],
       default: "pending",
     },

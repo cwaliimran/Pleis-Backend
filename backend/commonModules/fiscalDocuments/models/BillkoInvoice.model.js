@@ -11,6 +11,7 @@ const billkoInvoiceSchema = new mongoose.Schema(
         "reservation",
         "subscription",
         "commission",
+        "refund_storno",
       ],
       required: true,
     },
@@ -26,6 +27,7 @@ const billkoInvoiceSchema = new mongoose.Schema(
         "userreservations",
         "menuorders",
         "subscription",
+        "commission",
       ],
       required: true,
     },
@@ -46,6 +48,9 @@ const billkoInvoiceSchema = new mongoose.Schema(
     billkoId: { type: String, index: true },
     invoiceNumber: { type: String, index: true },
     fiscalizationNumber: { type: String },
+    // Croatian ZKI (zaštitni kod izdavatelja). Billko may send as
+    // fiscalProtectionCode, zki, or ZKI.
+    fiscalProtectionCode: { type: String, default: "" },
     invoicePreviewLink: { type: String },
     status: {
       type: String,
@@ -56,9 +61,15 @@ const billkoInvoiceSchema = new mongoose.Schema(
     currency: { type: String, default: "EUR" },
     taxRateLabels: { type: [String], default: [] },
     pdfStorageKey: { type: String },
+    pdfFileUrl: { type: String },
     pdfFileName: { type: String },
+    pdfEmailedAt: { type: Date, default: null },
     rawResponse: { type: mongoose.Schema.Types.Mixed },
     lastError: { type: String },
+    /** Imperial Lake document id (integer as string) when known. */
+    lakeDocumentId: { type: String, default: "", index: true },
+    paymentReportedAt: { type: Date, default: null },
+    paymentReport: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { timestamps: true },
 );

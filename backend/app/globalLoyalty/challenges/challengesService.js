@@ -26,17 +26,21 @@ const getGlobalLoyaltyChallenges = async ({
     return { items: [], meta: generateMeta(page, limit, 0) };
   }
 
-  const tierKey = wallet.global.level?.type || "blue";
   const userTierEntry = wallet.global.level?.entryPoints ?? 0;
 
   // 2️⃣ Active global challenges
   let challenges = await challengesRepo.getActiveGlobalChallenges({ keyword, timezone });
 
-  // 3️⃣ Active orders (progress)
-  const activeOrders =
-    await challengeOrdersRepo.getActiveGlobalOrdersForDashboard({
-      userId
-    });
+  // 3️⃣ Active orders (progress) + completed claim counts
+  const challengeIds = challenges.map((ch) => ch._id);
+
+  const [activeOrders, completedCountsMap] = await Promise.all([
+    challengeOrdersRepo.getActiveGlobalOrdersForDashboard({ userId }),
+    challengeOrdersRepo.getCompletedCountsForChallenges({
+      userId,
+      challengeIds,
+    }),
+  ]);
 
   const activeOrderMap = new Map(
     activeOrders.map(o => [
@@ -45,18 +49,33 @@ const getGlobalLoyaltyChallenges = async ({
     ])
   );
 
-  // 4️⃣ Eligibility + formatting
+  // 4️⃣ Eligibility + formatting (mirror company loyalty)
   const eligible = [];
 
   for (const ch of challenges) {
-    const requiredEntry = ch?.tierLimit?.[tierKey]?.entryPoints ?? 0;
-    if (userTierEntry < requiredEntry) continue;
+    const challengeId = String(ch._id);
+    const requiredEntry = ch?.tierLimit?.entryPoints ?? 0;
+    const claimLimit = ch.claimLimit;
+    const completedCount = completedCountsMap.get(challengeId) || 0;
 
-    const activeOrder = activeOrderMap.get(String(ch._id));
+    const eligibleByTier = userTierEntry >= requiredEntry;
+    const eligibleByLimit =
+      !claimLimit || claimLimit <= 0 || completedCount < claimLimit;
+
+    // Hide when tier too low or claim limit exhausted
+    if (!eligibleByTier || !eligibleByLimit) continue;
+
+    const activeOrder = activeOrderMap.get(challengeId);
+    const claimRemaining =
+      claimLimit > 0 ? Math.max(claimLimit - completedCount, 0) : null;
 
     eligible.push({
       ...formatGlobalChallenge(ch, timezone),
+      canParticipate: true,
       isActive: Boolean(activeOrder),
+      isClaimed: completedCount > 0,
+      completedCount,
+      claimRemaining,
       progress: activeOrder
         ? {
             current: activeOrder.progress.current,

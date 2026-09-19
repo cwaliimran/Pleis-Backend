@@ -688,7 +688,11 @@ const cloneEvent = async (req, res) => {
 const getMinimalEventsInfo = async (req, res) => {
   let { organization } = req.params;
   if (!organization) {
-    return res.status(400).json({ error: "Organization ID is required" });
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "organization_id_is_required",
+    });
   }
   let { timezone } = req.user;
   try {
@@ -870,7 +874,11 @@ const getEventRatings = async (req, res) => {
 const getEventbycompanyOrganizer = async (req, res) => {
   let { companyOrganizer } = req.params;
   if (!companyOrganizer) {
-    return res.status(400).json({ error: "company organizer ID is required" });
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "company_organizer_id_required",
+    });
   }
   let { timezone } = req.user;
   try {
@@ -906,7 +914,11 @@ const getEventbycompanyOrganizer = async (req, res) => {
 const getEventsByVenueType = async (req, res) => {
   let { venueTypeId } = req.params;
   if (!venueTypeId) {
-    return res.status(400).json({ error: "Venue Type ID is required" });
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "venue_type_id_required",
+    });
   }
   let { timezone } = req.user;
   try {
@@ -942,7 +954,11 @@ const getEventsByVenueType = async (req, res) => {
 const getEventsByTag = async (req, res) => {
   let { tagId } = req.params;
   if (!tagId) {
-    return res.status(400).json({ error: "Tag ID is required" });
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "tag_id_required",
+    });
   }
   let { timezone } = req.user;
   try {

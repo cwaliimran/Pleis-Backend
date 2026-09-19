@@ -8,32 +8,21 @@ const createReviews = async (data) => {
   try {
     const reviews = await Reviews.create(data);
     const organizerId = await getOrgCompanyOrganizer(data.organization);
-    await sendUserNotifications({
-      recipientIds: [reviews.user.toString()],
-      title: "Review Created",
-      body: `Your review  has been sent successfully.`,
-      data: {
-        type: NotificationTypes.EVENT_UPDATE,
-        objectType: "Reviews",
-        organization_id: reviews.organization.toString(),
-      },
-      image: "noimage",
-      sender: reviews.user,
-      objectId: reviews.event,
-    });
-        await sendUserNotifications({
-      recipientIds: [organizerId.toString()],
-      title: "Someone Reviewed Your Event",
-      body: `A user has submitted a review for your event.`,
-      data: {
-        type: NotificationTypes.EVENT_UPDATE,
-        objectType: "Reviews",
-        organization_id: reviews.organization.toString(),
-      },
-      image: "noimage",
-      sender: reviews.user,
-      objectId: reviews.event,
-    });
+    if (organizerId) {
+      await sendUserNotifications({
+        recipientIds: [organizerId.toString()],
+        titleKey: "event_reviewed_title",
+        bodyKey: "event_reviewed_body",
+        data: {
+          type: NotificationTypes.EVENT_UPDATE,
+          objectType: "Reviews",
+          organization_id: reviews.organization.toString(),
+        },
+        image: "noimage",
+        sender: reviews.user,
+        objectId: reviews.event,
+      });
+    }
 
     return reviews;
 

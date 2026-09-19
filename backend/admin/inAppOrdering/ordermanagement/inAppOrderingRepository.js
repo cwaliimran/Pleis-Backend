@@ -33,6 +33,14 @@ const withOrderItemImageUrls = (order) => {
     combos: Array.isArray(order.combos)
       ? order.combos.map((combo) => ({
           ...combo,
+          comboSnapShot: combo.comboSnapShot
+            ? {
+                ...combo.comboSnapShot,
+                image: getFullImageUrl(
+                  combo.comboSnapShot.image || "noimage.png",
+                ),
+              }
+            : combo.comboSnapShot,
           items: Array.isArray(combo.items)
             ? combo.items.map(withFullItemImage)
             : combo.items,
@@ -110,11 +118,11 @@ const getOrders = async ({
   if (status && status.trim()) {
     if (status.trim() === "active") {
       statusFilter = {
-        status: { $nin: ["cancelled", "completed", "rejected"] },
+        status: { $nin: ["cancelled", "completed", "rejected","expired"] },
       };
     } else if (status.trim() === "past") {
       statusFilter = {
-        status: { $in: ["cancelled", "completed", "rejected"] },
+        status: { $in: ["cancelled", "completed", "rejected","expired"] },
       };
     }
   }
@@ -324,11 +332,11 @@ const getOrders = async ({
       MenuOrders.aggregate(pipeline),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $nin: ["cancelled", "completed", "rejected"] },
-      }),
+        status: { $nin: ["cancelled", "completed", "rejected","expired"] },
+      }), 
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $in: ["cancelled", "completed", "rejected"] },
+        status: { $in: ["cancelled", "completed", "rejected","expired"] },
       }),
       getEventsCounts(eventCountQuery),
     ]);

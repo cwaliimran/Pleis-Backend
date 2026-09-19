@@ -1,5 +1,5 @@
 // services/streakService.js
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { generateMeta } = require("../../helperUtils/responseUtil");
 const streakRepo = require("./usersStreaksRepository");
 const { formatStreaks } = require("./formatters/usersStreaksFormatter");
 const { default: mongoose } = require("mongoose");

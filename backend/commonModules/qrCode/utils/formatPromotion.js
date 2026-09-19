@@ -1,5 +1,5 @@
-const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
-const { convertUtcToTimezone } = require("../../../../helperUtils/responseUtil");
+const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
+const { convertUtcToTimezone } = require("../../../helperUtils/responseUtil");
 
 // Helper function to handle date conversion
 function convertPromotionDates(promotion, timezone, format) {

@@ -41,6 +41,7 @@ const {
 const {
   formatReservationDates,
 } = require("./formatters/reservationDateFormatter");
+const { checkReservationAvailability } = require("../../app/reservations/reservationRepository");
 
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
@@ -409,6 +410,15 @@ const updateUserReservation = async (data) => {
     "status",
   ];
 
+  const checkAvailability = await ReservationRepo.checkReservationAvailabilityForUpdate({
+    reservationId: data.id,
+    organizationId: UserReservation.organizationId,
+    payload: data,
+  });
+  if (checkAvailability.allowed=== false) {
+    return { error: checkAvailability.message };
+  }
+
   // -----------------------------
   // Detect timing change
   // -----------------------------
@@ -474,10 +484,10 @@ const updateUserReservation = async (data) => {
   if (UserReservation.userId) {
     await sendUserNotifications({
       recipientIds: [UserReservation.userId.toString()],
-      title: "Reservation Updated",
-      body: timingChanged
-        ? "Your reservation timing has been updated."
-        : "Your reservation details have been updated.",
+      titleKey: "reservation_updated_title",
+      bodyKey: timingChanged
+        ? "reservation_updated_timing_body"
+        : "reservation_updated_details_body",
 
       data: {
         type: NotificationTypes.RESERVATION_UPDATE,
@@ -754,8 +764,8 @@ const changeUsersReservationsTiming = async ({
   if (recipientIds.length) {
     sendUserNotifications({
       recipientIds,
-      title: "Reservation Time Updated",
-      body: "Your reservation timing has been updated.",
+      titleKey: "reservation_time_updated_title",
+      bodyKey: "reservation_time_updated_body",
       data: {
         type: NotificationTypes.RESERVATION_UPDATE,
         objectType: "userreservations",
@@ -763,7 +773,7 @@ const changeUsersReservationsTiming = async ({
       sender: reservations[0]?.companyOrganizer?.toString() || null,
       objectId: reservations[0]?._id?.toString() || null,
     })
-      .then(() => {})
+      .then(() => { })
       .catch((err) =>
         console.error("Error sending notifications in background:", err),
       );
@@ -792,14 +802,14 @@ const getReservationsV2 = async ({
   startTime,
 }) => {
   let endTime = null;
-if (date && startTime) {
-  startTime = combineDateTime(date, startTime, timezone);
+  if (date && startTime) {
+    startTime = combineDateTime(date, startTime, timezone);
 
-  endTime = moment
-    .utc(startTime)
-    .add(1, "hour")
-    .format("YYYY-MM-DDTHH:mm:ss.SSSZ");
-}
+    endTime = moment
+      .utc(startTime)
+      .add(1, "hour")
+      .format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+  }
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let { reservations, meta } = await ReservationRepo.getReservationsV2({
     page,

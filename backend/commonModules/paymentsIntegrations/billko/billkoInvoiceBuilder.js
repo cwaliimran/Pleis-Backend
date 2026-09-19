@@ -9,7 +9,7 @@ const {
 const BILLKO_TZ = "Europe/Zagreb";
 
 const InvoiceFormat = { A4Paper: 3 };
-const InvoiceType = { Normal: 0 };
+const InvoiceType = { Normal: 0, Electronic: 2 };
 const TransactionType = { Sale: 0, Refund: 1 };
 const ProductType = { Service: 1, Ticket: 4 };
 const PaymentType = {
@@ -60,6 +60,31 @@ function mapGatewayPaymentType(paymentMethod) {
   return PaymentType.Card;
 }
 
+function trimName(value) {
+  return String(value || "").trim();
+}
+
+function isPlaceholderPersonName(firstName, lastName) {
+  const joined = [firstName, lastName]
+    .map(trimName)
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return !joined || joined === "guest" || joined === "guest user";
+}
+
+function personNameFromParts(...sources) {
+  for (const source of sources) {
+    if (!source) continue;
+    const firstName = trimName(source.firstName);
+    const lastName = trimName(source.lastName || source.surName);
+    if (!isPlaceholderPersonName(firstName, lastName)) {
+      return { firstName, lastName };
+    }
+  }
+  return { firstName: "", lastName: "" };
+}
+
 function buildBillingInformation(billing, fallback = {}) {
   const address = billing?.billingAddress || {};
   const { street, streetNumber } = splitStreet(address.address || fallback.address || "");
@@ -84,8 +109,9 @@ function buildBillingInformation(billing, fallback = {}) {
     payload.companyName = billing.companyName;
     payload.personalIdentificationNumber = billing.personalIdentificationNumber;
   } else {
-    payload.firstName = billing?.firstName || fallback.firstName || "Guest";
-    payload.lastName = billing?.lastName || fallback.lastName || "User";
+    const person = personNameFromParts(fallback, billing);
+    payload.firstName = person.firstName || "Guest";
+    payload.lastName = person.lastName;
   }
 
   if (billing?.phone) payload.phoneNumber = billing.phone;
@@ -109,6 +135,10 @@ function buildCreateInvoicePayload({
   dateOfService,
   note,
   createOrUpdateOrganizationCustomer = false,
+  invoiceType = InvoiceType.Normal,
+  transactionType = TransactionType.Sale,
+  referentDocumentNumber,
+  referentDocumentDT,
 }) {
   const total = productTotal(products);
   if (products.some((product) => !isValidTaxRateLabel(product.taxRateLabels?.[0]))) {
@@ -120,8 +150,8 @@ function buildCreateInvoicePayload({
   const payload = {
     invoiceFormat: InvoiceFormat.A4Paper,
     fiscalizeInvoice: true,
-    type: InvoiceType.Normal,
-    transactionType: TransactionType.Sale,
+    type: invoiceType,
+    transactionType,
     orderNumber: String(orderNumber),
     payment: [{ amount: total, paymentType }],
     products,
@@ -134,8 +164,61 @@ function buildCreateInvoicePayload({
   if (createOrUpdateOrganizationCustomer) {
     payload.createOrUpdateOrganizationCustomer = true;
   }
+  // Billko requires the referent pair together (full refund uses /invoices/refund instead).
+  if (referentDocumentNumber || referentDocumentDT) {
+    if (!referentDocumentNumber || !referentDocumentDT) {
+      const error = new Error("billko_referent_pair_incomplete");
+      error.statusCode = 400;
+      throw error;
+    }
+    payload.referentDocumentNumber = String(referentDocumentNumber);
+    payload.referentDocumentDT = String(referentDocumentDT);
+  }
 
   return payload;
+}
+
+/**
+ * Partial ticket storno: new invoice with transactionType Refund + referent pair.
+ * Full invoice cancel uses POST /invoices/refund instead (Billko §4.5 / §12).
+ */
+function buildPartialRefundInvoicePayload({
+  orderNumber,
+  products,
+  paymentType,
+  billingInformation,
+  referentDocumentNumber,
+  referentDocumentDT,
+  note,
+}) {
+  return buildCreateInvoicePayload({
+    orderNumber,
+    products,
+    paymentType,
+    billingInformation,
+    note,
+    transactionType: TransactionType.Refund,
+    referentDocumentNumber,
+    referentDocumentDT,
+  });
+}
+
+function resolveReferentDocumentDT(invoice = {}) {
+  const raw = invoice.rawResponse || {};
+  return (
+    raw.dateAndTimeOfIssue ||
+    raw.dateOfIssue ||
+    raw.DateAndTimeOfIssue ||
+    (invoice.createdAt ? formatBillkoDate(invoice.createdAt) : formatBillkoDate())
+  );
+}
+
+/** Full ticket storno when refund covers the ticket invoice amount (fee kept separately). */
+function isFullTicketRefund(refundAmount, ticketAmount) {
+  if (refundAmount == null) return true;
+  const ticket = toGross(ticketAmount);
+  if (!(ticket > 0)) return true;
+  return toGross(refundAmount) + 0.0001 >= ticket;
 }
 
 function buildServiceFeeProducts(ticketLines, feeTotal) {
@@ -226,9 +309,14 @@ module.exports = {
   splitStreet,
   countryCode,
   mapGatewayPaymentType,
+  isPlaceholderPersonName,
+  personNameFromParts,
   buildBillingInformation,
   productTotal,
   buildCreateInvoicePayload,
+  buildPartialRefundInvoicePayload,
+  resolveReferentDocumentDT,
+  isFullTicketRefund,
   buildServiceFeeProducts,
   buildTicketProducts,
   buildServiceProducts,

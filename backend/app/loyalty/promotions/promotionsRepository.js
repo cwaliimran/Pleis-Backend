@@ -601,12 +601,16 @@ const getActiveLoyaltyHappyHourPromotion = async ({
         as: "tierLimit",
       },
     },
-    { $unwind: "$tierLimit" },
+    // Keep happy-hour promos with no tierLimit (open to all tiers)
+    { $unwind: { path: "$tierLimit", preserveNullAndEmptyArrays: true } },
 
     {
       $match: {
         $expr: {
-          $lte: ["$tierLimit.entryPoints", userTierEntryPoints],
+          $lte: [
+            { $ifNull: ["$tierLimit.entryPoints", 0] },
+            userTierEntryPoints,
+          ],
         },
       },
     },

@@ -9,6 +9,7 @@ const LoyaltyReferralSettings = require("@LoyaltyReferralSettingsModel");
 const { LoyaltyReferredRecord, LoyaltyReferredRecords } = require("@LoyaltyReferredRecordModel");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("../../../models/Notifications");
+const { fireAndForget } = require("../../../helperUtils/responseUtil");
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
 // ==========================================================
@@ -191,8 +192,9 @@ const checkLoyaltyTierPromotion = async (
   // 5️⃣ Fire-and-forget notification
   sendUserNotifications({
     recipientIds: [userId],
-    title: `🎉 Level upgraded!`,
-    body: `You have been promoted to ${promotionTarget.title}.`,
+    titleKey: "level_upgraded_celebration_title",
+    bodyKey: "level_upgraded_body",
+    bodyValues: { levelTitle: promotionTarget.title },
     data: {
       type: NotificationTypes.LEVEL_PROMOTED,
       levelId: promotionTarget._id,
@@ -260,6 +262,7 @@ const checkDemotion = async (
       earned12Months,
       session
     );
+  
 
   if (!fallbackTier) return;
 
@@ -286,8 +289,9 @@ const checkDemotion = async (
   // 5️⃣ Fire-and-forget notification
   sendUserNotifications({
     recipientIds: [userId],
-    title: `Level updated`,
-    body: `Your membership level is now ${fallbackTier.title}.`,
+    titleKey: "level_updated_title",
+    bodyKey: "level_updated_body",
+    bodyValues: { levelTitle: fallbackTier.title },
     data: {
       type: NotificationTypes.LEVEL_DEMOTED,
       levelId: fallbackTier._id,
@@ -324,12 +328,12 @@ const updateUserCompanyPointsRepo = async ({
   try {
     const delta = points.total;
 
-    // Ensure wallet exists (uses session if provided)
-    await ensureClubMemberWallet(userId, companyOrganizer, session);
-
+    // Only update existing active club members — never auto-join / create wallet.
+    // Membership is created only via joinClub API.
     const query = {
       user: userId,
-      companyOrganizer
+      companyOrganizer,
+      status: "active",
     };
 
     // Prevent negative balance atomically
@@ -357,6 +361,22 @@ const updateUserCompanyPointsRepo = async ({
     );
 
     if (!updated) {
+      let memberQuery = ClubMembers.findOne({
+        user: userId,
+        companyOrganizer,
+        status: "active",
+      }).select("_id");
+      if (session) memberQuery = memberQuery.session(session);
+      const isActiveMember = !!(await memberQuery);
+
+      if (!isActiveMember) {
+        return {
+          success: false,
+          skipped: true,
+          message: "User is not an active club member.",
+        };
+      }
+
       return {
         success: false,
         message: "Insufficient company loyalty points."
@@ -386,7 +406,8 @@ const getWallet = async (
   userId,
   companyOrganizer,
   session = null,
-  { autoCreate = false } = {}
+  // autoCreate kept for call-site compat; ignored — membership only via joinClub
+  { autoCreate: _autoCreate = false } = {}
 ) => {
   const { tierKey } = await getCompanyLoyaltyInfo(companyOrganizer);
 
@@ -399,18 +420,7 @@ const getWallet = async (
 
   let wallet = await query;
 
-  if (!wallet) {
-    if (!autoCreate) return null;
-
-    await ensureClubMemberWallet(userId, companyOrganizer, session);
-
-    return getWallet(
-      userId,
-      companyOrganizer,
-      session,
-      { autoCreate }
-    );
-  }
+  if (!wallet) return null;
 
   if (wallet.level) {
     const currentEntry =
@@ -761,6 +771,21 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
       $inc: { loyaltyReferralsCount: 1 }, // Increment referrer's referral count
     });
 
+    // Progress referrer's "referUsers" challenges after a successful join referral
+    // Lazy-require to avoid circular dep with unifiedTransactions → isClubMember
+    fireAndForget(
+      (async () => {
+        const { resolveChallengeByTaskTypeService } = require("../challengesOrders/challengeOrdersService");
+        return resolveChallengeByTaskTypeService({
+          userId: referrerId,
+          companyOrganizer,
+          taskType: "referUsers",
+          value: 1,
+        });
+      })(),
+      "REFER_USERS_CHALLENGE"
+    );
+
     // Return a success response with relevant data
     return {
       userId: newReferralRecord.user,    // Return the user ID from the created record
@@ -804,18 +829,18 @@ const getClubMembersForUsers = async ({ userIds, companyOrganizers }) => {
     .lean();
 };
 
-//get closing balance
+//get closing balance — does not create membership; returns 0 if user has not joined
 const getClosingBalance = async (user, companyOrganizer, session) => {
   try {
     const objectId = new mongoose.Types.ObjectId(companyOrganizer);
-    const result = await ClubMembers.findOne({ companyOrganizer: objectId, user: user }).select("points").lean();
-    if (result) {
-      return result.points || 0;
-    } else {
-      //ensure wallet exists
-      const member = await ensureClubMemberWallet(user, companyOrganizer, session);
-      return member.points || 0;
-    }
+    let query = ClubMembers.findOne({
+      companyOrganizer: objectId,
+      user,
+      status: "active",
+    }).select("points");
+    if (session) query = query.session(session);
+    const result = await query.lean();
+    return result?.points || 0;
   } catch (err) {
     throw err;
   }

@@ -1,0 +1,646 @@
+{
+  "startedAt": "2026-09-17T08:50:58.665Z",
+  "finishedAt": "2026-09-17T08:52:48.651Z",
+  "base": "http://127.0.0.1:4020/api/v1",
+  "runId": "sys-1789635058665",
+  "concurrency": 25,
+  "durationSec": 75,
+  "phases": [
+    {
+      "name": "auth",
+      "ms": 3235
+    },
+    {
+      "name": "discover",
+      "ms": 20889
+    },
+    {
+      "name": "seed-users",
+      "ms": 7306
+    },
+    {
+      "name": "seed-org",
+      "ms": 1890
+    },
+    {
+      "name": "load",
+      "ms": 76658
+    },
+    {
+      "name": "post-health",
+      "ms": 2
+    }
+  ],
+  "seeded": {
+    "guestUser": {
+      "basicInfo": {
+        "_id": "6aab7ba23b9b64b16deb5d35",
+        "profileIcon": "https://pleis-images-ceeshqhnf7avgnan.z02.azurefd.net/pleisappcontainerdev/noimage.png",
+        "firstName": "Guest",
+        "lastName": "User",
+        "email": "guest@pleis.com",
+        "phoneNumber": {
+          "code": "",
+          "number": ""
+        },
+        "language": "en",
+        "publicId": "85882692",
+        "companyDetails": null
+      },
+      "accountState": {
+        "companyDetails": null,
+        "twoFactorAuth": false,
+        "userType": "guest",
+        "status": "active",
+        "profileCompleted": true,
+        "verificationStatus": {
+          "email": "verified",
+          "phoneNumber": "pending"
+        },
+        "userglobalwallets": [],
+        "revenue": 0,
+        "lastLogin": null
+      },
+      "preferences": {
+        "notifications": {
+          "email": true,
+          "push": true
+        }
+      },
+      "metadata": {
+        "timezone": "UTC",
+        "createdAt": "2026-09-17T05:33:22.427Z",
+        "updatedAt": "2026-09-17T08:47:26.781Z",
+        "__v": 0
+      }
+    },
+    "adminUser": {
+      "basicInfo": {
+        "_id": "6aab7ba33b9b64b16deb5d5a",
+        "profileIcon": "https://pleis-images-ceeshqhnf7avgnan.z02.azurefd.net/pleisappcontainerdev/noimage.png",
+        "firstName": "Pleis",
+        "lastName": "Admin",
+        "email": "admin@pleis.com",
+        "phoneNumber": {
+          "code": "",
+          "number": ""
+        },
+        "language": "en",
+        "publicId": "14727438",
+        "companyDetails": null
+      },
+      "accountState": {
+        "companyDetails": null,
+        "twoFactorAuth": false,
+        "userType": "admin",
+        "status": "active",
+        "profileCompleted": true,
+        "verificationStatus": {
+          "email": "verified",
+          "phoneNumber": "pending"
+        },
+        "userglobalwallets": [],
+        "revenue": 0,
+        "lastLogin": null
+      },
+      "preferences": {
+        "notifications": {
+          "email": true,
+          "push": true
+        }
+      },
+      "metadata": {
+        "timezone": "UTC",
+        "createdAt": "2026-09-17T05:33:23.176Z",
+        "updatedAt": "2026-09-17T08:47:28.747Z",
+        "__v": 0
+      }
+    },
+    "discovered": {
+      "orgCount": 10,
+      "venueCount": 10,
+      "userCount": 3,
+      "eventCount": 0,
+      "orgId": "6aab92339a7dd9a391c33adb",
+      "countries": 250
+    },
+    "users": [
+      {
+        "type": "user",
+        "email": "loaduser.sys-1789635058665.0@example.com",
+        "status": 201,
+        "message": "Signup successful",
+        "id": "6aabaa0c99a48c668b372384"
+      },
+      {
+        "type": "user",
+        "email": "loaduser.sys-1789635058665.1@example.com",
+        "status": 201,
+        "message": "Signup successful",
+        "id": "6aabaa0d99a48c668b372391"
+      },
+      {
+        "type": "user",
+        "email": "loaduser.sys-1789635058665.2@example.com",
+        "status": 201,
+        "message": "Signup successful",
+        "id": "6aabaa0f99a48c668b37239e"
+      },
+      {
+        "type": "organizer",
+        "email": "loadorg.sys-1789635058665.0@example.com",
+        "status": 201,
+        "message": "Signup successful",
+        "id": "6aabaa1099a48c668b3723ac"
+      },
+      {
+        "type": "organizer",
+        "email": "loadorg.sys-1789635058665.1@example.com",
+        "status": 201,
+        "message": "Signup successful",
+        "id": "6aabaa1199a48c668b3723ba"
+      }
+    ],
+    "_organizerIds": [
+      "6aabaa1099a48c668b3723ac",
+      "6aabaa1199a48c668b3723ba"
+    ],
+    "organization": {
+      "status": 201,
+      "message": "Organization created successfully",
+      "id": "6aabaa1299a48c668b3723c5",
+      "organizerId": "6aabaa1099a48c668b3723ac"
+    },
+    "menu": {
+      "status": 201,
+      "message": "Menu created successfully",
+      "id": "6aabaa1399a48c668b3723cb"
+    }
+  },
+  "endpointCount": 38,
+  "endpoints": {
+    "auth.login.guest": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1542,
+      "p95": 1542,
+      "p99": 1542,
+      "max": 1542
+    },
+    "auth.login.admin": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1693,
+      "p95": 1693,
+      "p99": 1693,
+      "max": 1693
+    },
+    "locations.countries": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1621,
+      "p95": 1621,
+      "p99": 1621,
+      "max": 1621
+    },
+    "settings/settings/privacy-policy": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1836,
+      "p95": 1836,
+      "p99": 1836,
+      "max": 1836
+    },
+    "settings/settings/terms-conditions": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1613,
+      "p95": 1613,
+      "p99": 1613,
+      "max": 1613
+    },
+    "settings/settings/about-us": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1709,
+      "p95": 1709,
+      "p99": 1709,
+      "max": 1709
+    },
+    "settings/settings/faqs": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 2018,
+      "p95": 2018,
+      "p99": 2018,
+      "max": 2018
+    },
+    "admin.organizations.list": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1398,
+      "p95": 1398,
+      "p99": 1398,
+      "max": 1398
+    },
+    "admin.venues.list": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 2266,
+      "p95": 2266,
+      "p99": 2266,
+      "max": 2266
+    },
+    "admin.users.list": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1396,
+      "p95": 1396,
+      "p99": 1396,
+      "max": 1396
+    },
+    "admin.events.list": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1326,
+      "p95": 1326,
+      "p99": 1326,
+      "max": 1326
+    },
+    "app.orgs.nearby": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 805,
+      "p95": 805,
+      "p99": 805,
+      "max": 805
+    },
+    "app.popular.events": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1425,
+      "p95": 1425,
+      "p99": 1425,
+      "max": 1425
+    },
+    "tags.global": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1349,
+      "p95": 1349,
+      "p99": 1349,
+      "max": 1349
+    },
+    "categories.via.admin": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 807,
+      "p95": 807,
+      "p99": 807,
+      "max": 807
+    },
+    "app.menu.items": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1318,
+      "p95": 1318,
+      "p99": 1318,
+      "max": 1318
+    },
+    "admin.users.create.user": {
+      "ok": 3,
+      "fail": 0,
+      "reqs": 3,
+      "statuses": {
+        "201": 3
+      },
+      "p50": 1437,
+      "p95": 1590,
+      "p99": 1590,
+      "max": 1590
+    },
+    "admin.users.create.organizer": {
+      "ok": 2,
+      "fail": 0,
+      "reqs": 2,
+      "statuses": {
+        "201": 2
+      },
+      "p50": 1405,
+      "p95": 1450,
+      "p99": 1450,
+      "max": 1450
+    },
+    "admin.organizations.create": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "201": 1
+      },
+      "p50": 832,
+      "p95": 832,
+      "p99": 832,
+      "max": 832
+    },
+    "admin.menu.create": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "201": 1
+      },
+      "p50": 1057,
+      "p95": 1057,
+      "p99": 1057,
+      "max": 1057
+    },
+    "L.health": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1,
+      "p95": 4,
+      "p99": 8,
+      "max": 10
+    },
+    "L.apiRoot": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1,
+      "p95": 5,
+      "p99": 7,
+      "max": 10
+    },
+    "L.guest.nearby": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 797,
+      "p95": 1021,
+      "p99": 1089,
+      "max": 1161
+    },
+    "L.app.org.profile": {
+      "ok": 99,
+      "fail": 0,
+      "reqs": 99,
+      "statuses": {
+        "200": 99
+      },
+      "p50": 812,
+      "p95": 966,
+      "p99": 1240,
+      "max": 1240
+    },
+    "L.guest.trending": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 894,
+      "p95": 1154,
+      "p99": 1180,
+      "max": 1202
+    },
+    "L.guest.foryou.orgs": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1254,
+      "p95": 1521,
+      "p99": 1557,
+      "max": 1569
+    },
+    "L.countries": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1562,
+      "p95": 1700,
+      "p99": 1832,
+      "max": 1906
+    },
+    "L.admin.events": {
+      "ok": 99,
+      "fail": 0,
+      "reqs": 99,
+      "statuses": {
+        "200": 99
+      },
+      "p50": 1326,
+      "p95": 1540,
+      "p99": 1743,
+      "max": 1743
+    },
+    "L.guest.menu": {
+      "ok": 99,
+      "fail": 0,
+      "reqs": 99,
+      "statuses": {
+        "200": 99
+      },
+      "p50": 1321,
+      "p95": 1600,
+      "p99": 1778,
+      "max": 1778
+    },
+    "L.guest.popular": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1323,
+      "p95": 1595,
+      "p99": 1649,
+      "max": 1668
+    },
+    "L.admin.dashboard": {
+      "ok": 99,
+      "fail": 0,
+      "reqs": 99,
+      "statuses": {
+        "200": 99
+      },
+      "p50": 1329,
+      "p95": 1615,
+      "p99": 1702,
+      "max": 1702
+    },
+    "L.admin.orgs": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1336,
+      "p95": 1598,
+      "p99": 1619,
+      "max": 1629
+    },
+    "L.admin.users": {
+      "ok": 99,
+      "fail": 0,
+      "reqs": 99,
+      "statuses": {
+        "200": 99
+      },
+      "p50": 1354,
+      "p95": 1586,
+      "p99": 1601,
+      "max": 1601
+    },
+    "L.admin.venues": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1363,
+      "p95": 1614,
+      "p99": 1648,
+      "max": 1653
+    },
+    "L.faqs": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1637,
+      "p95": 1913,
+      "p99": 2118,
+      "max": 2168
+    },
+    "L.privacy": {
+      "ok": 100,
+      "fail": 0,
+      "reqs": 100,
+      "statuses": {
+        "200": 100
+      },
+      "p50": 1652,
+      "p95": 1941,
+      "p99": 2011,
+      "max": 2142
+    },
+    "post.health": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1,
+      "p95": 1,
+      "p99": 1,
+      "max": 1
+    },
+    "post.api": {
+      "ok": 1,
+      "fail": 0,
+      "reqs": 1,
+      "statuses": {
+        "200": 1
+      },
+      "p50": 1,
+      "p95": 1,
+      "p99": 1,
+      "max": 1
+    }
+  },
+  "totals": {
+    "ok": 1620,
+    "fail": 0,
+    "reqs": 1620
+  },
+  "errorSample": [],
+  "errorCount": 0
+}

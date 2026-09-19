@@ -6,16 +6,21 @@ const {
   deleteTicketing,
   getTicketingDetails,
   getOrganizationTicketings,
-  
 } = require("./ticketingsController");
+const { testPayTicketingOrder } = require("./testPayTicketingOrder");
 
 const auth = require("../../middlewares/authMiddleware");
 const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
-// Apply authentication middleware globally
 router.use(auth);
+
+router.post(
+  "/orders/:id/test-pay",
+  roleMiddleware(["admin"]),
+  testPayTicketingOrder,
+);
 
 /**
  * @route POST /ticketings

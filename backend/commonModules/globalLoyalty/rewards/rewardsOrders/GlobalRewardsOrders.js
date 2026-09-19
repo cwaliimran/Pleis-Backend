@@ -23,14 +23,14 @@ const globalRewardsOrderSchema = new mongoose.Schema(
     // reward source
     sourceType: {
       type: String,
-      enum: ["globalRewards"],
+      enum: ["globalRewards", "globalchallengeorders"],
       default: "globalRewards",
       index: true,
     },
 
     sourceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "GlobalReward",
+      // GlobalReward when sourceType=globalRewards; GlobalChallengeOrder when sourceType=globalchallengeorders
       required: true,
       index: true,
     },

@@ -562,6 +562,23 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Heal legacy bad values before validation (e.g. email:"active").
+// Older docs sometimes stored accountState.status values in verificationStatus.
+userSchema.pre("validate", function (next) {
+  const user = this;
+  const emailStatus = user.verificationStatus?.email;
+  if (emailStatus && !["pending", "verified"].includes(emailStatus)) {
+    user.verificationStatus.email =
+      emailStatus === "active" ? "verified" : "pending";
+  }
+  const phoneStatus = user.verificationStatus?.phoneNumber;
+  if (phoneStatus && !["pending", "verified"].includes(phoneStatus)) {
+    user.verificationStatus.phoneNumber =
+      phoneStatus === "active" ? "verified" : "pending";
+  }
+  next();
+});
+
 // Hash password before saving to database
 userSchema.pre("save", async function (next) {
   const user = this;
@@ -596,7 +613,10 @@ userSchema.pre("save", async function (next) {
     user.publicId = code;
   }
 
-  createUserWallet(user._id);
+  // Fire-and-forget wallet bootstrap — never reject the save path
+  Promise.resolve(createUserWallet(user._id)).catch((err) => {
+    console.error("createUserWallet after user save failed:", err.message);
+  });
 
   next();
 });
@@ -642,8 +662,24 @@ userSchema.statics.findByCredentials = async (
   }
 
   if (timezone) {
-    user.timezone = timezone; // Update user's timezone if provided
-    user.save(); // Save the updated user document
+    user.timezone = timezone;
+    // Heal legacy bad values (e.g. email:"active") that fail the enum and
+    // used to crash the process via an unhandled save() rejection.
+    const emailStatus = user.verificationStatus?.email;
+    if (emailStatus && !["pending", "verified"].includes(emailStatus)) {
+      user.verificationStatus.email =
+        emailStatus === "active" ? "verified" : "pending";
+    }
+    const phoneStatus = user.verificationStatus?.phoneNumber;
+    if (phoneStatus && !["pending", "verified"].includes(phoneStatus)) {
+      user.verificationStatus.phoneNumber =
+        phoneStatus === "active" ? "verified" : "pending";
+    }
+    try {
+      await user.save();
+    } catch (err) {
+      console.error("findByCredentials timezone save failed:", err.message);
+    }
   }
 
   return user; // Return the user object if login is successful

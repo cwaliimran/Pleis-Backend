@@ -3,7 +3,7 @@ const months = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
-const uildOrganizationViewOverTime = (rows = []) => {
+const buildOrganizationViewOverTime = (rows = []) => {
   const viewCount = {};
 
   // Iterate over rows to map totalAmount and totalOrders by month (_id)

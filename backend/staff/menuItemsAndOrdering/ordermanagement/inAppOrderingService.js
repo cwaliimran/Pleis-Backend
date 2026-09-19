@@ -133,8 +133,12 @@ const updateOrders = async (staffId, id, data) => {
 
   sendUserNotifications({
     recipientIds: [order.user.toString()],
-    title: "Order Updated",
-    body: `Your order ${order.orderNumber} has been updated to status: ${order.status}`,
+    titleKey: "order_updated_title",
+    bodyKey: "order_updated_status_body",
+    bodyValues: {
+      orderNumber: order.orderNumber,
+      status: order.status,
+    },
     data: {
       type: NotificationTypes.ORDER_UPDATE,
       objectType: "menuorders",

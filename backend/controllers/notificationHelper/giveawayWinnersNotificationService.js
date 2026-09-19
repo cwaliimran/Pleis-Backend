@@ -4,22 +4,26 @@ const { getFullImageUrl } = require("@utils/imageHelper");
 
 /**
  * =====================================================
- * EVENT NOTIFICATION MAP
+ * GIVEAWAY WINNER NOTIFICATION MAP
  * =====================================================
  */
 
 const GIVEAWAY_NOTIFICATION_MAP = {
   GIVEAWAY_WINNER: {
     type: NotificationTypes.GIVEAWAY_WINNER,
-    title: (event) => `Congratulations! You won the ${event} giveaway!`,
-    body: (event, ticket) =>
-      `You have won the giveaway for a ${ticket} at the ${event}. Enjoy your prize!`,
+    titleKey: "giveaway_winner_title",
+    bodyKey: "giveaway_winner_body",
+    titleValues: (event) => ({ giveawayTitle: event }),
+    bodyValues: (event, ticket) => ({
+      giveawayTitle: event,
+      ticket,
+    }),
   },
 };
 
 /**
  * =====================================================
- * GENERIC EVENT NOTIFICATION DISPATCHER
+ * GENERIC GIVEAWAY WINNER NOTIFICATION DISPATCHER
  * =====================================================
  */
 const giveawayWinnersNotificationService = async ({
@@ -39,14 +43,12 @@ const giveawayWinnersNotificationService = async ({
       return;
     }
 
-    // Construct title and body using event and ticket information
-    const title = config.title(event);
-    const body = config.body(event, ticket);
-
     await sendUserNotifications({
       recipientIds: userIds,
-      title,
-      body,
+      titleKey: config.titleKey,
+      bodyKey: config.bodyKey,
+      titleValues: config.titleValues ? config.titleValues(event) : {},
+      bodyValues: config.bodyValues ? config.bodyValues(event, ticket) : {},
       data: {
         type: config.type,
         event,

@@ -1,6 +1,8 @@
 const orderRepo = require("./orderRepository");
 const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
+const clubMemberRepo = require("../../loyalty/clubMembers/clubMembersRepository");
+
 const {
   menuItemOrderFormatter,
 } = require("./formatter/menuItemOrderFormatter");
@@ -210,6 +212,7 @@ const buildOrderCombos = async ({
         JSON.stringify({
           _id: combo._id,
           name: combo.name,
+          image: combo.image || "",
           description: combo.description || "",
           subCategory: combo.subCategory || null,
           priceMode: combo.priceMode,
@@ -495,8 +498,12 @@ const placeOrder = async ({
 
     sendUserNotifications({
       recipientIds: staffIds,
-      title: "New Order Placed",
-      body: `New Order Has been placed : and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
+      titleKey: "new_order_placed_title",
+      bodyKey: "new_order_placed_body",
+      bodyValues: {
+        status: formattedOrder.status,
+        amount: formattedOrder.totalPrice,
+      },
       data: {
         type: NotificationTypes.NEW_MENU_ITEMS_ORDER,
         objectType: "menuorders",
@@ -552,36 +559,6 @@ const updateOrder = async ({
     // if (existingOrder.status !== "pending") {
     //   throw new Error("Only orders in pending state can be updated");
     // }
-
-    // #region agent log
-    fetch("http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "6050ad",
-      },
-      body: JSON.stringify({
-        sessionId: "6050ad",
-        runId: "post-fix",
-        hypothesisId: "H1",
-        location: "orderService.js:updateOrder:entry",
-        message: "updateOrder existing vs incoming",
-        data: {
-          orderId: String(orderId),
-          status: existingOrder.status,
-          existingTotal: existingOrder.totalPrice,
-          existingBreakdown: existingOrder.priceBreakdown,
-          incomingTip: tip,
-          incomingPromo: promoCode,
-          didSendItems: items !== undefined,
-          didSendCombos: combos !== undefined,
-          didSendTip: tip !== undefined,
-          didSendPromo: promoCode !== undefined,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     const organizationId =
       existingOrder.organization?._id || existingOrder.organization;
@@ -813,37 +790,6 @@ const updateOrder = async ({
       (existingPromoCode || null) !== (finalPromoCode || null);
     const willConsumeUsage = Boolean(finalPromoCode) && promoChanged;
 
-    // #region agent log
-    fetch("http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "6050ad",
-      },
-      body: JSON.stringify({
-        sessionId: "6050ad",
-        runId: "post-fix",
-        hypothesisId: "H1",
-        location: "orderService.js:updateOrder:beforeTipPromo",
-        message: "totals before tip/promo",
-        data: {
-          itemsTotal,
-          totalSaleDiscount,
-          itemsAndCombosTotal,
-          existingTip,
-          finalTip,
-          tipDelta: finalTip - existingTip,
-          existingPromo: existingPromoCode,
-          finalPromoCode: finalPromoCode || null,
-          promoChanged,
-          willConsumeUsage,
-          willReleaseOld: Boolean(promoChanged && existingPromoCode),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
     // =========================================================
     // 6️⃣ PROMO (on items+combos, before tip — same order as placeOrder)
     // =========================================================
@@ -867,35 +813,6 @@ const updateOrder = async ({
       if (finalPromoCode) {
         const promoAmount = totalPrice;
 
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "6050ad",
-            },
-            body: JSON.stringify({
-              sessionId: "6050ad",
-              runId: "post-fix",
-              hypothesisId: "H2",
-              location: "orderService.js:updateOrder:beforeUsePromo",
-              message: "applying promo before tip",
-              data: {
-                finalPromoCode,
-                promoAmount,
-                itemsAndCombosTotal,
-                finalTip,
-                willConsumeUsage,
-                samePromoAsExisting: !promoChanged,
-              },
-              timestamp: Date.now(),
-            }),
-          },
-        ).catch(() => {});
-        // #endregion
-
         promoResult = willConsumeUsage
           ? await usePromoCode(
               {
@@ -918,32 +835,6 @@ const updateOrder = async ({
             );
 
         if (promoResult.error) {
-          // #region agent log
-          fetch(
-            "http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Debug-Session-Id": "6050ad",
-              },
-              body: JSON.stringify({
-                sessionId: "6050ad",
-                runId: "post-fix",
-                hypothesisId: "H3",
-                location: "orderService.js:updateOrder:promoError",
-                message: "promo apply failed",
-                data: {
-                  error: promoResult.error,
-                  finalPromoCode,
-                  samePromoAsExisting: !promoChanged,
-                  willConsumeUsage,
-                },
-                timestamp: Date.now(),
-              }),
-            },
-          ).catch(() => {});
-          // #endregion
           throw new Error(promoResult.error);
         }
 
@@ -956,40 +847,6 @@ const updateOrder = async ({
     }
 
     totalPrice += finalTip;
-
-    // #region agent log
-    fetch("http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "6050ad",
-      },
-      body: JSON.stringify({
-        sessionId: "6050ad",
-        runId: "post-fix",
-        hypothesisId: "H4",
-        location: "orderService.js:updateOrder:finalTotals",
-        message: "final recalculated totals",
-        data: {
-          itemsTotal,
-          totalSaleDiscount,
-          itemsAndCombosTotal,
-          finalTip,
-          promoDiscount: promoResult?.discount || 0,
-          promoFinalAmount: promoResult?.finalAmount,
-          resultingTotal: totalPrice,
-          expectedReplaceTipTotal:
-            itemsAndCombosTotal -
-            (promoResult?.discount || 0) -
-            voucherDiscount +
-            finalTip,
-          voucherKept: voucherDiscount,
-          willConsumeUsage,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     // =========================================================
     // 7️⃣ UPDATE DATA
@@ -1241,7 +1098,8 @@ const getOrderDetails = async (orderId, timezone) => {
   const organizationID = order.organization._id;
 
   const companyOrganizer = await getOrgCompanyOrganizer(organizationID);
-  const wallet = await getWallet(userID, companyOrganizer);
+  
+  const wallet = await clubMemberRepo.getWallet(userID, companyOrganizer, null, { autoCreate: false });
   const reservation = await getLatestUserReservations(
     userID,
     organizationID,
@@ -1272,32 +1130,6 @@ const getUserOrders = async (userId, page, limit) => {
   let formattedOrders = orders.map((order) => menuItemOrderFormatter(order));
 
   let { pending, confirmed, completed, cancelled, totalFiltered } = counts;
-  // #region agent log
-  fetch("http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "6050ad",
-    },
-    body: JSON.stringify({
-      sessionId: "6050ad",
-      runId: "post-fix",
-      hypothesisId: "H5",
-      location: "orderService.js:getUserOrders:counts",
-      message: "status counts from getCounts",
-      data: {
-        pending,
-        confirmed,
-        completed,
-        cancelled,
-        totalFiltered,
-        countsKeys: counts && Object.keys(counts),
-        rawCountsType: typeof counts,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   let meta = generateMeta(page, limit, totalFiltered);
   meta.counts = { pending, confirmed, completed, cancelled };
   return { orders: formattedOrders, meta };

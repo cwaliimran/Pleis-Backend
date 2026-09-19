@@ -81,8 +81,15 @@ router.use("/faqs", require("../faqs/faqsRoutes"));
 router.use("/badge-categories", require("../badgeCategories/badgeCategoriesRoutes"));
 router.use("/reviews", require("../reviews/reviewsRoutes"));
 router.use("/support", require("../support/supportRoutes"));
+router.use("/ip-threats", require("../security/ipThreatRoutes"));
 router.use("/feed-config", require("../feedConfig/feedConfigRoutes"));
 router.use("/preset-menu", require("../presetMenu/index"));
+router.use("/fiscal-documents", require("../../commonModules/fiscalDocuments/api/routes"));
+// Phase B payout statements (additive — does not alter existing transaction routes)
+router.use("/payout-statements", require("../payouts/payoutsRoutes"));
+router.use("/payouts", require("../payouts/payoutsRoutes"));
+
+
 
 
 

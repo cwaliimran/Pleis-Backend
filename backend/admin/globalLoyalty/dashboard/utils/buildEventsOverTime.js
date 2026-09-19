@@ -3,7 +3,7 @@ const months = [
   "Jul","Aug","Sep","Oct","Nov","Dec"
 ];
 
-const uildEventsOverTime = (rows = []) => {
+const buildEventsOverTime = (rows = []) => {
   const map = {};
   rows.forEach(r => {
     map[r._id] = r.events;

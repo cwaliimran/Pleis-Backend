@@ -2,9 +2,6 @@
 const { Highlights } = require("@HighlightsModel");
 const { default: mongoose } = require("mongoose");
 const { getModelCounts } = require("@dbUtils/queryUtil");
-const { getAllUsers } = require("../usersManagement/usersService");
-const { sendUserNotifications } = require("@notificationsUtil");
-const { NotificationTypes } = require("@NotificationsModel");
 const { cache, invalidate } = require("@redisCache");
 const ACTIVE_HIGHLIGHTS_CACHE_KEY = "highlights:active";
 const buildHighlightsCacheKey = ({
@@ -21,17 +18,6 @@ const buildHighlightsCacheKey = ({
 // Create
 const createHighlight = async (data) => {
   const highlight = new Highlights(data);
-  const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
-  await sendUserNotifications({
-    recipientIds: userIds,
-    title: `A new highlight "${highlight.title}" has been created.`,
-    body: `A new highlight "${highlight.title}" is now available in the system.`,
-    data: { type: NotificationTypes.HIGHLIGHT_CREATED, highlightId: highlight._id, objectType: "highlights" },
-    sender: highlight.creator,
-    objectId: highlight._id,
-    image: highlight.media.type === 'image' ? event.basicInfo.media.name : null,
-
-  });
   await invalidate(ACTIVE_HIGHLIGHTS_CACHE_KEY);
   return await highlight.save();
 };

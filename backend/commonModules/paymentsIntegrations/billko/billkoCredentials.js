@@ -81,6 +81,74 @@ async function assertOrganizerBillkoReady(companyOrganizerId) {
   }
 }
 
+/**
+ * Payout readiness (Payout §5.3 subset for Phase A).
+ * Checks OIB + IBAN (companyDetails.bankAccountNumber) only.
+ * Does NOT validate structured address, IBAN checksum, or OIB mod-11 — Phase B.
+ * Does NOT invent bank-upload UI. Do not block payment capture with this;
+ * incomplete data keeps transactions PENDING for a later statement (§2.3).
+ */
+async function getOrganizerPayoutReadiness(companyOrganizerId) {
+  if (!companyOrganizerId) {
+    return {
+      exists: false,
+      ready: false,
+      hasOib: false,
+      hasIban: false,
+      missing: ["organizer"],
+    };
+  }
+
+  const User = mongoose.model("User");
+  const organizer = await User.findById(companyOrganizerId)
+    .select("companyDetails.oib companyDetails.bankAccountNumber")
+    .lean();
+
+  if (!organizer) {
+    return {
+      exists: false,
+      ready: false,
+      hasOib: false,
+      hasIban: false,
+      missing: ["organizer"],
+    };
+  }
+
+  const oib = String(organizer.companyDetails?.oib || "").trim();
+  const iban = String(organizer.companyDetails?.bankAccountNumber || "").trim();
+  const hasOib = Boolean(oib);
+  const hasIban = Boolean(iban);
+  const missing = [];
+  if (!hasOib) missing.push("oib");
+  if (!hasIban) missing.push("iban");
+
+  return {
+    exists: true,
+    ready: hasOib && hasIban,
+    hasOib,
+    hasIban,
+    missing,
+  };
+}
+
+async function assertOrganizerPayoutReady(companyOrganizerId) {
+  const status = await getOrganizerPayoutReadiness(companyOrganizerId);
+  if (!status.exists) {
+    const error = new Error("payout_organizer_missing");
+    error.statusCode = 400;
+    error.code = "PAYOUT_ORGANIZER_MISSING";
+    throw error;
+  }
+  if (!status.ready) {
+    const error = new Error("payout_organizer_incomplete");
+    error.statusCode = 403;
+    error.code = "PAYOUT_ORGANIZER_INCOMPLETE";
+    error.missing = status.missing;
+    throw error;
+  }
+  return status;
+}
+
 function formatOrganizerAddress(companyDetails = {}) {
   const location = companyDetails.location || {};
   return [
@@ -105,10 +173,50 @@ async function getOrganizerSeller(companyOrganizerId, organization) {
   };
 }
 
+/**
+ * Organizer legal/party fields for payment confirmations.
+ * Does not decrypt or require a Billko API key.
+ */
+async function getOrganizerParty(companyOrganizerId, organization = null) {
+  if (!companyOrganizerId) {
+    return {
+      companyName: organization?.basicInfo?.name || "",
+      oib: "",
+      address: organization?.location?.fullAddress || "",
+      venueName: organization?.basicInfo?.name || "",
+      representativeName: "",
+      hasBillkoApiKey: false,
+    };
+  }
+
+  const User = mongoose.model("User");
+  const organizer = await User.findById(companyOrganizerId)
+    .select(
+      "companyDetails.oib companyDetails.name companyDetails.location companyDetails.representativeName companyDetails.billkoApiKeyEncrypted",
+    )
+    .lean();
+
+  const companyDetails = organizer?.companyDetails || {};
+  return {
+    companyName: companyDetails.name || organization?.basicInfo?.name || "",
+    oib: companyDetails.oib || "",
+    address:
+      formatOrganizerAddress(companyDetails) ||
+      organization?.location?.fullAddress ||
+      "",
+    venueName: organization?.basicInfo?.name || companyDetails.name || "",
+    representativeName: companyDetails.representativeName || "",
+    hasBillkoApiKey: Boolean(companyDetails.billkoApiKeyEncrypted),
+  };
+}
+
 module.exports = {
   getPleisBillkoApiKey,
   getOrganizerBillkoApiKey,
   getOrganizerSeller,
+  getOrganizerParty,
   formatOrganizerAddress,
   assertOrganizerBillkoReady,
+  getOrganizerPayoutReadiness,
+  assertOrganizerPayoutReady,
 };

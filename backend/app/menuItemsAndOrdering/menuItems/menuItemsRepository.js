@@ -248,6 +248,37 @@ const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null, userId =
     },
     {
       $lookup: {
+        from: "presettypes",
+        localField: "presetType",
+        foreignField: "_id",
+        pipeline: [
+          { $match: { status: "active" } },
+          {
+            $lookup: {
+              from: "menuitemsubcategorytypes",
+              localField: "type",
+              foreignField: "_id",
+              pipeline: [
+                { $match: { status: "active" } },
+                { $project: { _id: 1, name: 1 } },
+              ],
+              as: "type",
+            },
+          },
+          { $unwind: { path: "$type", preserveNullAndEmptyArrays: true } },
+          { $project: { _id: 1, name: "$type.name" } },
+        ],
+        as: "menuItemSubCategoryType",
+      },
+    },
+    {
+      $unwind: {
+        path: "$menuItemSubCategoryType",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
         from: "menusubcategories",
         localField: "subCategory",
         foreignField: "_id",
@@ -256,7 +287,7 @@ const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null, userId =
       },
     },
     { $match: { subCategoryInfo: { $ne: [] } } },
-    { $project: { subCategoryInfo: 0 } },
+    { $project: { subCategoryInfo: 0, presetType: 0 } },
     { $sort: { createdAt: -1 } },
   ]);
   if (!menuItems.length) return [];
@@ -649,7 +680,7 @@ const comboMenuItemLookupPipeline = [
 
 const getMenuItemsCombosWithFilters = async ({ query = {} } = {}) => {
   return MenuItemsCombos.find({ ...query, status: "active" })
-    .select("name description subCategory priceMode price status menuItems creator")
+    .select("name image description subCategory priceMode price status menuItems creator")
     .populate("subCategory", "name status category")
     .lean();
 };
@@ -742,6 +773,7 @@ const getMenuItemsCombos = async (
     {
       $project: {
         name: 1,
+        image: 1,
         description: 1,
         subCategory: 1,
         priceMode: 1,
@@ -794,6 +826,7 @@ const getMenuItemsCombos = async (
     applicable.push({
       _id: combo._id,
       name: combo.name,
+      image: combo.image,
       description: combo.description,
       subCategory: combo.subCategory,
       priceMode: combo.priceMode,

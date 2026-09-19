@@ -1,6 +1,7 @@
 const GlobalReward = require("@GlobalLoyaltyReward");
-const { createGlobalRewardOrderService } =
-  require("../rewardsOrders/rewardsOrdersService");
+const {
+  createGlobalRewardOrderService,
+} = require("../rewardsOrders/rewardsOrdersService");
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 
 const getGlobalRewards = async (category, keyword) => {
@@ -18,17 +19,14 @@ const getGlobalRewards = async (category, keyword) => {
 
   // Expiry filter
   andConditions.push({
-    $or: [
-      { endDate: null },
-      { endDate: { $gt: now } }
-    ]
+    $or: [{ endDate: null }, { endDate: { $gt: now } }],
   });
 
   // Keyword filter
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
       [{ schema: GlobalReward.schema }],
-      keyword
+      keyword,
     );
 
     if (Object.keys(keywordMatch).length) {
@@ -36,9 +34,10 @@ const getGlobalRewards = async (category, keyword) => {
     }
   }
 
-  const query = andConditions.length
-    ? { $and: andConditions }
-    : {};
+  const query = andConditions.length ? { $and: andConditions } : {};
+
+  //exclude promotion only rewards
+  query.isPromotionOnly = false;
 
   return GlobalReward.find(query)
     .populate("tierLimit", "-backgroundImage")
@@ -50,13 +49,18 @@ const getGlobalRewards = async (category, keyword) => {
     .lean();
 };
 
-
-const claimReward = async (userId, rewardId,
+const claimReward = async (
+  userId,
+  rewardId,
+  protectionUserDetails,
+  timezone,
+) => {
+  return createGlobalRewardOrderService(
+    userId,
+    rewardId,
     protectionUserDetails,
-    timezone) => {
-  return createGlobalRewardOrderService(userId, rewardId,
-    protectionUserDetails,
-    timezone);
+    timezone,
+  );
 };
 
 module.exports = {

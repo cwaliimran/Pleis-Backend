@@ -21,9 +21,10 @@ const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
-const { menuOrderConfirmationEmailTemplate } = require("../../../../helperUtils/emailTemplates");
-const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
+const {
+  recordPaidCaptureLedger,
+} = require("../../ledger/ledgerWriter");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -159,21 +160,6 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
      */
     emitMenuOrderPaymentSockets(menuOrder, result.status, { includeNewOrder: false });
     if (result.status === "paid") {
-      fireAndForget((async () => {
-        const populatedOrder = await MenuOrders.findById(menuOrder._id)
-          .populate("organization", "basicInfo.name")
-          .populate("user", "firstName lastName email timezone")
-          .lean();
-        if (!populatedOrder?.user?.email) return;
-        const mBody = menuOrderConfirmationEmailTemplate({
-          userName: `${populatedOrder.user.firstName || ""} ${populatedOrder.user.lastName || ""}`.trim(),
-          order: populatedOrder,
-          organizationName: populatedOrder.organization?.basicInfo?.name || "Restaurant",
-          currency: "EUR",
-        });
-        await sendEmailViaMailgun(populatedOrder.user.email, "Your order has been confirmed", mBody);
-      })(), "MENU_ORDER_CONFIRMATION_EMAIL");
-
       findAppUserByIdWithProjectionService(menuOrder.user, {
         profileIcon: 1,
         firstName: 1,
@@ -201,6 +187,22 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           orderId: menuOrder._id,
         }),
         "FISCAL_ORDERING_CONFIRMATION",
+      );
+      fireAndForget(
+        recordPaidCaptureLedger({
+          orderId: menuOrder._id,
+          orderType: "menuorders",
+          module: "ORDERING",
+          organization: menuOrder.organization?._id || menuOrder.organization,
+          companyOrganizer,
+          user: menuOrder.user,
+          amount: menuOrder.totalPrice,
+          tipAmount: menuOrder.priceBreakdown?.tip || 0,
+          paymentStatus: "paid",
+          paymentMethod: menuOrder.paymentMethod,
+          providerTransactionId: result.transactionId || menuOrder.transactionId,
+        }),
+        "LEDGER_ORDERING_CAPTURE",
       );
     }
     if (menuOrder.totalPrice && menuOrder.totalPrice > 0) {

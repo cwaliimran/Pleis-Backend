@@ -12,50 +12,57 @@ const { NotificationTypes } = require("../../models/Notifications");
 const EVENT_NOTIFICATION_MAP = {
     TICKET_CONFIRMED: {
         type: NotificationTypes.TICKET_CONFIRMED,
-        title: (event) => `Ticket confirmed for ${event.basicInfo.title}`,
-        body: (event, context) =>
-            `Your booking for ${context.ticketsPurchased || 0} ticket(s) is confirmed.`,
+        titleKey: "ticket_confirmed_title",
+        bodyKey: "ticket_confirmed_body",
+        titleValues: (event) => ({ eventTitle: event.basicInfo.title }),
+        bodyValues: (_event, context) => ({
+            ticketsPurchased: context.ticketsPurchased || 0,
+        }),
     },
 
     TICKET_CANCELLED: {
         type: NotificationTypes.TICKET_CANCELLED,
-        title: (event) => `Ticket cancelled for ${event.basicInfo.title}`,
-        body: () => `Your ticket has been cancelled.`,
+        titleKey: "ticket_cancelled_title",
+        bodyKey: "ticket_cancelled_body",
+        titleValues: (event) => ({ eventTitle: event.basicInfo.title }),
     },
 
     EVENT_CANCELLED: {
         type: NotificationTypes.EVENT_CANCELLED,
-        title: () => `Event Cancelled`,
-        body: (event) =>
-            `"${event.basicInfo.title}" has been cancelled.`,
+        titleKey: "event_cancelled_title",
+        bodyKey: "event_cancelled_body",
+        bodyValues: (event) => ({ eventTitle: event.basicInfo.title }),
     },
 
     EVENT_RESCHEDULED: {
         type: NotificationTypes.EVENT_RESCHEDULED,
-        title: () => `Event Rescheduled`,
-        body: (event, context) =>
-            `"${event.basicInfo.title}" has been rescheduled to ${context.newDate}.`,
+        titleKey: "event_rescheduled_title",
+        bodyKey: "event_rescheduled_body",
+        bodyValues: (event, context) => ({
+            eventTitle: event.basicInfo.title,
+            newDate: context.newDate,
+        }),
     },
 
     EVENT_STARTING_24H: {
         type: NotificationTypes.EVENT_STARTING_24H,
-        title: () => `Starts in 24 hours`,
-        body: (event) =>
-            `"${event.basicInfo.title}" starts tomorrow.`,
+        titleKey: "event_starting_24h_title",
+        bodyKey: "event_starting_24h_body",
+        bodyValues: (event) => ({ eventTitle: event.basicInfo.title }),
     },
 
     EVENT_STARTING_2H: {
         type: NotificationTypes.EVENT_STARTING_2H,
-        title: () => `Starts in 2 hours`,
-        body: (event) =>
-            `"${event.basicInfo.title}" starts soon.`,
+        titleKey: "event_starting_2h_title",
+        bodyKey: "event_starting_2h_body",
+        bodyValues: (event) => ({ eventTitle: event.basicInfo.title }),
     },
 
     EVENT_STARTED: {
         type: NotificationTypes.EVENT_STARTED,
-        title: () => `Event is Live Now`,
-        body: (event) =>
-            `"${event.basicInfo.title}" has started.`,
+        titleKey: "event_started_title",
+        bodyKey: "event_started_body",
+        bodyValues: (event) => ({ eventTitle: event.basicInfo.title }),
     },
 };
 
@@ -104,8 +111,14 @@ const sendEventNotification = async ({
 
         await sendUserNotifications({
             recipientIds: userIds,
-            title: config.title(event, context),
-            body: config.body(event, context),
+            titleKey: config.titleKey,
+            bodyKey: config.bodyKey,
+            titleValues: config.titleValues
+                ? config.titleValues(event, context)
+                : {},
+            bodyValues: config.bodyValues
+                ? config.bodyValues(event, context)
+                : {},
             data: {
                 type: config.type,
                 eventId,

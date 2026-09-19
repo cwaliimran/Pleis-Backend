@@ -114,7 +114,7 @@ async function runDBBootstrap() {
                 userType: "admin",
                 timezone: "Asia/Karachi",
                 deviceType: "web",
-                deviceId: "123",
+                deviceId: "test",
             });
 
             if (res?.success)

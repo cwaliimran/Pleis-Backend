@@ -1,5 +1,5 @@
 // repositories/presetRepository.js
-const Presets = require("./Presets");
+const Presets = require("@PresetsModel");
 const mongoose = require("mongoose");
 
 // Create preset in a transaction and update organization

@@ -22,8 +22,8 @@ const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizati
     AnalyticsRepo.getMostOrderedCategoryData(organizations),
     getReservationsByHourRaw(organizations),
     AnalyticsRepo.getUserLevelStatsRaw(organizations),
-    getAverageOrderValueOverTimeRaw(organizations)
-
+    getAverageOrderValueOverTimeRaw(organizations),
+    AnalyticsRepo.getLoyaltyImpactRaw({ dateFilter, timezone, organizations }),
   ];
 
   const [
@@ -34,6 +34,7 @@ const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizati
     reservationsByHour,
     userLevelStats, // used
     averageOrderValueOverTime, // used
+    loyaltyImpactRaw,
   ] = await Promise.all(promises);
 
   return {
@@ -80,10 +81,10 @@ const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizati
         ...withSubFilters("orderFrequencyPerHour"),
       },
       {
-        key: "mostOrderedCategory",  // used 
-        title: Analytics_KEYS.mostOrderedCategory.title,
+        key: "mostOrderedSubCategory",  // used 
+        title: Analytics_KEYS.mostOrderedSubCategory.title,
         value: orderStats.mostOrderedCategory || 0,
-        ...withSubFilters("mostOrderedCategory"),
+        ...withSubFilters("mostOrderedSubCategory"),
       },
       {
         key: "totalItemsSold",  // used 
@@ -104,7 +105,11 @@ const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizati
     orderedCategories,
     orderByHour:reservationsByHour,
     salesSourceBreakDown:userLevelStats,
-    averageOrderValueOverTime,  
+    averageOrderValueOverTime,
+    loyaltyImpact: {
+      orderFrequencyLoyalty: loyaltyImpactRaw.orderFrequencyLoyalty.value,
+      averageSpendLoyalty: loyaltyImpactRaw.averageSpend.value,
+    },
   }
 };
 const getAnalyticsStats = async ({ dateFilter, timezone }) => {

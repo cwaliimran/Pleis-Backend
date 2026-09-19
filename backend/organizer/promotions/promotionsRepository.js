@@ -4,10 +4,10 @@ const {
   HappyHourPromotion,
   ProductSalePromotion,
   ClaimPromotion,
-} = require("../../../commonModules/loyalty/promotions/models/Promotion/");
+} = require("../../commonModules/loyalty/promotions/models/Promotion/");
 const {
   resolvePromotionTimes,
-} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
+} = require("../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {

@@ -11,44 +11,40 @@ const { NotificationTypes } = require("../../models/Notifications");
 const RESERVATION_NOTIFICATION_MAP = {
   RESERVATION_CONFIRMED: {
     type: NotificationTypes.RESERVATION_CONFIRMED,
-    title: () => `Reservation Confirmed`,
-    body: (reservation) =>
-      `Your reservation for ${reservation.partySize} guest(s) has been confirmed.`,
+    titleKey: "reservation_confirmed_title",
+    bodyKey: "reservation_confirmed_body",
+    bodyValues: (reservation) => ({ partySize: reservation.partySize }),
   },
 
   RESERVATION_CANCELLED: {
     type: NotificationTypes.RESERVATION_CANCELLED,
-    title: () => `Reservation Cancelled`,
-    body: () =>
-      `Your reservation has been cancelled.`,
+    titleKey: "reservation_cancelled_title",
+    bodyKey: "reservation_cancelled_body",
   },
 
   RESERVATION_REJECTED: {
     type: NotificationTypes.RESERVATION_REJECTED,
-    title: () => `Reservation Rejected`,
-    body: () =>
-      `Unfortunately, your reservation request was rejected.`,
+    titleKey: "reservation_rejected_title",
+    bodyKey: "reservation_rejected_body",
   },
 
   RESERVATION_TIMING_CHANGED: {
     type: NotificationTypes.RESERVATION_TIMING_CHANGED,
-    title: () => `Reservation Time Updated`,
-    body: (reservation, context) =>
-      `Your reservation timing has changed to ${context.newTiming}.`,
+    titleKey: "reservation_timing_changed_title",
+    bodyKey: "reservation_timing_changed_body",
+    bodyValues: (_reservation, context) => ({ newTiming: context.newTiming }),
   },
 
   RESERVATION_CHECKED_IN: {
     type: NotificationTypes.RESERVATION_CHECKED_IN,
-    title: () => `Checked In`,
-    body: () =>
-      `You have successfully checked in. Enjoy your visit!`,
+    titleKey: "reservation_checked_in_title",
+    bodyKey: "reservation_checked_in_body",
   },
 
   RESERVATION_COMPLETED: {
     type: NotificationTypes.RESERVATION_COMPLETED,
-    title: () => `Reservation Completed`,
-    body: () =>
-      `Thank you for visiting. We hope to see you again!`,
+    titleKey: "reservation_completed_title",
+    bodyKey: "reservation_completed_body",
   },
 };
 
@@ -95,8 +91,11 @@ const sendReservationNotification = async ({
 
     await sendUserNotifications({
       recipientIds: userIds,
-      title: config.title(reservation, context),
-      body: config.body(reservation, context),
+      titleKey: config.titleKey,
+      bodyKey: config.bodyKey,
+      bodyValues: config.bodyValues
+        ? config.bodyValues(reservation, context)
+        : {},
       data: {
         type: config.type,
         reservationId,

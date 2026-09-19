@@ -65,9 +65,11 @@ const unifiedTransactionSchema = new mongoose.Schema(
                 "loyaltyrewardsorders",
                 "loyaltychallengesorders",
                 "globalrewardsorders",
+                "globalchallengeorders",
                 "userreservations",
                 "applypointsbystaffs",
                 "promotionorders",
+                "globalpromotionorders",
                 "userstreaks",
                 "userglobalbadges", // for global badges
                 "event",

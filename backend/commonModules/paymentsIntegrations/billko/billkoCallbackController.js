@@ -1,4 +1,4 @@
-const { applyBillkoCallback } = require("../../fiscalDocuments/documentService");
+const { applyBillkoCallback } = require("../../fiscalDocuments/jobs/documentService");
 
 const billkoCallbackController = async (req, res) => {
   try {
