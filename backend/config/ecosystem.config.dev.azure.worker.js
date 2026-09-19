@@ -2,11 +2,16 @@
  * Azure App Service (dev) — Worker role (crons + BullMQ consumers + backup).
  *
  * Target app name (create manually): Pleis-backend-dev-worker
+ * Prefer direct Node on Azure (same as API — avoid pm2-runtime restart loops).
+ *
  * Startup command: npm run pm2:azure:dev:worker
+ *   → APP_ROLE=worker NODE_ENV=dev node backend/server.js
  *
  * App Settings:
  *   APP_ROLE=worker
+ *   NODE_ENV=dev
  *   Same secrets as API (MONGO, REDIS, MONRI_*, Billko, BASE_URL, etc.)
+ *   Do NOT override PORT with a local-dev value; let Azure inject PORT.
  * Keep scale-out at 1 instance.
  */
 module.exports = {

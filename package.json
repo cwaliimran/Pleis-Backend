@@ -41,10 +41,10 @@
     "load:system": "NODE_ENV=prodtest node k6/system/run-system-test.js",
     "load:system:heavy": "NODE_ENV=prodtest CONCURRENCY=30 DURATION_SEC=90 node k6/system/run-system-test.js",
     "load:postman-walk": "NODE_ENV=prodtest node k6/system/postman-walk.js",
-    "pm2:azure:prod": "pm2-runtime backend/config/ecosystem.config.prod.azure.js",
-    "pm2:azure:prod:worker": "pm2-runtime backend/config/ecosystem.config.prod.azure.worker.js",
-    "pm2:azure:dev": "pm2-runtime backend/config/ecosystem.config.dev.azure.js",
-    "pm2:azure:dev:worker": "pm2-runtime backend/config/ecosystem.config.dev.azure.worker.js"
+    "pm2:azure:prod": "APP_ROLE=api NODE_ENV=prod node backend/server.js",
+    "pm2:azure:prod:worker": "APP_ROLE=worker NODE_ENV=prod node backend/server.js",
+    "pm2:azure:dev": "APP_ROLE=api NODE_ENV=dev node backend/server.js",
+    "pm2:azure:dev:worker": "APP_ROLE=worker NODE_ENV=dev node backend/server.js"
   },
   "_moduleAliases": {
     "@utils": "backend/helperUtils",

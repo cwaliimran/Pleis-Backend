@@ -1,10 +1,16 @@
 /**
  * Azure App Service (dev) — API role (public HTTP).
  *
+ * Prefer direct Node on Azure (pm2-runtime was restart-looping; process showed up as
+ * ecosystem.config.dev.azure:0 instead of pleis-backend). Kept for reference / local pm2.
+ *
  * Startup command (API app): npm run pm2:azure:dev
+ *   → APP_ROLE=api NODE_ENV=dev node backend/server.js
  *
  * App Settings:
- *   APP_ROLE=api  (after worker app is healthy; default APP_ROLE=all until then)
+ *   APP_ROLE=api
+ *   NODE_ENV=dev
+ *   Do NOT set PORT to a local value (e.g. 4020); let Azure inject PORT (usually 8080).
  */
 module.exports = {
   apps: [
