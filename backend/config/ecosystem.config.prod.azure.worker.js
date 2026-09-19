@@ -1,19 +1,18 @@
 /**
- * Azure App Service — API role (public HTTP).
+ * Azure App Service — Worker role (crons + BullMQ consumers + backup).
  *
- * Startup command (API app): npm run pm2:azure:prod
+ * Target app name (create manually): Pleis-worker
+ * Startup command: npm run pm2:azure:prod:worker
  *
- * App Settings (Azure Portal / Configuration):
- *   APP_ROLE=api
- *   (plus existing MONGO/REDIS/MONRI/Billko/BASE_URL/etc.)
- *
- * Rollout: leave APP_ROLE unset (defaults to all) until the worker
- * app is healthy, then set APP_ROLE=api on this app.
+ * App Settings:
+ *   APP_ROLE=worker
+ *   Same secrets as API (MONGO, REDIS, MONRI_*, Billko, BASE_URL, etc.)
+ * Keep scale-out at 1 instance (fork × 1) so crons are not multiplied.
  */
 module.exports = {
   apps: [
     {
-      name: "pleis-backend",
+      name: "pleis-backend-worker",
 
       script: "backend/server.js",
 
@@ -36,7 +35,7 @@ module.exports = {
 
       env: {
         NODE_ENV: "prod",
-        APP_ROLE: "api",
+        APP_ROLE: "worker",
       },
     },
   ],

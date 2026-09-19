@@ -7,8 +7,12 @@
     "dev": "NODE_ENV=dev node backend/server.js",
     "dev1": "NODE_ENV=dev PORT=4014 node backend/server.js",
     "prod": "NODE_ENV=prod node backend/server.js",
-    "prodtest": "NODE_ENV=prodtest nodemon backend/server.js",
+    "prodtest": "APP_ROLE=api NODE_ENV=prodtest nodemon backend/server.js",
+    "prodtest:api": "APP_ROLE=api NODE_ENV=prodtest PORT=4020 nodemon backend/server.js",
+    "prodtest:worker": "APP_ROLE=worker NODE_ENV=prodtest PORT=4021 nodemon backend/server.js",
     "mobileapps": "NODE_ENV=mobileapps nodemon backend/server.js",
+    "start:api": "APP_ROLE=api node backend/server.js",
+    "start:worker": "APP_ROLE=worker node backend/server.js",
     "pm2:dev:start": "pm2 start backend/config/ecosystem.config.js --env dev",
     "pm2:dev:reload": "pm2 reload pleis-backend --update-env",
     "pm2:dev:stop": "pm2 stop pleis-backend",
@@ -38,7 +42,9 @@
     "load:system:heavy": "NODE_ENV=prodtest CONCURRENCY=30 DURATION_SEC=90 node k6/system/run-system-test.js",
     "load:postman-walk": "NODE_ENV=prodtest node k6/system/postman-walk.js",
     "pm2:azure:prod": "pm2-runtime backend/config/ecosystem.config.prod.azure.js",
-    "pm2:azure:dev": "pm2-runtime backend/config/ecosystem.config.dev.azure.js"
+    "pm2:azure:prod:worker": "pm2-runtime backend/config/ecosystem.config.prod.azure.worker.js",
+    "pm2:azure:dev": "pm2-runtime backend/config/ecosystem.config.dev.azure.js",
+    "pm2:azure:dev:worker": "pm2-runtime backend/config/ecosystem.config.dev.azure.worker.js"
   },
   "_moduleAliases": {
     "@utils": "backend/helperUtils",

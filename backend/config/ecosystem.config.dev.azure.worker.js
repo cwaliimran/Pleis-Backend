@@ -1,15 +1,18 @@
 /**
- * Azure App Service (dev) — API role (public HTTP).
+ * Azure App Service (dev) — Worker role (crons + BullMQ consumers + backup).
  *
- * Startup command (API app): npm run pm2:azure:dev
+ * Target app name (create manually): Pleis-backend-dev-worker
+ * Startup command: npm run pm2:azure:dev:worker
  *
  * App Settings:
- *   APP_ROLE=api  (after worker app is healthy; default APP_ROLE=all until then)
+ *   APP_ROLE=worker
+ *   Same secrets as API (MONGO, REDIS, MONRI_*, Billko, BASE_URL, etc.)
+ * Keep scale-out at 1 instance.
  */
 module.exports = {
   apps: [
     {
-      name: "pleis-backend",
+      name: "pleis-backend-worker",
 
       script: "backend/server.js",
 
@@ -20,44 +23,25 @@ module.exports = {
       exec_mode: "fork",
       instances: 1,
 
-      /**
-       * Restart protection
-       */
       autorestart: true,
       max_restarts: 10,
       restart_delay: 3000,
 
-      /**
-       * Startup / shutdown safety
-       */
       listen_timeout: 10000,
       kill_timeout: 5000,
 
-      /**
-       * Memory protection
-       */
       max_memory_restart: "1024M",
 
-      /**
-       * Increase Node heap size
-       */
       node_args: "--max-old-space-size=1024",
 
-      /**
-       * Logging
-       * Azure collects stdout/stderr automatically
-       */
       output: "/dev/stdout",
       error: "/dev/stderr",
       merge_logs: true,
       time: true,
 
-      /**
-       * Environment variables
-       */
       env: {
         NODE_ENV: "dev",
-        APP_ROLE: "api",
+        APP_ROLE: "worker",
       },
     },
   ],
