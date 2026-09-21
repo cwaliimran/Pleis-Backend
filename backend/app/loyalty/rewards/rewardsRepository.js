@@ -9,17 +9,17 @@ const {
 const { createRewardOrderService } = require("../rewardsOrders/rewardsOrdersService");
 const { getActiveRewardEndDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 
-const MENU_ITEM_POPULATE = "title image presetType creator";
+const MENU_ITEM_POPULATE = "title image presetType creator basePrice";
 
 const getMenuItemIdentityKey = (item) => {
   if (!item?.presetType || !item?.title) return null;
-  return `${item.presetType}::${item.title}::${item.creator || ""}`;
+  return `${item.presetType}::${item.title}::${item.creator || ""}::${item.basePrice ?? 0}`;
 };
 
 const getRewardMenuItemId = (menuItem) => menuItem?._id || menuItem;
 
 /**
- * Menu items that share presetType + title + creator count as the same
+ * Menu items that share presetType + title + creator + basePrice count as the same
  * buyMenuItemReward product. Attaches equivalentMenuItems on each reward.
  */
 const attachEquivalentMenuItemsToRewards = async (rewards = []) => {
@@ -34,7 +34,7 @@ const attachEquivalentMenuItemsToRewards = async (rewards = []) => {
   ];
 
   const requestedItems = await MenuItems.find({ _id: { $in: requestedIds } })
-    .select("_id title image presetType creator")
+    .select("_id title image presetType creator basePrice")
     .lean();
 
   const requestedById = new Map(requestedItems.map((item) => [String(item._id), item]));
@@ -54,10 +54,11 @@ const attachEquivalentMenuItemsToRewards = async (rewards = []) => {
       presetType: group[0].presetType,
       title: group[0].title,
       creator: group[0].creator,
+      basePrice: group[0].basePrice ?? 0,
     }));
 
     const siblings = await MenuItems.find({ $or: siblingQueries })
-      .select("_id title image presetType creator")
+      .select("_id title image presetType creator basePrice")
       .lean();
 
     for (const sibling of siblings) {

@@ -10,13 +10,46 @@ const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek, generateMeta } = require("../../helperUtils/responseUtil");
 const Tags = require("@TagsModel");
+const { getLeanPlacesForMap, getLeanEventsForMap } = require("./mapsLean");
 
+/** Map viewport (unlimited + bounds) without heavy time modes → lean markers. */
+function canUseLeanMapPath(queryData) {
+  const { unlimited, limit, bounds, advanceFilters = {} } = queryData || {};
+  const noLimit = unlimited || limit == null || limit === 0;
+  if (!noLimit || !bounds?.northEast || !bounds?.southWest) return false;
+  const { time, dateFrom, dateTo } = advanceFilters;
+  if (dateFrom || dateTo) return false;
+  if (time && time !== "all") return false;
+  return true;
+}
 
 const getEvents = async (queryData) => {
+  if (canUseLeanMapPath(queryData)) {
+    try {
+      const data = await getLeanEventsForMap(queryData);
+      const total = data.length;
+      return {
+        status: true,
+        result: {
+          data,
+          meta: {
+            currentPage: 1,
+            totalPages: 1,
+            totalRecords: total,
+            limit: total,
+          },
+        },
+      };
+    } catch (err) {
+      throw new Error(`Failed to fetch events: ${err.message}`);
+    }
+  }
+
   let {
     keyword = "",
     page = 1,
     limit = 10,
+    unlimited = false,
     timezone = "Asia/Karachi",
     advanceFilters = {},
     userId,
@@ -35,7 +68,8 @@ const getEvents = async (queryData) => {
     tags = [],
   } = advanceFilters;
 
-  const skip = Math.max(0, (page - 1) * limit);
+  const noLimit = unlimited || limit == null || limit === 0;
+  const skip = noLimit ? 0 : Math.max(0, (page - 1) * limit);
   const now = getCurrentDateInTimezone({ timezone });
 
   // ---------------------------------
@@ -267,10 +301,13 @@ const getEvents = async (queryData) => {
       //
       {
         $facet: {
-          events: [
-            { $skip: skip },
-            { $limit: parseInt(limit) },
-          ],
+          // Empty branch pipeline = all matched events (no skip/limit)
+          events: noLimit
+            ? []
+            : [
+                { $skip: skip },
+                { $limit: parseInt(limit, 10) },
+              ],
           totalCount: [
             { $count: "total" },
           ],
@@ -302,11 +339,15 @@ const getEvents = async (queryData) => {
       )
     );
 
-    const meta = generateMeta(
-      page,
-      limit,
-      result?.[0]?.totalCount?.[0]?.total || 0
-    );
+    const total = result?.[0]?.totalCount?.[0]?.total || 0;
+    const meta = noLimit
+      ? {
+          currentPage: 1,
+          totalPages: 1,
+          totalRecords: total,
+          limit: total,
+        }
+      : generateMeta(page, limit, total);
 
     return {
       status: true,
@@ -321,10 +362,32 @@ const getEvents = async (queryData) => {
 
 
 const getPlaces = async (queryData = {}) => {
+  if (canUseLeanMapPath(queryData)) {
+    try {
+      const data = await getLeanPlacesForMap(queryData);
+      const total = data.length;
+      return {
+        status: true,
+        result: {
+          data,
+          meta: {
+            currentPage: 1,
+            totalPages: 1,
+            totalRecords: total,
+            limit: total,
+          },
+        },
+      };
+    } catch (err) {
+      throw new Error(`Failed to fetch organizations: ${err.message}`);
+    }
+  }
+
   try {
     const {
       page = 1,
       limit = 10,
+      unlimited = false,
       keyword = "",
       sort = "asc",
       timezone = "Asia/Karachi",
@@ -343,7 +406,8 @@ const getPlaces = async (queryData = {}) => {
       distanceFrom = 0,
       distanceTo = 0,
     } = advanceFilters;
-    const skip = (page - 1) * limit;
+    const noLimit = unlimited || limit == null || limit === 0;
+    const skip = noLimit ? 0 : (page - 1) * limit;
 
     let sortStage = { createdAt: sort === "asc" ? 1 : -1 };
     if (time === "topRated") {
@@ -754,8 +818,9 @@ const getPlaces = async (queryData = {}) => {
       ...(time === "trending" ? trendingStages : []),
 
       { $sort: sortStage },
-      { $skip: skip },
-      { $limit: limit }
+      ...(noLimit
+        ? []
+        : [{ $skip: skip }, { $limit: limit }]),
     ];
 
     const items = await Organizations.aggregate(pipeline);
@@ -850,7 +915,14 @@ const getPlaces = async (queryData = {}) => {
       status: true,
       result: {
         data: enriched,
-        meta: generateMeta(page, limit, total)
+        meta: noLimit
+          ? {
+              currentPage: 1,
+              totalPages: 1,
+              totalRecords: total,
+              limit: total,
+            }
+          : generateMeta(page, limit, total),
       }
     };
 

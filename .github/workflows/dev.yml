@@ -3,7 +3,7 @@ name: Deploy Node.js API to Azure Web App - Pleis-backend-dev
 on:
   push:
     branches:
-      - dev
+      - scaling-backend-v1
 
   workflow_dispatch:
 
@@ -15,11 +15,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Azure Web App
+      - name: Deploy to Azure Web App (API — Pleis-backend-dev)
         uses: azure/webapps-deploy@v3
         env:
           SCM_DO_BUILD_DURING_DEPLOYMENT: true
         with:
           app-name: 'Pleis-backend-dev'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8DE223AF70D74AE6A51EEF16D991C7F0 }}
+          package: .
+
+      - name: Deploy to Azure Web App (Worker — Pleis-backend-dev-worker)
+        uses: azure/webapps-deploy@v3
+        env:
+          SCM_DO_BUILD_DURING_DEPLOYMENT: true
+        with:
+          app-name: 'Pleis-backend-dev-worker'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_PLEIS_BACKEND_DEV_WORKER }}
           package: .

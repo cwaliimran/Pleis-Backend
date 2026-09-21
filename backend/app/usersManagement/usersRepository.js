@@ -212,11 +212,21 @@ const getUserInterestsByUserId = async (userId) => {
     .populate("tags");
 };
 
-//get user interests by userId and populate references
-const getUserInterestsIdsForRecommendation = async (userId) => {
-  const cacheKey = buildUserInterestsCacheKey(userId);
+// Collapse concurrent home-section callers (forYou events/orgs/reservations)
+// into one Redis GET per userId while the promise is in flight.
+const interestsInflight = new Map();
 
-  return cache({
+const getUserInterestsIdsForRecommendation = async (userId) => {
+  const uid = String(userId || "");
+  if (!uid) {
+    return { categories: [], venueTypes: [], tags: [] };
+  }
+  if (interestsInflight.has(uid)) {
+    return interestsInflight.get(uid);
+  }
+
+  const cacheKey = buildUserInterestsCacheKey(userId);
+  const pending = cache({
     namespace: cacheKey,
     ttl: null,
     fetchFn: async () => {
@@ -230,7 +240,12 @@ const getUserInterestsIdsForRecommendation = async (userId) => {
         tags: []
       };
     },
+  }).finally(() => {
+    interestsInflight.delete(uid);
   });
+
+  interestsInflight.set(uid, pending);
+  return pending;
 };
 
 

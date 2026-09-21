@@ -1,6 +1,10 @@
 // repositories/topPicksOrganizationRepository.js
 const TopPicksOrganizations = require("@TopPicksOrganizationsModel");
 const Organizations = require("@OrganizationModel");
+const mongoose = require("mongoose");
+const {
+  getVenueTypeObjectIdsForMainCategories,
+} = require("../../admin/venueTypes/resolveCategoryVenueTypes");
 
 
 // Get all with filters
@@ -234,22 +238,20 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
   );
 
   /* ===============================
-     CATEGORY FILTER (CTX + DEFAULT MERGE)
+     CATEGORY → VENUE TYPES (main carousel)
      =============================== */
 
-  const finalCategories =
-    ctx && filterCategories.length
-      ? filterCategories
-      : categoryObjectIds;
+  let effectiveVenueTypeIds = [...filterVenueTypes];
+  const mainCats =
+    ctx && filterCategories.length ? filterCategories : categoryObjectIds;
+  if (!effectiveVenueTypeIds.length && mainCats.length) {
+    effectiveVenueTypeIds = await getVenueTypeObjectIdsForMainCategories(
+      mainCats
+    );
+  }
 
-  if (finalCategories.length) {
-    pipeline.push({
-      $match: {
-        "otherInfo.categories": {
-          $in: finalCategories
-        }
-      }
-    });
+  if (mainCats.length && !effectiveVenueTypeIds.length) {
+    return { topPicksOrganizations: [], totalCount: 0 };
   }
 
   /* ===============================
@@ -358,14 +360,14 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
   );
 
   /* ===============================
-     VENUE TYPE FILTER (CTX ONLY)
+     VENUE TYPE FILTER (main category carousel + advanceFilters)
      =============================== */
 
-  if (ctx && filterVenueTypes.length) {
+  if (effectiveVenueTypeIds.length) {
     pipeline.push({
       $match: {
         "venueTypes._id": {
-          $in: filterVenueTypes
+          $in: effectiveVenueTypeIds
         }
       }
     });

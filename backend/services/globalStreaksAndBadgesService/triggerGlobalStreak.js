@@ -7,8 +7,6 @@ const UserVenueVisits = require("@manageBadgeHistory/UserVenueVisits");
 const UserReferrals = require("@manageBadgeHistory/UserReferrals");
 const UserMonthlySpend = require("@manageBadgeHistory/UserMonthlySpend");
 
-const cron = require("node-cron");
-
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
 
@@ -355,9 +353,10 @@ async function recordUserSpending(userId, amount) {
 
 /* =====================================================
 TOP SPENDER CRON // runs on the 1st of every month at 00:00
+Registered from backend/config/cron/index.js (worker/all role).
 ===================================================== */
 
-cron.schedule("0 0 1 * *", async () => {
+const runTopSpenderMonthlyCron = async () => {
 
 
     const now = new Date();
@@ -419,7 +418,7 @@ cron.schedule("0 0 1 * *", async () => {
     await Promise.all(jobs);
 
 
-});
+};
 
 const awardTopSpenderBadge = async (userId) => {
 
@@ -599,4 +598,5 @@ const evaluateBadges = async ({
 EXPORT
 ===================================================== */
 
-module.exports = triggerBadgeEngine
+module.exports = triggerBadgeEngine;
+module.exports.runTopSpenderMonthlyCron = runTopSpenderMonthlyCron;

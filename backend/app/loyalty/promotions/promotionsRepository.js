@@ -769,11 +769,11 @@ const toObjectIds = (ids = []) =>
 
 const getMenuItemIdentityKey = (item) => {
   if (!item?.presetType || !item?.title) return null;
-  return `${item.presetType}::${item.title}::${item.creator || ""}`;
+  return `${item.presetType}::${item.title}::${item.creator || ""}::${item.basePrice ?? 0}`;
 };
 
 /**
- * Menu items that share presetType + title + creator count as the same
+ * Menu items that share presetType + title + creator + basePrice count as the same
  * promotion target. Returns expanded lookup ids and a map from any
  * equivalent id back to the originally requested menu item ids (so
  * attachMenuItemPromotions can still match the items being displayed).
@@ -793,7 +793,7 @@ const getEquivalentMenuItemMatch = async (menuItemIds = []) => {
   }
 
   const requestedItems = await MenuItems.find({ _id: { $in: requestedIds } })
-    .select("_id presetType title creator")
+    .select("_id presetType title creator basePrice")
     .lean();
 
   const lookupIds = new Set(requestedItems.map((item) => String(item._id)));
@@ -814,10 +814,11 @@ const getEquivalentMenuItemMatch = async (menuItemIds = []) => {
       presetType: group[0].presetType,
       title: group[0].title,
       creator: group[0].creator,
+      basePrice: group[0].basePrice ?? 0,
     }));
 
     const siblings = await MenuItems.find({ $or: siblingQueries })
-      .select("_id presetType title creator")
+      .select("_id presetType title creator basePrice")
       .lean();
 
     for (const sibling of siblings) {

@@ -1,7 +1,7 @@
 
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo, getTrendingOrganizationsForHomeRepo, getSuggestedLoyaltyClubsForHome, getNewlyListedOrganizationsRepo, getOrganizationsGroupedByTagsRepo } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo, getTrendingOrganizationsForHomeRepo, getSuggestedLoyaltyClubsForHome, getNewlyListedOrganizationsRepo, getOrganizationsGroupedByTagsRepo, getOrganizationsByPrimaryTagRepo } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -65,14 +65,16 @@ const getOrganizationProfile = async (queryData) => {
     const menu = menuPayload?.menu || [];
     // Format organization profile info
     let orgProfileInfo = formatOrganization(orgProfile.org);
-    let userCompanyWallet = await getWallet(userId, orgProfile.org.creator, null, { autoCreate: false });
-    if (userCompanyWallet) {
-      userCompanyWallet = formatUserWallet(userCompanyWallet)
-    }
 
-    // Check if the user is a club member
-    let member = await isClubMember(userId, orgProfileInfo.creator);
-    orgProfileInfo.isClubMember = member ? true : false;
+    const creatorId = orgProfile.org.creator?._id || orgProfile.org.creator;
+    let [userCompanyWallet, member] = await Promise.all([
+      getWallet(userId, creatorId, null, { autoCreate: false }),
+      isClubMember(userId, creatorId),
+    ]);
+    if (userCompanyWallet) {
+      userCompanyWallet = formatUserWallet(userCompanyWallet);
+    }
+    orgProfileInfo.isClubMember = !!member;
 
     // Set favorite status and venue information
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
@@ -135,17 +137,27 @@ const getOrganizationEvents = async (queryData) => {
     const organizationObjectId = new mongoose.Types.ObjectId(organizationId);
 
     // Fetch events + counts concurrently
-    const [events, pastUpcomingMeta, favorites] = await Promise.all([
+    const [events, pastUpcomingMeta] = await Promise.all([
       findEventsByOrganization(organizationObjectId, timeFilter, skip, limit),
       countEventsByOrganization(organizationObjectId, now),
-      Favorites.find({ user: userId, targetType: "event" }).select("targetId"),
     ]);
 
-    // 🔍 Get all favorite event IDs for this user
-    let favoriteEventIds = [];
-    if (userId) {
-      favoriteEventIds = favorites.map((f) => f.targetId.toString());
-    }
+    // Only check favorites for the events on this page
+    const eventIds = events.map((e) => e._id);
+    const favorites =
+      userId && eventIds.length
+        ? await Favorites.find({
+            user: userId,
+            targetType: "event",
+            targetId: { $in: eventIds },
+          })
+            .select("targetId")
+            .lean()
+        : [];
+
+    const favoriteEventIds = new Set(
+      favorites.map((f) => f.targetId.toString())
+    );
     // Format events
     const formatted = events.map((event) => {
       const formattedEvent = formatEventResponse(event, { timezone });
@@ -163,8 +175,7 @@ const getOrganizationEvents = async (queryData) => {
         formattedEvent.distance = null;
       }
 
-      // ✅ Add isFavorite flag
-      formattedEvent.isFavorite = favoriteEventIds.includes(event._id.toString());
+      formattedEvent.isFavorite = favoriteEventIds.has(event._id.toString());
 
       return formattedEvent;
     });
@@ -426,6 +437,45 @@ const getNewlyListedOrganizationsService = async ({
   };
 };
 
+const getOrganizationsByPrimaryTagService = async ({
+  tagId,
+  userLocation,
+  radiusKm,
+  timezone,
+  page = 1,
+  limit = 10,
+  skip = 0,
+  userId,
+  category,
+}) => {
+  const { organizations, totalCount } = await getOrganizationsByPrimaryTagRepo({
+    tagId,
+    userLocation,
+    radiusKm,
+    page,
+    limit,
+    skip,
+    category,
+  });
+
+  const formatted = (organizations || []).map((org) => {
+    const formattedOrg = formatOrganization(org, { timezone, userId });
+    return {
+      ...formattedOrg,
+      type: "Organizations",
+      distance:
+        org.distance != null
+          ? { distance: Number((org.distance / 1000).toFixed(2)), unit: "km" }
+          : undefined,
+    };
+  });
+
+  return {
+    organizations: formatted,
+    totalCount,
+  };
+};
+
 const getOrganizationsGroupedByTagsService = async ({
   userLocation,
   radiusKm,
@@ -439,28 +489,48 @@ const getOrganizationsGroupedByTagsService = async ({
     TAG_GROUPS_MAX,
   } = require("../home/utils/homeFeedLimits");
 
-  const results = await getOrganizationsGroupedByTagsRepo({
+  // Discover which tag groups to show (cheap scan), then fill each with the
+  // same primary-tag query used by global/search see-all — so lists match.
+  const discovered = await getOrganizationsGroupedByTagsRepo({
     userLocation,
     radiusKm,
-    limitPerTag: TAG_LIMIT_PER_GROUP,
+    limitPerTag: 1,
     maxOrgsScan: TAG_ORGS_SCAN,
     maxTagGroups: TAG_GROUPS_MAX,
     category
   });
 
-  if (!Array.isArray(results)) return [];
+  if (!Array.isArray(discovered) || !discovered.length) return [];
 
-  return results.map(group => ({
-    key: "customCategory",
-    title: group.title,
-    data: (group.objects || []).map(org => {
-      const formattedOrg = formatOrganization(org, { timezone, userId });
+  const groups = await Promise.all(
+    discovered.map(async (group) => {
+      const tagId = group.tagId;
+      if (!tagId) return null;
+
+      const { organizations } = await getOrganizationsByPrimaryTagService({
+        tagId,
+        userLocation,
+        radiusKm,
+        timezone,
+        page: 1,
+        limit: TAG_LIMIT_PER_GROUP,
+        skip: 0,
+        userId,
+        category,
+      });
+
+      if (!organizations?.length) return null;
+
       return {
-        ...formattedOrg,
-        type: "Organizations"
+        key: "customCategoryByTags",
+        tagId,
+        title: group.title,
+        data: organizations,
       };
     })
-  }));
+  );
+
+  return groups.filter(Boolean);
 };
 
 
@@ -474,5 +544,6 @@ module.exports = {
   getTrendingOrganizationsForHomeService,
   getSuggestedLoyaltyClubsForHomeService,
   getNewlyListedOrganizationsService,
-  getOrganizationsGroupedByTagsService
+  getOrganizationsGroupedByTagsService,
+  getOrganizationsByPrimaryTagService,
 };
