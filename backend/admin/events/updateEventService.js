@@ -8,6 +8,11 @@
 
 const { Events } = require("@EventsModel");
 const { uniqueObjectIds } = require("../../helperUtils/responseUtil");
+const {
+  syncMapMarker,
+  firstImageFilename,
+  toBlobName,
+} = require("../../helperUtils/mapMarkerImage");
 
 const updateEventService = async (eventId, payload, mode = "single") => {
 
@@ -23,7 +28,14 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // -----------------------------
   // SAFE FIELD APPLIER
   // -----------------------------
-  const applyFields = (doc, data, skipSchedule = false) => {
+  const applyFields = async (doc, data, skipSchedule = false) => {
+    const prevMedia = doc.basicInfo?.media
+      ? {
+          name: doc.basicInfo.media.name,
+          marker: doc.basicInfo.media.marker,
+          type: doc.basicInfo.media.type,
+        }
+      : null;
 
     if (data.basicInfo) {
       for (const key of Object.keys(data.basicInfo)) {
@@ -43,6 +55,29 @@ const updateEventService = async (eventId, payload, mode = "single") => {
       );
     }
 
+    // Map marker from first image when media changes
+    if (data.basicInfo?.media) {
+      const media = doc.basicInfo.media || {};
+      const mediaType = media.type || "image";
+      if (mediaType === "video") {
+        media.marker = await syncMapMarker({
+          newSource: "",
+          prevSource: prevMedia?.name || "",
+          prevMarker: prevMedia?.marker || "",
+        });
+      } else if (data.basicInfo.media.name !== undefined) {
+        const first = firstImageFilename(media.name) || "";
+        const prevFirst = firstImageFilename(prevMedia?.name) || "";
+        if (toBlobName(first) !== toBlobName(prevFirst) || !media.marker) {
+          media.marker = await syncMapMarker({
+            newSource: first,
+            prevSource: prevFirst,
+            prevMarker: prevMedia?.marker || "",
+          });
+        }
+      }
+      doc.basicInfo.media = media;
+    }
 
     if (!skipSchedule && data.schedule) {
       doc.schedule = { ...doc.schedule, ...data.schedule };
@@ -71,7 +106,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   if (mode === "single" || !isChild) {
 
 
-    applyFields(event, payload);
+    await applyFields(event, payload);
     await event.save();
 
 
@@ -99,7 +134,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // -------------------------------------------
 
 
-  applyFields(event, payload);
+  await applyFields(event, payload);
 
   const editedStart = new Date(payload.schedule.startDateTime);
   const editedEnd = new Date(payload.schedule.endDateTime);
@@ -117,7 +152,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // -------------------------------------------
 
 
-  applyFields(template, payload, true);
+  await applyFields(template, payload, true);
 
   template.schedule.startDateTime = new Date(editedStart);
   template.schedule.endDateTime = new Date(editedEnd);
@@ -162,7 +197,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
       occ.schedule.startDateTime.getTime() + editedDuration
     );
 
-    applyFields(occ, payload, true);
+    await applyFields(occ, payload, true);
 
     await occ.save();
 
