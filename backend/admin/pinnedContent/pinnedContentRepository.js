@@ -24,13 +24,15 @@ const createPinnedContent = async (data) => {
 };
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
+const findPinnedContentWithFilters = (filter, sort = { order: 1 }) =>
+  PinnedContent.find(filter).sort(sort).populate({ path: "filter" }).lean();
+
 const getPinnedContentWithFilters = async (filter, sort = { order: 1 }) => {
   return cache({
     namespace: "pinnedContent:list",
     params: { filter: JSON.stringify(filter), sort: JSON.stringify(sort) },
     ttl: 3600, // 1 hour
-    fetchFn: () =>
-      PinnedContent.find(filter).sort(sort).populate({ path: "filter" }).exec(),
+    fetchFn: () => findPinnedContentWithFilters(filter, sort),
   });
 };
 
@@ -142,6 +144,7 @@ const normalizeOrders = async () => {
 
 module.exports = {
   createPinnedContent,
+  findPinnedContentWithFilters,
   getPinnedContentWithFilters,
   countPinnedContent,
   getPinnedContentCounts,

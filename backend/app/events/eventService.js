@@ -16,6 +16,10 @@ const { logEngagementService } = require("@appEngagement/engagementEventsService
 const Tags = require("@TagsModel");
 const { getUpdatesByEventIdService } = require("../../admin/updates/updatesService");
 const { getGiveawaysByEventIdService } = require("../giveaways/giveawayService");
+const {
+  getVenueTypeObjectIdsForMainCategories,
+  eventVenueTypeMatchStages,
+} = require("../../admin/venueTypes/resolveCategoryVenueTypes");
 
 const getNearbyEvents = async (queryData) => {
   let {
@@ -252,10 +256,15 @@ const thisWeekEvents = async ({
     ...dateFilter,
   };
 
+  // Main carousel categories → venue types (not event.basicInfo.categories)
+  let weekVenueTypeIds = [];
   if (finalCategories.length) {
-    baseQuery["basicInfo.categories"] = {
-      $in: finalCategories,
-    };
+    weekVenueTypeIds = await getVenueTypeObjectIdsForMainCategories(
+      finalCategories
+    );
+    if (!weekVenueTypeIds.length) {
+      return { data: [], totalCount: 0 };
+    }
   }
 
   if (ctxTags.length) {
@@ -284,6 +293,10 @@ const thisWeekEvents = async ({
     pipeline.push({
       $match: baseQuery,
     });
+  }
+
+  if (weekVenueTypeIds.length) {
+    pipeline.push(...eventVenueTypeMatchStages(weekVenueTypeIds));
   }
 
   pipeline.push(

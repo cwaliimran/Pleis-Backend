@@ -1,15 +1,14 @@
 const { default: mongoose } = require("mongoose");
 const {
   sendResponse,
-  validateParams,
   parsePaginationParams,
-  generateMeta
 } = require("../../helperUtils/responseUtil");
 const { getHomeService } = require("./homeService");
-const { globalSearchService, getGlobalFiltersService } = require("./globalSearch/globalSearchService");
-const { getForYouOrganizationsForHomeService, getNearbyOrganizationsService, getTrendingOrganizationsForHomeService, getNewlyListedOrganizationsService, getSuggestedLoyaltyClubsForHomeService } = require("../organizationProfile/organizationProfileService");
-const { getTopPicksOrganizationsForHomeService } = require("../topPicksOrganizations/topPicksOrganizationsService");
-const { getForYouEventsService, thisWeekEvents } = require("../events/eventService");
+const {
+  globalSearchService,
+  getGlobalFiltersService,
+  getFilterKeySearchService,
+} = require("./globalSearch/globalSearchService");
 
 const getHome = async (req, res) => {
 
@@ -94,12 +93,15 @@ const getHome = async (req, res) => {
 };
 
 const globalSearch = async (req, res) => {
-  //filterKey is used to filter data when user requests from search section in home screen, it can have values like events, organizations, giveaways, etc. which will be used in service layer to filter data accordingly.
-  //filterKey is actually represents a section
-  const { latitude, longitude, keyword, type, filterKey } = req.query;
+  // filterKey = home section drill-down (nearYou, forYou, …).
+  // Without filterKey = keyword search across events/organizations.
+  // Both paths use geohash cell Redis cache (see globalSearch/searchCache.js).
+  const { latitude, longitude, keyword, type, filterKey, radiusKm } = req.query;
   const { page, limit, skip } = parsePaginationParams(req);
   let { timezone, _id: userId } = req.user || {};
   let { sort = "desc" } = req.body || {};
+  const body = req.body || {};
+  const advanceFilters = body.advanceFilters || {};
   const ctx = {
     keyword,
     filterKey,
@@ -107,235 +109,57 @@ const globalSearch = async (req, res) => {
     longitude: parseFloat(longitude),
     page,
     limit,
+    skip,
     timezone,
     userId,
     type: type || "all",
     sort,
-    advanceFilters: req.body?.advanceFilters || {},
+    radiusKm: radiusKm != null ? parseFloat(radiusKm) : 50,
+    advanceFilters,
+    // Dynamic home sections (customCategoryByTags / customCategory)
+    tagId: body.tagId || req.query.tagId || advanceFilters.tagId || null,
+    customCategoryId:
+      body.customCategoryId ||
+      req.query.customCategoryId ||
+      advanceFilters.customCategoryId ||
+      null,
+    title: body.title || req.query.title || null,
   };
 
   try {
-
     if (filterKey) {
-
-      if (filterKey === "forYouOrganizations") {
-        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
-        const { organizations, totalCount } = await getForYouOrganizationsForHomeService({
-          category: advanceFilters?.categories,
-          userLocation: latitude && longitude ? {
-            type: "Point",
-            coordinates: [longitude, latitude]
-          } : null,
-          radiusKm: ctx.radiusKm || 50,
-          timezone,
-          page,
-          limit,
-          skip,
-          userId,
-          ctx
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 200,
-          translationKey: "search_results_fetched",
-          data: organizations,
-          meta: generateMeta(page, limit, totalCount)
-        });
-      }
-
-      if (filterKey === "nearYouOrganizations") {
-        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
-        const { organizations, totalCount } = await getNearbyOrganizationsService({
-          category: advanceFilters?.categories,
-          userLocation: latitude && longitude ? {
-            type: "Point",
-            coordinates: [longitude, latitude]
-          } : null,
-          radiusKm: ctx.radiusKm || 50,
-          timezone,
-          page,
-          limit,
-          skip,
-          userId,
-          ctx
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 200,
-          translationKey: "search_results_fetched",
-          data: organizations,
-          meta: generateMeta(page, limit, totalCount)
-        });
-      }
-      if (filterKey === "topPicks") { //topPicks is a section in home screen which shows top picks organizations based on user's interest and location
-        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
-        const { topPicksOrganizations, totalCount } = await getTopPicksOrganizationsForHomeService({
-          category: advanceFilters?.categories,
-          userLocation: latitude && longitude ? {
-            type: "Point",
-            coordinates: [longitude, latitude]
-          } : null,
-          radiusKm: ctx.radiusKm || 50,
-          timezone,
-          page,
-          limit,
-          skip,
-          userId,
-          ctx
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 200,
-          translationKey: "search_results_fetched",
-          data: topPicksOrganizations,
-          meta: generateMeta(page, limit, totalCount)
-        });
-      }
-      if (filterKey === "trendingOrganizations") {
-        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
-        const { organizations, totalCount } = await getTrendingOrganizationsForHomeService({
-          category: advanceFilters?.categories,
-          userLocation: latitude && longitude ? {
-            type: "Point",
-            coordinates: [longitude, latitude]
-          } : null,
-          radiusKm: ctx.radiusKm || 50,
-          timezone,
-          page,
-          limit,
-          skip,
-          userId,
-          ctx
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 200,
-          translationKey: "search_results_fetched",
-          data: organizations,
-          meta: generateMeta(page, limit, totalCount)
-        });
-      }
-      if (filterKey === "forYouEvents") {
-        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
-        const { recommendedEvents, totalCount } = await getForYouEventsService({
-          category: advanceFilters?.categories,
-          userLocation: latitude && longitude ? {
-            type: "Point",
-            coordinates: [longitude, latitude]
-          } : null,
-          radiusKm: ctx.radiusKm || 50,
-          timezone,
-          page,
-          limit,
-          skip,
-          userId,
-          ctx
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 200,
-          translationKey: "search_results_fetched",
-          data: recommendedEvents,
-          meta: generateMeta(page, limit, totalCount)
-        });
-      }
-      if (filterKey === "thisWeekEvents") {
-        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
-        const { data, totalCount } = await thisWeekEvents({
-          category: advanceFilters?.categories,
-          userLocation: latitude && longitude ? {
-            type: "Point",
-            coordinates: [longitude, latitude]
-          } : null,
-          radiusKm: ctx.radiusKm || 50,
-          timezone,
-          page,
-          limit,
-          skip,
-          userId,
-          ctx
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 200,
-          translationKey: "search_results_fetched",
-          data,
-          meta: generateMeta(page, limit, totalCount)
-        });
-      }
-      if (filterKey === "newlyListedOrganizations") {
-        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
-        const { organizations, totalCount } = await getNewlyListedOrganizationsService({
-          category: advanceFilters?.categories,
-          userLocation: latitude && longitude ? {
-            type: "Point",
-            coordinates: [longitude, latitude]
-          } : null,
-          radiusKm: ctx.radiusKm || 50,
-          timezone,
-          page,
-          limit,
-          skip,
-          userId,
-          ctx
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 200,
-          translationKey: "search_results_fetched",
-          data: organizations,
-          meta: generateMeta(page, limit, totalCount)
-        });
-      }
-      if (filterKey === "loyaltyClubs") {
-        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
-        const { loyaltyClubs, totalCount } = await getSuggestedLoyaltyClubsForHomeService({
-          userLocation: latitude && longitude ? {
-            type: "Point",
-            coordinates: [longitude, latitude]
-          } : null,
-          radiusKm: ctx.radiusKm || 50,
-          timezone,
-          page,
-          limit,
-          skip,
-          userId,
-          ctx
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 200,
-          translationKey: "search_results_fetched",
-          data: loyaltyClubs,
-          meta: generateMeta(page, limit, totalCount)
-        });
-      }
-
-
-    } else {
-      const sections = await globalSearchService(ctx);
+      const { data, meta } = await getFilterKeySearchService(ctx);
 
       return sendResponse({
         res,
         statusCode: 200,
         translationKey: "search_results_fetched",
-        data: sections,
+        data,
+        meta,
       });
     }
 
-  } catch (err) {
+    const sections = await globalSearchService(ctx);
+
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
+      statusCode: 200,
+      translationKey: "search_results_fetched",
+      data: sections,
+    });
+  } catch (err) {
+    const msg = err?.message ? String(err.message) : "";
+    const clientError =
+      msg.startsWith("Unsupported filterKey") ||
+      msg.startsWith("Unsupported search type") ||
+      msg.startsWith("tagId required") ||
+      msg.startsWith("customCategoryId required") ||
+      msg.startsWith("filterKey required");
+
+    return sendResponse({
+      res,
+      statusCode: clientError ? 400 : 500,
+      translationKey: clientError ? msg : "internal_server",
       error: err,
     });
   }

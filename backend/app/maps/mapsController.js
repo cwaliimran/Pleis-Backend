@@ -10,7 +10,24 @@ const { getEvents, getPlaces, getAllData } = require("./mapsService");
 const getMapsData = async (req, res) => {
   try {
     const requestData = { ...(req.body || {}) };
-    const { page, limit } = parsePaginationParams(req);
+    const { page } = parsePaginationParams(req);
+
+    const hasBounds = Boolean(
+      requestData.bounds?.northEast && requestData.bounds?.southWest
+    );
+
+    // Map viewport: return every pin inside bounds (no pagination).
+    // Optional explicit limit still supported for clients that want a cap.
+    const bodyLimit = parseInt(req.body?.limit, 10);
+    const queryLimit = parseInt(req.query?.limit, 10);
+    const explicitLimit = Number.isFinite(bodyLimit) && bodyLimit > 0
+      ? bodyLimit
+      : Number.isFinite(queryLimit) && queryLimit > 0
+        ? queryLimit
+        : null;
+
+    const unlimited = hasBounds && explicitLimit == null;
+    const limit = unlimited ? null : explicitLimit;
 
     requestData.page = page;
     requestData.limit = limit;
@@ -50,10 +67,11 @@ const getMapsData = async (req, res) => {
     };
 
     const baseQuery = {
-      page,
+      page: unlimited ? 1 : page,
       limit,
+      unlimited,
       keyword: req.body?.keyword || "",
-      sort: af.sort || "asc",        // <-- sort now comes from advanceFilters
+      sort: af.sort || requestData.sort || "asc",
       timezone: requestData.timezone,
       userId: requestData.userId,
       bounds: requestData.bounds,

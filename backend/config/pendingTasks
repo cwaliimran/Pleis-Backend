@@ -2,7 +2,6 @@ cloudflared tunnel --url http://localhost:4009
 http://localhost:4012/api/v1/
 https://pleis-backend-dev-bgd6a6hxefgwbzg5.germanywestcentral-01.azurewebsites.net/api/v1/
 
-
-
-
+# Home geo-cache (done for getHome): keys home:global:v1 / home:geo:v1 (geohash p5, TTL 60s) / home:user:v1
+# Follow-up: wire cacheHomeGeo from app/home/utils/homeGeoCache.js into globalSearch filterKey handlers
 

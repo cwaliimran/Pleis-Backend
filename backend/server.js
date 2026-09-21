@@ -327,6 +327,12 @@ process.on("uncaughtException", (err) => {
     return;
   }
 
+  // Nodemon/FSWatcher can throw EMFILE under high FD pressure; do not take down API.
+  if (err && (err.code === "EMFILE" || /EMFILE/.test(String(err.message || "")))) {
+    logger.error("EMFILE ignored (file watch limit)", { error: err.message });
+    return;
+  }
+
   crashLogger.fatal("Uncaught Exception", err);
 
   setTimeout(() => {

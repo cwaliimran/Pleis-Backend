@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pleis Global Search — Engine Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419; --surface: #1a222c; --surface2: #243040; --border: #2f3d4d;
+      --text: #e8eef4; --muted: #8b9aab;
+      --geo: #3ecf8e; --user: #f0b429; --global: #3d9cfd;
+      --cold: #f87171; --warm: #34d399; --mongo: #c084fc;
+      --radius: 14px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.55; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    header.hero { padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+    header.hero h1 { margin: 0 0 0.4rem; font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 650; letter-spacing: -0.02em; }
+    header.hero p { margin: 0; color: var(--muted); max-width: 68ch; }
+    .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .pill { padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.78rem; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+    .pill strong { color: var(--text); }
+    nav.toc { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 2rem; position: sticky; top: 0; z-index: 10; padding: 0.7rem 0; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+    nav.toc a { font-size: 0.8rem; color: var(--muted); text-decoration: none; padding: 0.3rem 0.6rem; border-radius: 8px; }
+    nav.toc a:hover { color: var(--text); background: var(--surface); }
+    section { margin-bottom: 2.75rem; }
+    h2 { font-size: 1.3rem; margin: 0 0 0.6rem; }
+    p.lead { color: var(--muted); margin: 0 0 1rem; max-width: 70ch; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; margin-bottom: 1rem; }
+    .mermaid { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin: 0.75rem 0 1.1rem; overflow-x: auto; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+    .cold { border-top: 3px solid var(--cold); }
+    .warm { border-top: 3px solid var(--warm); }
+    .metric { font-family: var(--mono); font-size: 1.6rem; font-weight: 650; margin: 0.35rem 0; }
+    .metric small { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: var(--surface); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    table.data th, table.data td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.data th { background: var(--surface2); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    table.data tr:last-child td { border-bottom: none; }
+    code { font-family: var(--mono); font-size: 0.78rem; background: var(--surface2); padding: 0.1rem 0.35rem; border-radius: 4px; }
+    .tag { display: inline-block; font-size: 0.72rem; padding: 0.12rem 0.45rem; border-radius: 5px; font-weight: 600; }
+    .tag.geo { background: color-mix(in srgb, var(--geo) 25%, transparent); color: var(--geo); }
+    .tag.user { background: color-mix(in srgb, var(--user) 25%, transparent); color: var(--user); }
+    .pass { color: var(--warm); font-weight: 600; }
+    .legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 0.35rem; vertical-align: -1px; }
+    footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.82rem; }
+    footer a { color: var(--global); }
+    .bar-track { height: 18px; background: var(--surface2); border-radius: 6px; overflow: hidden; margin-top: 0.4rem; }
+    .bar-fill { height: 100%; border-radius: 6px; font-size: 0.65rem; display: flex; align-items: center; padding-left: 0.4rem; color: #0a0f14; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Global Search engine report</h1>
+      <p>
+        How <code>POST /api/v1/app/home/global/search</code> fetches keyword results and
+        home-section drill-downs (<code>filterKey</code>), with the same geohash + L1/Redis pattern as home.
+        Response format unchanged.
+      </p>
+      <div class="meta">
+        <span class="pill"><strong>Route</strong> POST …/global/search</span>
+        <span class="pill"><strong>Auth</strong> required</span>
+        <span class="pill"><strong>Geohash</strong> p5 · r ≤ 50 km</span>
+        <span class="pill"><strong>Probed</strong> 2026-09-21 · Zagreb · :4020</span>
+      </div>
+    </header>
+
+    <nav class="toc">
+      <a href="#probe">Live probe</a>
+      <a href="#modes">Two modes</a>
+      <a href="#flow">Flow</a>
+      <a href="#fetch">Fetch graph</a>
+      <a href="#cache">Cache keys</a>
+      <a href="#response">Response shapes</a>
+      <a href="#ttls">TTLs</a>
+    </nav>
+
+    <section id="probe">
+      <h2>Live probe results (prodtest)</h2>
+      <p class="lead">Guest JWT · Zagreb 45.8146703, 16.0120023 · radiusKm=50. All calls returned <span class="pass">200</span>.</p>
+      <div class="grid-2">
+        <div class="card cold">
+          <h3 style="margin:0 0 0.25rem">Cold (first miss)</h3>
+          <div class="metric">941 <small>ms · keyword all</small></div>
+          <div class="metric">1003 <small>ms · filterKey nearYou</small></div>
+          <div class="metric">1330 <small>ms · filterKey forYou</small></div>
+          <p style="margin:0.5rem 0 0;font-size:0.85rem;color:var(--muted)">Log: <code>🔵 CACHE MISS → search:…</code></p>
+        </div>
+        <div class="card warm">
+          <h3 style="margin:0 0 0.25rem">Warm (L1 hit)</h3>
+          <div class="metric">446 <small>ms · keyword all</small></div>
+          <div class="metric">451 <small>ms · filterKey nearYou</small></div>
+          <div class="metric">444 <small>ms · filterKey forYou</small></div>
+          <p style="margin:0.5rem 0 0;font-size:0.85rem;color:var(--muted)">Log: <code>🟢 L1 HIT → search:…</code> · ~2–3× faster</p>
+        </div>
+      </div>
+      <div class="card">
+        <strong>Payload checks (unchanged shape)</strong>
+        <ul style="margin:0.5rem 0 0;color:var(--muted);font-size:0.9rem">
+          <li>Keyword <code>type=all</code>: sections <code>events</code> (2 items) + <code>organizations</code> (10) with <code>key/title/data/meta</code></li>
+          <li>Keyword <code>keyword=cafe</code>: events 0 · organizations 10 · titles Events / Organizers</li>
+          <li>filterKey nearYou / forYou: <code>data[]</code> length 10 · <code>meta</code> = currentPage, limit, totalPages, totalRecords</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="modes">
+      <h2>Two request modes</h2>
+      <div class="legend">
+        <span><i style="background:var(--geo)"></i> Geo cache</span>
+        <span><i style="background:var(--user)"></i> User cache</span>
+      </div>
+      <table class="data">
+        <thead>
+          <tr><th>Mode</th><th>Query</th><th>Cache</th><th>HTTP data</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Keyword search</strong></td>
+            <td>no <code>filterKey</code> · optional <code>keyword</code>, <code>type</code></td>
+            <td><span class="tag geo">search:geo:v1:keyword</span></td>
+            <td>Array of sections <code>[{ key, title, data, meta }]</code></td>
+          </tr>
+          <tr>
+            <td><strong>Section drill-down</strong></td>
+            <td><code>filterKey=nearYouOrganizations</code> etc.</td>
+            <td><span class="tag geo">geo</span> or <span class="tag user">user</span> by key</td>
+            <td>Flat list + <code>meta</code> (same as before)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="flow">
+      <h2>Request flow</h2>
+      <div class="mermaid">
+flowchart TB
+  Client["Client"] --> Route["POST /global/search<br/>auth"]
+  Route --> Ctrl["homeController.globalSearch"]
+  Ctrl --> FK{"filterKey?"}
+  FK -->|no| KW["globalSearchService<br/>keyword path"]
+  FK -->|yes| FKS["getFilterKeySearchService"]
+  KW --> Cell["resolveGeoCell p5<br/>clamp radius ≤ 50"]
+  FKS --> Cell
+  Cell --> Cache["L1 → Redis → Mongo"]
+  Cache --> Resp["Same response shape"]
+
+  style KW fill:#14352a,stroke:#3ecf8e,color:#e8eef4
+  style FKS fill:#3d3214,stroke:#f0b429,color:#e8eef4
+  style Resp fill:#1a222c,stroke:#67e8f9,color:#e8eef4
+      </div>
+    </section>
+
+    <section id="fetch">
+      <h2>Where data is fetched</h2>
+      <div class="mermaid">
+flowchart LR
+  subgraph KEYWORD["Keyword · search:geo:v1:keyword"]
+    E["searchEvents"]
+    O["searchOrganizations"]
+  end
+  subgraph GEO_FK["filterKey · geo"]
+    NY["nearYouOrganizations"]
+    TP["topPicks"]
+    TR["trendingOrganizations"]
+    NL["newlyListedOrganizations"]
+  end
+  subgraph USER_FK["filterKey · user"]
+    FYO["forYouOrganizations"]
+    FYE["forYouEvents"]
+    TW["thisWeekEvents"]
+    LC["loyaltyClubs"]
+  end
+  E --> ES["events / nearby + filters"]
+  O --> ORG["Organizations aggregate"]
+  NY --> OPS["organizationProfileService"]
+  TP --> TPS["topPicksOrganizations"]
+  TR --> OPS
+  NL --> OPS
+  FYO --> OPS
+  FYE --> EV["eventService"]
+  TW --> EV
+  LC --> OPS
+
+  style KEYWORD fill:#14352a,stroke:#3ecf8e,color:#e8eef4
+  style GEO_FK fill:#14352a,stroke:#3ecf8e,color:#e8eef4
+  style USER_FK fill:#3d3214,stroke:#f0b429,color:#e8eef4
+      </div>
+      <p class="lead" style="margin-top:0">
+        Geo paths query with <b>cell center</b> so neighbors share one Redis entry.
+        Search analytics (<code>recordSearchService</code>) still run outside the cache on warm hits.
+      </p>
+    </section>
+
+    <section id="cache">
+      <h2>Cache key examples (from live logs)</h2>
+      <div class="card">
+        <pre style="margin:0;white-space:pre-wrap;font-family:var(--mono);font-size:0.75rem;color:var(--muted);line-height:1.6">🔵 CACHE MISS → search:geo:v1:keyword:…&amp;geo=u25ks&amp;kw=_&amp;type=all&amp;page=1&amp;limit=10&amp;r=50
+🟢 L1 HIT     → search:geo:v1:keyword:…&amp;geo=u25ks&amp;kw=_&amp;…
+🔵 CACHE MISS → search:geo:v1:keyword:…&amp;kw=cafe&amp;…
+🔵 CACHE MISS → search:geo:v1:fk:nearYouOrganizations:…&amp;geo=u25ks&amp;…
+🟢 L1 HIT     → search:geo:v1:fk:nearYouOrganizations:…
+🔵 CACHE MISS → search:user:v1:fk:forYouOrganizations:…&amp;userId=…&amp;geo=u25ks&amp;…
+🟢 L1 HIT     → search:user:v1:fk:forYouOrganizations:…</pre>
+      </div>
+    </section>
+
+    <section id="response">
+      <h2>Response shapes (must stay stable)</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top:0">Keyword (no filterKey)</h3>
+          <pre style="margin:0;font-family:var(--mono);font-size:0.75rem;color:var(--muted);white-space:pre-wrap">{
+  "data": [
+    {
+      "key": "events",
+      "title": "Events",
+      "data": [ /* events */ ],
+      "meta": { currentPage, limit, totalPages, totalRecords }
+    },
+    {
+      "key": "organizations",
+      "title": "Organizers",
+      "data": [ /* orgs */ ],
+      "meta": { … }
+    }
+  ]
+}</pre>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">filterKey drill-down</h3>
+          <pre style="margin:0;font-family:var(--mono);font-size:0.75rem;color:var(--muted);white-space:pre-wrap">{
+  "data": [ /* org or event objects */ ],
+  "meta": {
+    "currentPage": 1,
+    "limit": 10,
+    "totalPages": …,
+    "totalRecords": …
+  }
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="ttls">
+      <h2>Refresh windows</h2>
+      <div class="card">
+        <div>L1 memory (all search keys)</div>
+        <div class="bar-track"><div class="bar-fill" style="width:25%;background:#67e8f9">30s</div></div>
+        <div style="margin-top:0.75rem">Redis geo / user</div>
+        <div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--geo)">60s</div></div>
+        <p style="margin:0.75rem 0 0;font-size:0.85rem;color:var(--muted)">
+          After admin edits events/orgs, search results refresh within ~60s (same policy as home). No write-time invalidate yet.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      Code: <code>globalSearch/searchCache.js</code> · <code>globalSearchService.js</code> · <code>homeController.js</code><br />
+      Related: <a href="./HOME_API_SYSTEM_REPORT.html">Home report</a> ·
+      <a href="./GLOBAL_FILTERS_SYSTEM_REPORT.html">Filters report</a>
+    </footer>
+  </div>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true, theme: "dark", securityLevel: "loose",
+      flowchart: { curve: "basis", htmlLabels: true },
+      themeVariables: {
+        primaryColor: "#243040", primaryTextColor: "#e8eef4",
+        primaryBorderColor: "#2f3d4d", lineColor: "#8b9aab",
+        secondaryColor: "#1a222c", tertiaryColor: "#0f1419",
+        fontFamily: "Segoe UI, system-ui, sans-serif"
+      }
+    });
+  </script>
+</body>
+</html>

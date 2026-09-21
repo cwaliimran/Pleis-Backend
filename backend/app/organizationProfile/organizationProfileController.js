@@ -54,8 +54,22 @@ const getOrganizationProfileData = async (req, res) => {
 
 const getNearbyOrganizationsByLocation = async (req, res) => {
   try {
-    let { timezone, location } = req.user;
-    if (!location || !location.coordinates || location.coordinates.length !== 2) {
+    const { latitude, longitude, radiusKm = 50 } = req.query;
+    let { timezone, location: userLocation } = req.user;
+
+    // Prefer query lat/lng (same pattern as for-you / home); else saved user location
+    if (latitude !== undefined && longitude !== undefined) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0)) {
+        userLocation = {
+          type: "Point",
+          coordinates: [lng, lat],
+        };
+      }
+    }
+
+    if (!userLocation || !userLocation.coordinates || userLocation.coordinates.length !== 2) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -66,12 +80,10 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
     let { page, limit, skip } = parsePaginationParams(req);
     let { category } = req.body;
 
-    let { radiusKm } = req.query;
-
     const { organizations } = await getNearbyOrganizationsService({
       category,
-      userLocation: { type: "Point", coordinates: location.coordinates },
-      radiusKm: radiusKm || 1,
+      userLocation: { type: "Point", coordinates: userLocation.coordinates },
+      radiusKm: radiusKm || 50,
       timezone,
       page,
       limit,
