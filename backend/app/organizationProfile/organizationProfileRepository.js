@@ -363,6 +363,70 @@ function getSimilarityWeights(options = {}) {
 }
 
 
+const { NEARBY_MAX_DISTANCE_KM, NEARBY_DISTANCE_TAU_KM } = require("../home/utils/homeFeedLimits");
+const {
+  getVenueTypeObjectIdsForMainCategories,
+  primaryVenueTypeMatchStages,
+} = require("../../admin/venueTypes/resolveCategoryVenueTypes");
+
+/** Resolve main-carousel category (and/or advanceFilters) → venue type ObjectIds. */
+async function resolveEffectiveVenueTypeIds({ category, ctx } = {}) {
+  const advanceFilters = ctx?.advanceFilters || {};
+  const filterVenueTypes = (advanceFilters.venueTypes || [])
+    .filter(Boolean)
+    .map((id) => new mongoose.Types.ObjectId(id));
+  if (filterVenueTypes.length) return filterVenueTypes;
+
+  const filterCategories = (advanceFilters.categories || [])
+    .filter(Boolean)
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  const fromParam = category
+    ? (Array.isArray(category) ? category : [category])
+        .filter(Boolean)
+        .map((id) => new mongoose.Types.ObjectId(id))
+    : [];
+
+  const mainCats = filterCategories.length ? filterCategories : fromParam;
+  if (!mainCats.length) return [];
+  return getVenueTypeObjectIdsForMainCategories(mainCats);
+}
+
+/**
+ * Cap requested nearby radius so orgs beyond NEARBY_MAX_DISTANCE_KM never appear.
+ * Sort remains nearest-first; only the max distance is clamped.
+ */
+const clampNearbyRadiusKm = (requestedKm) => {
+  const n = Number(requestedKm);
+  const base = Number.isFinite(n) && n > 0 ? n : NEARBY_MAX_DISTANCE_KM;
+  return Math.min(base, NEARBY_MAX_DISTANCE_KM);
+};
+
+/**
+ * Soft distance relevance: exp(-distance_km / τ), τ from homeFeedLimits.
+ * $geoNear distance is meters → divide by (τ * 1000).
+ * Strictly decreasing in distance ⇒ closest venues rank first, with stronger
+ * relative weight inside ~1.5 km when blended with other signals later.
+ */
+const distanceScoreAddFields = () => ({
+  $addFields: {
+    distanceScore: {
+      $cond: [
+        { $and: [{ $ne: ["$distance", null] }, { $gte: ["$distance", 0] }] },
+        {
+          $exp: {
+            $divide: [
+              { $multiply: ["$distance", -1] },
+              (Number(NEARBY_DISTANCE_TAU_KM) || 5) * 1000,
+            ],
+          },
+        },
+        0,
+      ],
+    },
+  },
+});
+
 /**
  * Get nearby organizations and include active order number for the user (if any).
  * @param {Object} params - { location, radiusKm, timezone, page, limit, userId }
@@ -403,9 +467,10 @@ const getNearbyOrganizations = async ({
     advanceFilters.distanceFrom || 0
   );
 
-  const distanceTo = Number(
+  const distanceTo = clampNearbyRadiusKm(
     advanceFilters.distanceTo || radiusKm
   );
+  const cappedRadiusKm = clampNearbyRadiusKm(radiusKm);
 
   let sortDirection = 1
   if (ctx?.sort === "desc") {
@@ -413,22 +478,29 @@ const getNearbyOrganizations = async ({
   }
 
   /* =====================================================
-     CATEGORY
+     CATEGORY → VENUE TYPES (main carousel)
+     Main categories link via VenueTypes.categories, not org.otherInfo.categories.
      ===================================================== */
 
   let categoryObjectId = [];
 
   if (category) {
-
-    const categoryIds = Array.isArray(category)
-      ? category
-      : [category];
-
+    const categoryIds = Array.isArray(category) ? category : [category];
     categoryObjectId = categoryIds
       .filter(Boolean)
-      .map(
-        id => new mongoose.Types.ObjectId(id)
-      );
+      .map((id) => new mongoose.Types.ObjectId(id));
+  }
+
+  // Prefer explicit venueTypes from advanceFilters; else resolve from main category
+  // (includes ctx.advanceFilters.categories which are the same carousel ids).
+  let effectiveVenueTypeIds = [...filterVenueTypes];
+  const mainCategoryIds = filterCategories.length
+    ? filterCategories
+    : categoryObjectId;
+  if (!effectiveVenueTypeIds.length && mainCategoryIds.length) {
+    effectiveVenueTypeIds = await getVenueTypeObjectIdsForMainCategories(
+      mainCategoryIds
+    );
   }
 
   /* =====================================================
@@ -439,25 +511,16 @@ const getNearbyOrganizations = async ({
     status: "active"
   };
 
-  // existing category behavior
-  if (!ctx && categoryObjectId.length) {
-    geoQuery["otherInfo.categories"] = {
-      $in: categoryObjectId
-    };
-  }
-
-  // ctx category filters
-  if (ctx && filterCategories.length) {
-    geoQuery["otherInfo.categories"] = {
-      $in: filterCategories
-    };
-  }
-
-  // ctx tag filters
+  // ctx tag filters only (category is applied as venue-type match below)
   if (ctx && filterTags.length) {
     geoQuery["otherInfo.tags"] = {
       $in: filterTags
     };
+  }
+
+  // Strict main-category / venue-type filter with no matching types → empty
+  if (mainCategoryIds.length && !effectiveVenueTypeIds.length) {
+    return { organizations: [], totalCount: 0 };
   }
 
   const pipeline = [];
@@ -476,24 +539,27 @@ const getNearbyOrganizations = async ({
       maxDistance: (
         ctx
           ? distanceTo
-          : radiusKm
+          : cappedRadiusKm
       ) * 1000,
       query: geoQuery
     };
 
     if (ctx && distanceFrom > 0) {
       geoNearStage.minDistance =
-        distanceFrom * 1000;
+        Math.min(distanceFrom, NEARBY_MAX_DISTANCE_KM) * 1000;
     }
 
     pipeline.push(
       {
         $geoNear: geoNearStage
       },
+      distanceScoreAddFields(),
       {
-        $sort: {
-          distance: sortDirection
-        }
+        // Closest first by default (score desc). ctx.sort=desc → farthest first.
+        $sort:
+          sortDirection === -1
+            ? { distanceScore: 1, distance: -1 }
+            : { distanceScore: -1, distance: 1 },
       }
     );
 
@@ -564,17 +630,14 @@ const getNearbyOrganizations = async ({
   );
 
   /* =====================================================
-     VENUE TYPE FILTER
+     VENUE TYPE FILTER (main category carousel + advanceFilters)
      ===================================================== */
 
-  if (
-    ctx &&
-    filterVenueTypes.length
-  ) {
+  if (effectiveVenueTypeIds.length) {
     pipeline.push({
       $match: {
         "venueTypes._id": {
-          $in: filterVenueTypes
+          $in: effectiveVenueTypeIds
         }
       }
     });
@@ -1121,36 +1184,29 @@ const getForYouOrganizationsForHomeRepo = async ({
     );
 
   /* =====================================================
-     DEFAULT CATEGORY FLOW
+     DEFAULT / CTX CATEGORY → VENUE TYPES (main carousel)
      ===================================================== */
 
-  if (!ctx && category) {
-    geoQuery["otherInfo.categories"] = {
-      $in: [
-        new mongoose.Types.ObjectId(category)
-      ]
-    };
+  const effectiveVenueTypeIds = await resolveEffectiveVenueTypeIds({
+    category,
+    ctx,
+  });
+
+  if (
+    (category || (ctx && filterCategories.length) || filterVenueTypes.length) &&
+    !effectiveVenueTypeIds.length
+  ) {
+    return { organizations: [], totalCount: 0 };
   }
 
   /* =====================================================
-     CTX STRICT FILTERS
+     CTX STRICT TAG FILTERS
      ===================================================== */
 
-  if (ctx) {
-
-    // strict category filtering
-    if (filterCategories.length) {
-      geoQuery["otherInfo.categories"] = {
-        $in: filterCategories
-      };
-    }
-
-    // strict tags filtering
-    if (filterTags.length) {
-      geoQuery["otherInfo.tags"] = {
-        $in: filterTags
-      };
-    }
+  if (ctx && filterTags.length) {
+    geoQuery["otherInfo.tags"] = {
+      $in: filterTags
+    };
   }
 
 
@@ -1254,18 +1310,14 @@ const getForYouOrganizationsForHomeRepo = async ({
   );
 
   /* =====================================================
-     VENUE TYPE FILTER
-     ONLY IN CTX MODE
+     VENUE TYPE FILTER (main category carousel + advanceFilters)
      ===================================================== */
 
-  if (
-    ctx &&
-    filterVenueTypes.length
-  ) {
+  if (effectiveVenueTypeIds.length) {
     pipeline.push({
       $match: {
         "venueTypes._id": {
-          $in: filterVenueTypes
+          $in: effectiveVenueTypeIds
         }
       }
     });
@@ -1579,15 +1631,18 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   });
 
-  //total count without limit and skip (for pagination meta)
-  if (ctx) {
-    const countResult = await Organizations.aggregate(countPipeline);
-    ctx.totalCount = countResult[0] ? countResult[0].totalCount : 0;
-  }
+  // Count only when ctx needs pagination meta; run in parallel with page query
+  const [organizations, countResult] = await Promise.all([
+    Organizations.aggregate(pipeline),
+    ctx
+      ? Organizations.aggregate(countPipeline)
+      : Promise.resolve([]),
+  ]);
+
   return {
-    organizations: await Organizations.aggregate(pipeline),
-    totalCount: ctx?.totalCount || 0
-  }
+    organizations,
+    totalCount: countResult[0]?.totalCount || 0,
+  };
 };
 
 
@@ -1636,10 +1691,10 @@ const getTrendingOrganizationsForHomeRepo = async ({
       .map(id => new mongoose.Types.ObjectId(id));
   }
 
-  const finalCategories =
-    ctx && filterCategories.length
-      ? filterCategories
-      : categoryObjectIds;
+  const effectiveVenueTypeIds = await resolveEffectiveVenueTypeIds({
+    category,
+    ctx,
+  });
 
   /* =====================================================
      TIME WINDOWS
@@ -1659,10 +1714,13 @@ const getTrendingOrganizationsForHomeRepo = async ({
     status: "active"
   };
 
-  if (finalCategories.length) {
-    baseQuery["otherInfo.categories"] = {
-      $in: finalCategories
-    };
+  if (
+    (categoryObjectIds.length ||
+      filterCategories.length ||
+      filterVenueTypes.length) &&
+    !effectiveVenueTypeIds.length
+  ) {
+    return { organizations: [], totalCount: 0 };
   }
 
   /* =====================================================
@@ -1796,14 +1854,14 @@ const getTrendingOrganizationsForHomeRepo = async ({
   );
 
   /* =====================================================
-     VENUE TYPE FILTER (CTX ONLY)
+     VENUE TYPE FILTER (main category carousel + advanceFilters)
      ===================================================== */
 
-  if (ctx && filterVenueTypes.length) {
+  if (effectiveVenueTypeIds.length) {
     pipeline.push({
       $match: {
         "venueTypes._id": {
-          $in: filterVenueTypes
+          $in: effectiveVenueTypeIds
         }
       }
     });
@@ -1879,12 +1937,14 @@ const getTrendingOrganizationsForHomeRepo = async ({
   });
 
   /* =====================================================
-     EXECUTION
+     EXECUTION — count only when ctx needs pagination meta
      ===================================================== */
 
   const [organizations, countResult] = await Promise.all([
     Organizations.aggregate(pipeline),
-    Organizations.aggregate(countPipeline)
+    ctx
+      ? Organizations.aggregate(countPipeline)
+      : Promise.resolve([]),
   ]);
 
   return {
@@ -1922,7 +1982,7 @@ const getNewlyListedOrganizationsRepo = async ({
     .map(id => new mongoose.Types.ObjectId(id));
 
   /* =====================================================
-     CATEGORY MERGE (CTX vs INPUT)
+     CATEGORY → VENUE TYPES (main carousel)
      ===================================================== */
 
   let categoryObjectIds = [];
@@ -1935,10 +1995,10 @@ const getNewlyListedOrganizationsRepo = async ({
       .map(id => new mongoose.Types.ObjectId(id));
   }
 
-  const finalCategories =
-    ctx && filterCategories.length
-      ? filterCategories
-      : categoryObjectIds;
+  const effectiveVenueTypeIds = await resolveEffectiveVenueTypeIds({
+    category,
+    ctx,
+  });
 
   /* =====================================================
      BASE QUERY
@@ -1948,10 +2008,13 @@ const getNewlyListedOrganizationsRepo = async ({
     status: "active"
   };
 
-  if (finalCategories.length) {
-    baseQuery["otherInfo.categories"] = {
-      $in: finalCategories
-    };
+  if (
+    (categoryObjectIds.length ||
+      filterCategories.length ||
+      filterVenueTypes.length) &&
+    !effectiveVenueTypeIds.length
+  ) {
+    return { organizations: [], totalCount: 0 };
   }
 
   /* =====================================================
@@ -2143,14 +2206,14 @@ const getNewlyListedOrganizationsRepo = async ({
   }
 
   /* ===============================
-     VENUE TYPE FILTER (CTX ONLY)
+     VENUE TYPE FILTER (main category carousel + advanceFilters)
      =============================== */
 
-  if (ctx && filterVenueTypes.length) {
+  if (effectiveVenueTypeIds.length) {
     pipeline.push({
       $match: {
         "venueTypes._id": {
-          $in: filterVenueTypes
+          $in: effectiveVenueTypeIds
         }
       }
     });
@@ -2204,12 +2267,14 @@ const getNewlyListedOrganizationsRepo = async ({
   });
 
   /* ===============================
-     EXECUTION
+     EXECUTION — count only when ctx needs pagination meta
      =============================== */
 
   const [organizations, countResult] = await Promise.all([
     Organizations.aggregate(pipeline),
-    Organizations.aggregate(countPipeline)
+    ctx
+      ? Organizations.aggregate(countPipeline)
+      : Promise.resolve([]),
   ]);
 
   return {
@@ -2238,11 +2303,16 @@ const getOrganizationsGroupedByTagsRepo = async ({
     ? new mongoose.Types.ObjectId(category)
     : null;
 
+  const effectiveVenueTypeIds = categoryObjectId
+    ? await getVenueTypeObjectIdsForMainCategories(categoryObjectId)
+    : [];
+
+  if (categoryObjectId && !effectiveVenueTypeIds.length) {
+    return [];
+  }
+
   const baseMatch = {
     status: "active",
-    ...(categoryObjectId && {
-      "otherInfo.categories": { $in: [categoryObjectId] }
-    })
   };
 
   const pipeline = [];
@@ -2269,6 +2339,10 @@ const getOrganizationsGroupedByTagsRepo = async ({
     pipeline.push({
       $addFields: { distance: null }
     });
+  }
+
+  if (effectiveVenueTypeIds.length) {
+    pipeline.push(...primaryVenueTypeMatchStages(effectiveVenueTypeIds));
   }
 
   /**
@@ -2414,6 +2488,7 @@ const getOrganizationsGroupedByTagsRepo = async ({
   pipeline.push({
     $project: {
       _id: 0,
+      tagId: "$_id",
       title: 1,
       objects: { $slice: ["$objects", perTag] }
     }
@@ -2421,6 +2496,158 @@ const getOrganizationsGroupedByTagsRepo = async ({
   pipeline.push({ $limit: tagGroupsCap });
 
   return Organizations.aggregate(pipeline).allowDiskUse(true);
+};
+
+/**
+ * Paginated orgs whose PRIMARY tag (otherInfo.tags[0]) is `tagId`.
+ * Same membership rule as home customCategoryByTags sections — distance ASC.
+ */
+const getOrganizationsByPrimaryTagRepo = async ({
+  tagId,
+  userLocation,
+  radiusKm = 50,
+  page = 1,
+  limit = 10,
+  skip = 0,
+  category = null,
+}) => {
+  if (!tagId || !mongoose.Types.ObjectId.isValid(tagId)) {
+    return { organizations: [], totalCount: 0 };
+  }
+
+  const tagObjectId = new mongoose.Types.ObjectId(tagId);
+  const cappedRadiusKm = clampNearbyRadiusKm(radiusKm);
+  const radiusMeters = cappedRadiusKm * 1000;
+  const safeSkip = Math.max(0, Number(skip) || 0);
+  const safeLimit = Math.max(1, Number(limit) || 10);
+
+  const categoryObjectId = category
+    ? new mongoose.Types.ObjectId(category)
+    : null;
+
+  const effectiveVenueTypeIds = categoryObjectId
+    ? await getVenueTypeObjectIdsForMainCategories(categoryObjectId)
+    : [];
+
+  if (categoryObjectId && !effectiveVenueTypeIds.length) {
+    return { organizations: [], totalCount: 0 };
+  }
+
+  // Primary tag only — matches home customCategoryByTags grouping
+  const geoQuery = {
+    status: "active",
+    "otherInfo.tags.0": tagObjectId,
+  };
+
+  const pipeline = [];
+
+  if (userLocation) {
+    pipeline.push({
+      $geoNear: {
+        near: userLocation,
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusMeters,
+        query: geoQuery,
+      },
+    });
+    pipeline.push({ $sort: { distance: 1 } });
+  } else {
+    pipeline.push({ $match: geoQuery });
+    pipeline.push({ $addFields: { distance: null } });
+    pipeline.push({ $sort: { createdAt: -1 } });
+  }
+
+  if (effectiveVenueTypeIds.length) {
+    pipeline.push(...primaryVenueTypeMatchStages(effectiveVenueTypeIds));
+  }
+
+  // Venue types for card UI (same shape as tag-group objects)
+  pipeline.push(
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active",
+            },
+          },
+          {
+            $lookup: {
+              from: "venuetypes",
+              localField: "venueType",
+              foreignField: "_id",
+              as: "venueType",
+              pipeline: [{ $project: { _id: 1, title: 1 } }],
+            },
+          },
+          { $project: { venueType: 1 } },
+          { $limit: 1 },
+        ],
+        as: "primaryVenue",
+      },
+    },
+    {
+      $lookup: {
+        from: "tags",
+        let: { tid: { $arrayElemAt: ["$otherInfo.tags", 0] } },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$tid"] },
+            },
+          },
+          { $project: { _id: 1, title: 1 } },
+          { $limit: 1 },
+        ],
+        as: "_primaryTagDoc",
+      },
+    },
+    {
+      $addFields: {
+        _pv: { $arrayElemAt: ["$primaryVenue", 0] },
+        _pt: { $arrayElemAt: ["$_primaryTagDoc", 0] },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        distance: 1,
+        basicInfo: 1,
+        operatingHours: 1,
+        location: 1,
+        otherInfo: 1,
+        venue: {
+          venueType: { $ifNull: ["$_pv.venueType", []] },
+        },
+        tags: {
+          $cond: [
+            { $ne: ["$_pt", null] },
+            [{ _id: "$_pt._id", title: "$_pt.title" }],
+            [],
+          ],
+        },
+        type: { $literal: "Organizations" },
+      },
+    },
+    {
+      $facet: {
+        data: [{ $skip: safeSkip }, { $limit: safeLimit }],
+        total: [{ $count: "count" }],
+      },
+    }
+  );
+
+  const [facet] = await Organizations.aggregate(pipeline).allowDiskUse(true);
+  return {
+    organizations: facet?.data || [],
+    totalCount: facet?.total?.[0]?.count || 0,
+  };
 };
 
 
@@ -2444,6 +2671,6 @@ module.exports = {
   getTrendingOrganizationsForHomeRepo,
   getSuggestedLoyaltyClubsForHome,
   getNewlyListedOrganizationsRepo,
-  getOrganizationsGroupedByTagsRepo
-
+  getOrganizationsGroupedByTagsRepo,
+  getOrganizationsByPrimaryTagRepo,
 };

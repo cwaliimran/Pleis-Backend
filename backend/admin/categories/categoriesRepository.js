@@ -57,13 +57,15 @@ const getPublicActiveCategories = async (filter = {}) => {
   return cache({
     namespace: "categories:public",
     ttl: null,
-    fetchFn: () =>
-      Categories.find({ status: "active", ...filter })
-        .sort({ order: 1 })
-        .select("title image order")
-        .lean(),
+    fetchFn: () => findPublicActiveCategories(filter),
   });
 };
+
+const findPublicActiveCategories = (filter = {}) =>
+  Categories.find({ status: "active", ...filter })
+    .sort({ order: 1 })
+    .select("title image order")
+    .lean();
 
     
 
@@ -173,4 +175,5 @@ module.exports = {
   updateMany,
   normalizeOrders,
   getPublicActiveCategories,
+  findPublicActiveCategories,
 };

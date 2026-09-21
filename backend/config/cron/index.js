@@ -33,6 +33,9 @@ const {
 const { runLoyaltyChallengeUpdateCron } = require("./loyalty/challenges/challengeUpdate");
 const globalStatusDemotionCron = require("./statusDemotion/globalStatusDemotion/globalStatusDemotion.cron");
 const loyaltyStatusDemotionCron = require("./statusDemotion/loyaltyStatusDemotion/loyaltyStatusDemotion.crom");
+const {
+  runTopSpenderMonthlyCron,
+} = require("../../services/globalStreaksAndBadgesService/triggerGlobalStreak");
 
 const startCrons = () => {
   /* ======================================================
@@ -296,6 +299,26 @@ const startCrons = () => {
     }
   });
 
+  /* ======================================================
+     🏆 CRON: Top spender badges (1st of every month at 00:00)
+     Moved from triggerGlobalStreak.js side-effect registration.
+     Orphan crons (reservation reminders / reservation+ticketing
+     reconcile) stay intentionally unregistered.
+     ====================================================== */
+  cron.schedule("0 0 1 * *", async () => {
+    const lockKey = "cron:top-spender-monthly";
+    const lock = await acquireLock(lockKey, 300);
+
+    if (!lock) return;
+
+    try {
+      await runTopSpenderMonthlyCron();
+    } catch (err) {
+      console.error("Top spender monthly cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
 
 
 

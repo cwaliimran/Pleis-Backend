@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pleis Global Filters — Engine Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419; --surface: #1a222c; --surface2: #243040; --border: #2f3d4d;
+      --text: #e8eef4; --muted: #8b9aab;
+      --geo: #3ecf8e; --global: #3d9cfd;
+      --cold: #f87171; --warm: #34d399;
+      --radius: 14px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.55; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    header.hero { padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+    header.hero h1 { margin: 0 0 0.4rem; font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 650; letter-spacing: -0.02em; }
+    header.hero p { margin: 0; color: var(--muted); max-width: 68ch; }
+    .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .pill { padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.78rem; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+    .pill strong { color: var(--text); }
+    nav.toc { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 2rem; position: sticky; top: 0; z-index: 10; padding: 0.7rem 0; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+    nav.toc a { font-size: 0.8rem; color: var(--muted); text-decoration: none; padding: 0.3rem 0.6rem; border-radius: 8px; }
+    nav.toc a:hover { color: var(--text); background: var(--surface); }
+    section { margin-bottom: 2.75rem; }
+    h2 { font-size: 1.3rem; margin: 0 0 0.6rem; }
+    p.lead { color: var(--muted); margin: 0 0 1rem; max-width: 70ch; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; margin-bottom: 1rem; }
+    .mermaid { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin: 0.75rem 0 1.1rem; overflow-x: auto; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+    @media (max-width: 800px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    .cold { border-top: 3px solid var(--cold); }
+    .warm { border-top: 3px solid var(--warm); }
+    .metric { font-family: var(--mono); font-size: 1.75rem; font-weight: 650; margin: 0.35rem 0; }
+    .metric small { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: var(--surface); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    table.data th, table.data td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.data th { background: var(--surface2); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    table.data tr:last-child td { border-bottom: none; }
+    code { font-family: var(--mono); font-size: 0.78rem; background: var(--surface2); padding: 0.1rem 0.35rem; border-radius: 4px; }
+    .tag { display: inline-block; font-size: 0.72rem; padding: 0.12rem 0.45rem; border-radius: 5px; font-weight: 600; }
+    .tag.geo { background: color-mix(in srgb, var(--geo) 25%, transparent); color: var(--geo); }
+    .tag.global { background: color-mix(in srgb, var(--global) 25%, transparent); color: var(--global); }
+    .pass { color: var(--warm); font-weight: 600; }
+    .stat { text-align: center; }
+    .stat .n { font-family: var(--mono); font-size: 1.5rem; font-weight: 650; }
+    .stat .l { font-size: 0.78rem; color: var(--muted); }
+    .bar-track { height: 18px; background: var(--surface2); border-radius: 6px; overflow: hidden; margin-top: 0.4rem; }
+    .bar-fill { height: 100%; border-radius: 6px; font-size: 0.65rem; display: flex; align-items: center; padding-left: 0.4rem; color: #0a0f14; font-weight: 600; }
+    footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.82rem; }
+    footer a { color: var(--global); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Global Filters engine report</h1>
+      <p>
+        How <code>POST /api/v1/app/home/global/filters</code> builds the search filter sheet:
+        shared catalogs + geo-scoped trending/popular searches. Same L1/Redis pattern as home.
+        Response format unchanged.
+      </p>
+      <div class="meta">
+        <span class="pill"><strong>Route</strong> POST …/global/filters</span>
+        <span class="pill"><strong>Auth</strong> required</span>
+        <span class="pill"><strong>Geohash</strong> p5 · r ≤ 50 km</span>
+        <span class="pill"><strong>Probed</strong> 2026-09-21 · Zagreb · :4020</span>
+      </div>
+    </header>
+
+    <nav class="toc">
+      <a href="#probe">Live probe</a>
+      <a href="#flow">Flow</a>
+      <a href="#layers">Two layers</a>
+      <a href="#response">Response shape</a>
+      <a href="#ttls">TTLs</a>
+    </nav>
+
+    <section id="probe">
+      <h2>Live probe results (prodtest)</h2>
+      <p class="lead">Guest JWT · Zagreb · <code>radiusKm=50</code> · body <code>{ categories: [] }</code>. Status <span class="pass">200</span> both times · identical top-level keys.</p>
+      <div class="grid-2">
+        <div class="card cold">
+          <h3 style="margin:0">Cold</h3>
+          <div class="metric">2971 <small>ms</small></div>
+          <p style="margin:0;font-size:0.85rem;color:var(--muted)">Miss on catalogs + trending · Mongo work</p>
+        </div>
+        <div class="card warm">
+          <h3 style="margin:0">Warm</h3>
+          <div class="metric">446 <small>ms</small></div>
+          <p style="margin:0;font-size:0.85rem;color:var(--muted)">L1 hit both keys · ~6.7× faster</p>
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="card stat"><div class="n">5</div><div class="l">categories</div></div>
+        <div class="card stat"><div class="n">49</div><div class="l">venueTypes</div></div>
+        <div class="card stat"><div class="n">82</div><div class="l">tags</div></div>
+        <div class="card stat"><div class="n">7</div><div class="l">genres</div></div>
+        <div class="card stat"><div class="n">~25 KB</div><div class="l">response size</div></div>
+        <div class="card stat"><div class="n">u25ks</div><div class="l">geo cell (Zagreb)</div></div>
+      </div>
+      <div class="card">
+        <strong>Warm path logs</strong>
+        <pre style="margin:0.5rem 0 0;font-family:var(--mono);font-size:0.75rem;color:var(--muted);white-space:pre-wrap">🔵 CACHE MISS → search:global:v1:filters-catalogs:cat=all
+🔵 CACHE MISS → search:geo:v1:filters-trending:geo=u25ks&amp;r=50
+🧩 STORED → …
+🟢 L1 HIT → search:global:v1:filters-catalogs:cat=all
+🟢 L1 HIT → search:geo:v1:filters-trending:geo=u25ks&amp;r=50</pre>
+      </div>
+    </section>
+
+    <section id="flow">
+      <h2>Request flow</h2>
+      <div class="mermaid">
+flowchart TB
+  Client["Client"] --> Route["POST /global/filters<br/>auth"]
+  Route --> Ctrl["homeController.globalFilters"]
+  Ctrl --> Svc["getGlobalFiltersService"]
+  Svc --> Clamp["clamp radiusKm ≤ 50<br/>resolveGeoCell"]
+  Clamp --> G["filters-catalogs<br/>search:global"]
+  Clamp --> T["filters-trending<br/>search:geo"]
+  G --> Merge["Map popular IDs → titles<br/>assemble response"]
+  T --> Merge
+  Merge --> Resp["data: popularSearches + catalogs"]
+
+  style G fill:#1e3a5f,stroke:#3d9cfd,color:#e8eef4
+  style T fill:#14352a,stroke:#3ecf8e,color:#e8eef4
+  style Resp fill:#1a222c,stroke:#67e8f9,color:#e8eef4
+      </div>
+    </section>
+
+    <section id="layers">
+      <h2>Two cache layers · fetch sources</h2>
+      <div class="mermaid">
+flowchart LR
+  subgraph GLOBAL["search:global:v1:filters-catalogs · TTL 120s"]
+    C["getPublicCategories"]
+    V["getPublicVenueTypes"]
+    TG["getActiveTagsService"]
+    GN["getActiveTagsTypes"]
+    AT["TagTypesModel active filter"]
+  end
+  subgraph GEO["search:geo:v1:filters-trending · TTL 60s"]
+    TR["getTrendingSearchesService<br/>cell center + radius"]
+  end
+  GLOBAL --> OUT["popularSearches mapped<br/>+ full catalog lists"]
+  GEO --> OUT
+
+  style GLOBAL fill:#1e3a5f,stroke:#3d9cfd,color:#e8eef4
+  style GEO fill:#14352a,stroke:#3ecf8e,color:#e8eef4
+      </div>
+      <table class="data">
+        <thead>
+          <tr><th>Piece</th><th>Layer</th><th>Key params</th><th>Shared by</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>categories, venueTypes, tags, genres</td>
+            <td><span class="tag global">global</span></td>
+            <td><code>cat=</code> fingerprint of body <code>categories</code></td>
+            <td>All users (same category filter)</td>
+          </tr>
+          <tr>
+            <td>trending / popularSearches raw IDs</td>
+            <td><span class="tag geo">geo</span></td>
+            <td><code>geo</code> hash · <code>r</code> radius</td>
+            <td>Users in same ~5 km cell</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="response">
+      <h2>Response shape (unchanged)</h2>
+      <div class="card">
+        <pre style="margin:0;font-family:var(--mono);font-size:0.78rem;color:var(--muted);white-space:pre-wrap">{
+  "data": {
+    "popularSearches": {
+      "total": number,
+      "keywords": [ … ],
+      "categories": [{ _id, title, order }],
+      "venueTypes": [{ _id, title, order }],
+      "tags": [{ _id, title, order }],
+      "genre": [{ _id, title, order }]
+    },
+    "categories": [ /* full catalog */ ],
+    "venueTypes": [ /* full catalog */ ],
+    "tags": [ /* active tag-type filtered */ ],
+    "genres": [ /* active tag types */ ]
+  }
+}</pre>
+      </div>
+      <p class="lead">
+        Probe confirmed top-level keys:
+        <code>categories</code>, <code>genres</code>, <code>popularSearches</code>, <code>tags</code>, <code>venueTypes</code>
+        — identical on cold and warm.
+      </p>
+    </section>
+
+    <section id="ttls">
+      <h2>Refresh windows</h2>
+      <div class="card">
+        <div>L1 · both layers</div>
+        <div class="bar-track"><div class="bar-fill" style="width:25%;background:#67e8f9">30s</div></div>
+        <div style="margin-top:0.75rem">Redis · trending (geo)</div>
+        <div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--geo)">60s</div></div>
+        <div style="margin-top:0.75rem">Redis · catalogs (global)</div>
+        <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--global)">120s</div></div>
+      </div>
+    </section>
+
+    <footer>
+      Code: <code>globalSearch/searchCache.js</code> · <code>getGlobalFiltersService</code> in <code>globalSearchService.js</code><br />
+      Related: <a href="./HOME_API_SYSTEM_REPORT.html">Home report</a> ·
+      <a href="./GLOBAL_SEARCH_SYSTEM_REPORT.html">Search report</a>
+    </footer>
+  </div>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true, theme: "dark", securityLevel: "loose",
+      flowchart: { curve: "basis", htmlLabels: true },
+      themeVariables: {
+        primaryColor: "#243040", primaryTextColor: "#e8eef4",
+        primaryBorderColor: "#2f3d4d", lineColor: "#8b9aab",
+        secondaryColor: "#1a222c", tertiaryColor: "#0f1419",
+        fontFamily: "Segoe UI, system-ui, sans-serif"
+      }
+    });
+  </script>
+</body>
+</html>

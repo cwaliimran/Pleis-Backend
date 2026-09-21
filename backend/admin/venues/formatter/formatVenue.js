@@ -1,7 +1,11 @@
 const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 const { calculateDistance } = require("../../../helperUtils/calculateDistance");
-const { formatEventSchedule } = require("../../../admin/events/formatter/eventFormatter");
-const { formatCategories } = require("../../../admin/categories/formatters/categoryFormatter");
+const {
+  formatEventSchedule,
+} = require("../../../admin/events/formatter/eventFormatter");
+const {
+  formatCategories,
+} = require("../../../admin/categories/formatters/categoryFormatter");
 
 /**
  * Formats an event document into a public-friendly JSON response.
@@ -13,11 +17,11 @@ const { formatCategories } = require("../../../admin/categories/formatters/categ
 const formatVenue = (obj, options = {}) => {
   if (!obj) return null;
   let venue = JSON.parse(JSON.stringify(obj));
-  venue.floorPlan = getFullImageUrl(venue.floorPlan || "noimage.png");
+  if (venue.floorPlan) {
+    venue.floorPlan = getFullImageUrl(venue.floorPlan);
+  }
   return venue;
 };
-
-
 
 module.exports = {
   formatVenue,
