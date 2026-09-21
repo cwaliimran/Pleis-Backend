@@ -10,6 +10,7 @@ const { getEvents, getPlaces, getAllData } = require("./mapsService");
 const getMapsData = async (req, res) => {
   try {
     const requestData = { ...(req.body || {}) };
+    console.log(requestData);
     const { page } = parsePaginationParams(req);
 
     const hasBounds = Boolean(

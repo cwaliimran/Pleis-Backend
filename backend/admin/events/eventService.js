@@ -14,7 +14,52 @@ const { countEngagementService } = require("../../commonModules/appEngagement/en
 const { getEngagementCountsByEntity, getWeeklyEngagementStats, getEventsViewsStats, getEventMonthlyViewsStats } = require("../../commonModules/appEngagement/engagementEventsRepository");
 const { getEventAudienceAnalytics } = require("../../staff/events/eventRepository");
 const { nanoid } = require("nanoid");
+const {
+  syncMapMarker,
+  firstImageFilename,
+  toBlobName,
+} = require("../../helperUtils/mapMarkerImage");
+
+async function applyEventMediaMarker(data, prevMedia = null) {
+  if (!data?.basicInfo?.media) return data;
+
+  const media = data.basicInfo.media;
+  const mediaType = media.type || "image";
+  const prevName = prevMedia?.name || "";
+  const prevMarker = prevMedia?.marker || "";
+
+  if (mediaType === "video") {
+    if (prevMarker) {
+      media.marker = await syncMapMarker({
+        newSource: "",
+        prevSource: prevName,
+        prevMarker,
+      });
+    } else {
+      media.marker = "";
+    }
+    return data;
+  }
+
+  if (media.name === undefined) return data;
+
+  const first = firstImageFilename(media.name) || "";
+  const prevFirst = firstImageFilename(prevName) || "";
+  if (toBlobName(first) === toBlobName(prevFirst) && prevMarker) {
+    media.marker = toBlobName(prevMarker) || prevMarker;
+    return data;
+  }
+
+  media.marker = await syncMapMarker({
+    newSource: first,
+    prevSource: prevFirst,
+    prevMarker,
+  });
+  return data;
+}
+
 const createEvent = async ({ data, ticketingData }, timezone) => {
+  await applyEventMediaMarker(data, null);
   let event = await eventRepo.createEvent(data, ticketingData);
   if (!event) return null;
 
