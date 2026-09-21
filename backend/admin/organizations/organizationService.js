@@ -12,8 +12,17 @@ const { getActiveEventsCountForOrganizations } = require("../events/eventReposit
 const {
   applyInAppOrderingSettingsV2,
 } = require("../../shared/organizations/inAppOrderingSettingsV2");
+const { syncMapMarker, toBlobName } = require("../../helperUtils/mapMarkerImage");
 const ACTIVE_ORGANIZATIONS_CACHE_KEY = "organizations:active";
 const createOrganization = async ({ data, timezone }) => {
+  if (data?.basicInfo?.media?.logo) {
+    const logoMarker = await syncMapMarker({
+      newSource: data.basicInfo.media.logo,
+      prevSource: "",
+      prevMarker: "",
+    });
+    data.basicInfo.media.logoMarker = logoMarker || "";
+  }
   let org = await organizationRepo.createOrganization(data);
   return formatOrganization(org, [], timezone);
 };
@@ -240,6 +249,9 @@ const updateOrganization = async ({ id, data, timezone }) => {
     ) : null;
 
     // ---------- UPDATE FIELDS ----------
+    const prevLogo = organization.basicInfo?.media?.logo || "";
+    const prevLogoMarker = organization.basicInfo?.media?.logoMarker || "";
+
     if (cleanBasicInfo) {
       // Ensure nested objects exist in incoming data (don't pass undefined)
       if (cleanBasicInfo.phoneNumber === undefined) cleanBasicInfo.phoneNumber = organization.basicInfo.phoneNumber;
@@ -247,6 +259,18 @@ const updateOrganization = async ({ id, data, timezone }) => {
       if (cleanBasicInfo.media === undefined) cleanBasicInfo.media = organization.basicInfo.media;
 
       organization.basicInfo = deepMergeSafe(organization.basicInfo, cleanBasicInfo);
+    }
+
+    // Regenerate map marker when logo changes
+    if (cleanBasicInfo?.media && cleanBasicInfo.media.logo !== undefined) {
+      const nextLogo = organization.basicInfo?.media?.logo || "";
+      if (toBlobName(nextLogo) !== toBlobName(prevLogo)) {
+        organization.basicInfo.media.logoMarker = await syncMapMarker({
+          newSource: nextLogo,
+          prevSource: prevLogo,
+          prevMarker: prevLogoMarker,
+        });
+      }
     }
 
     if (cleanOtherInfo) {

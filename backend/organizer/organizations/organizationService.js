@@ -13,8 +13,16 @@ const {
 const {
   invalidateOrganizationPickupSettingsCache,
 } = require("../../admin/organizations/organizationRepository");
+const { syncMapMarker, toBlobName } = require("../../helperUtils/mapMarkerImage");
 
 const createOrganization = async ({ data }) => {
+  if (data?.basicInfo?.media?.logo) {
+    data.basicInfo.media.logoMarker = await syncMapMarker({
+      newSource: data.basicInfo.media.logo,
+      prevSource: "",
+      prevMarker: "",
+    }) || "";
+  }
   let org = await organizationRepo.createOrganization(data);
   return formatOrganization(org);
 };
@@ -246,10 +254,22 @@ const updateOrganization = async ({ id, data }) => {
 
     // media merge
     if (basicInfo.media) {
+      const prevLogo = organization.basicInfo?.media?.logo || "";
+      const prevLogoMarker = organization.basicInfo?.media?.logoMarker || "";
       organization.basicInfo.media = {
         ...(organization.basicInfo.media || {}),
         ...basicInfo.media,
       };
+      if (basicInfo.media.logo !== undefined) {
+        const nextLogo = organization.basicInfo.media.logo || "";
+        if (toBlobName(nextLogo) !== toBlobName(prevLogo)) {
+          organization.basicInfo.media.logoMarker = await syncMapMarker({
+            newSource: nextLogo,
+            prevSource: prevLogo,
+            prevMarker: prevLogoMarker,
+          });
+        }
+      }
     }
 
     // social links merge

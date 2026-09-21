@@ -55,9 +55,17 @@ async function resolveMapVenueTypeIds(advanceFilters = {}) {
 }
 
 function formatPlaceMarker(doc, favSet) {
+  const markerRaw = doc?.basicInfo?.media?.logoMarker;
   const logoRaw = doc?.basicInfo?.media?.logo;
+  const markerName =
+    typeof markerRaw === "string" && markerRaw.trim()
+      ? markerRaw.trim()
+      : null;
   const logoName =
-    typeof logoRaw === "string" ? logoRaw : logoRaw?.name || null;
+    typeof logoRaw === "string" && logoRaw.trim()
+      ? logoRaw.trim()
+      : logoRaw?.name || null;
+  const pin = markerName || logoName;
   return {
     _id: doc._id,
     type: "place",
@@ -65,7 +73,7 @@ function formatPlaceMarker(doc, favSet) {
     basicInfo: {
       name: doc?.basicInfo?.name || "",
       media: {
-        logo: logoName ? getFullImageUrl(logoName) : null,
+        logo: pin ? getFullImageUrl(pin) : null,
       },
     },
     isFavorite: favSet ? favSet.has(String(doc._id)) : false,
@@ -73,9 +81,17 @@ function formatPlaceMarker(doc, favSet) {
 }
 
 function formatEventMarker(doc, favSet) {
-  const logoRaw = doc?.basicInfo?.media?.logo;
-  const logoName =
-    typeof logoRaw === "string" ? logoRaw : logoRaw?.name || null;
+  const media = doc?.basicInfo?.media || {};
+  const markerName =
+    typeof media.marker === "string" && media.marker.trim()
+      ? media.marker.trim()
+      : null;
+  // Events store image(s) in media.name — prefer generated marker, else first image
+  let firstImage = null;
+  if (typeof media.name === "string" && media.name.trim()) {
+    firstImage = media.name.split(/[,|]/)[0].trim() || null;
+  }
+  const pin = markerName || firstImage;
   const coords = doc?.basicInfo?.venueLocation?.coordinates;
   return {
     _id: doc._id,
@@ -86,7 +102,7 @@ function formatEventMarker(doc, favSet) {
     basicInfo: {
       title: doc?.basicInfo?.title || "",
       media: {
-        logo: logoName ? getFullImageUrl(logoName) : null,
+        logo: pin ? getFullImageUrl(pin) : null,
       },
       organization: doc?.basicInfo?.organization || null,
     },
@@ -184,6 +200,7 @@ async function fetchLeanPlaces({
         location: 1,
         "basicInfo.name": 1,
         "basicInfo.media.logo": 1,
+        "basicInfo.media.logoMarker": 1,
       },
     },
   ];
@@ -282,7 +299,9 @@ async function fetchLeanEvents({
       $project: {
         _id: 1,
         "basicInfo.title": 1,
-        "basicInfo.media.logo": 1,
+        "basicInfo.media.name": 1,
+        "basicInfo.media.marker": 1,
+        "basicInfo.media.type": 1,
         "basicInfo.venueLocation": 1,
         "basicInfo.organization": 1,
         "schedule.startDateTime": 1,
@@ -324,7 +343,7 @@ async function getLeanPlacesForMap(queryData) {
 
   // Favorites are user-specific — cache shared geo payload without favs, attach after
   const markers = await cache({
-    namespace: "maps:places:lean:v1",
+    namespace: "maps:places:lean:v4",
     params: { b: bq, f: fp },
     ttl: 30,
     memoryTtl: 15,
@@ -369,7 +388,7 @@ async function getLeanEventsForMap(queryData) {
   const bq = quantizeBounds(bounds);
 
   const markers = await cache({
-    namespace: "maps:events:lean:v1",
+    namespace: "maps:events:lean:v4",
     params: { b: bq, f: fp, tz: timezone || "UTC" },
     ttl: 30,
     memoryTtl: 15,
