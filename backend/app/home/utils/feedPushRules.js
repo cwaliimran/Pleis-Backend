@@ -1,9 +1,15 @@
 /**
  * FEED PUSH RULES
  * Ensures:
- *  - minimum items in each section (min 2)
- *  - global repetition limit (max 3 per org/event)
+ *  - minimum items in each section
+ *  - global repetition tracking
+ *  - explorabile sections expose opaque `filterKey` for global/search
+ *
+ * Frontend draws UI by `key`.
+ * Frontend sends `filterKey` as-is in ?filterKey= (no other body fields needed).
  */
+
+const { buildSectionFilterKey } = require("./sectionFilterKey");
 
 const MIN_ITEMS = 1;
 const MAX_REPEAT = 10;
@@ -52,6 +58,16 @@ const applyFrequencyFilter = (list = [], frequencyMap) => {
 };
 
 /**
+ * Attach opaque filterKey token (see sectionFilterKey.js).
+ */
+const attachFilterKey = (section) => {
+  if (!section?.key) return section;
+  const token = buildSectionFilterKey(section);
+  if (token) section.filterKey = token;
+  return section;
+};
+
+/**
  * Safe push — PURE
  * Requires feed + frequency state
  */
@@ -75,10 +91,12 @@ const pushIfValid = (feed, section, frequencyMap) => {
 
   // ✅ ALWAYS ARRAY (matches your existing home.json)
   section.data = filtered;
+  attachFilterKey(section);
 
   feed.push(section);
 };
 
 module.exports = {
   pushIfValid,
+  attachFilterKey,
 };

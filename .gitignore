@@ -146,3 +146,5 @@ scripts/combine-files.js
 /raw
 /tmp
 .env.prodtest
+/k6/results
+/k6/system/reports

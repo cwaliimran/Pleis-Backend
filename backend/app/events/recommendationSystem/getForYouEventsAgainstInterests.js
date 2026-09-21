@@ -4,6 +4,10 @@ const { formatRecentlyViewedEventResponse } = require("../../recentlyViewed/form
 const { default: mongoose } = require("mongoose");
 const { getCurrentDateInTimezone } = require("../../../helperUtils/responseUtil");
 const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
+const {
+  getVenueTypeObjectIdsForMainCategories,
+  eventVenueTypeMatchStages,
+} = require("../../../admin/venueTypes/resolveCategoryVenueTypes");
 
 const toObjectIdArray = (val) => {
   if (!val) return [];
@@ -59,18 +63,24 @@ const getForYouEventsAgainstInterests = async ({
     ],
 
   };
-  if (categoryObjectIds.length) {
-    baseQuery["basicInfo.categories"] = {
-      $in: categoryObjectIds
-    };
+
+  /* ===============================
+     Main carousel category → venue types (hard filter)
+     =============================== */
+  const mainCatIds = ctxCategories.length ? ctxCategories : categoryObjectIds;
+  let strictVenueTypes = [...ctxVenueTypes];
+  if (!strictVenueTypes.length && mainCatIds.length) {
+    strictVenueTypes = await getVenueTypeObjectIdsForMainCategories(mainCatIds);
+  }
+  if (mainCatIds.length && !strictVenueTypes.length) {
+    return { recommendedEvents: [], totalCount: 0 };
   }
 
   /* ===============================
-     CTX FILTER MERGE (STRICT)
+     CTX TAG FILTER (STRICT)
      =============================== */
-  if (ctx) {
-    if (ctxCategories.length) baseQuery["basicInfo.categories"] = { $in: ctxCategories };
-    if (ctxTags.length) baseQuery["basicInfo.tags"] = { $in: ctxTags };
+  if (ctx && ctxTags.length) {
+    baseQuery["basicInfo.tags"] = { $in: ctxTags };
   }
 
   let pipeline = [];
@@ -88,6 +98,10 @@ const getForYouEventsAgainstInterests = async ({
     });
   } else {
     pipeline.push({ $match: baseQuery });
+  }
+
+  if (strictVenueTypes.length) {
+    pipeline.push(...eventVenueTypeMatchStages(strictVenueTypes));
   }
 
   /* ===============================

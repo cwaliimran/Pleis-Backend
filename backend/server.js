@@ -55,7 +55,12 @@ const connectToDB = require("./helperUtils/server-setup");
 const { backupMongoDB } = require("./helperUtils/dataBaseBackup");
 const { getRedisClient } = require("./config/redis/redisConfig");
 const { startCrons } = require("./config/cron");
-require('./bullmq');
+const {
+  getAppRole,
+  shouldRunHttp,
+  shouldRunBackgroundJobs,
+} = require("./config/processRole");
+const { startWorkers, closeWorkers } = require("./bullmq");
 
 
 /**
@@ -117,6 +122,8 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
     uptime: process.uptime(),
+    role: getAppRole(),
+    backgroundJobs: shouldRunBackgroundJobs(),
   });
 });
 
@@ -207,16 +214,21 @@ app.use((err, req, res, next) => {
  */
 const server = createSocketServer(app, allowedOrigins);
 
-
 const PORT = process.env.PORT || 8080;
+const appRole = getAppRole();
 
-server.listen(PORT, () => {
-  logger.info("HTTP server listening", {
-    port: PORT,
-    env: process.env.NODE_ENV,
+if (shouldRunHttp()) {
+  server.listen(PORT, () => {
+    logger.info("HTTP server listening", {
+      port: PORT,
+      env: process.env.NODE_ENV,
+      role: appRole,
+      backgroundJobs: shouldRunBackgroundJobs(),
+    });
   });
-});
-
+} else {
+  logger.info("HTTP listener skipped", { role: appRole });
+}
 
 /**
  * =======================================================
@@ -229,9 +241,22 @@ server.listen(PORT, () => {
     await connectToDB();
     await initTextModeration();
     getRedisClient();
-    startCrons();
 
-    setInterval(backupMongoDB, 24 * 60 * 60 * 1000);
+    if (shouldRunBackgroundJobs()) {
+      startWorkers();
+      startCrons();
+      setInterval(backupMongoDB, 24 * 60 * 60 * 1000);
+      logger.info("Background jobs started", {
+        role: appRole,
+        crons: true,
+        bullmqWorkers: true,
+        backup: true,
+      });
+    } else {
+      logger.info("Background jobs skipped (API role)", {
+        role: appRole,
+      });
+    }
   } catch (err) {
     crashLogger.fatal("Startup failure", err);
     process.exit(1);
@@ -249,6 +274,7 @@ const shutdown = async (signal) => {
   logger.warn("Shutdown signal received", { signal });
 
   try {
+    await closeWorkers();
     if (global.io) {
       await global.io.close();
       logger.info("Socket.IO closed");
@@ -298,6 +324,12 @@ process.on("uncaughtException", (err) => {
     // logger.error("Firebase network error (ignored)", {
     //   error: err.message,
     // });
+    return;
+  }
+
+  // Nodemon/FSWatcher can throw EMFILE under high FD pressure; do not take down API.
+  if (err && (err.code === "EMFILE" || /EMFILE/.test(String(err.message || "")))) {
+    logger.error("EMFILE ignored (file watch limit)", { error: err.message });
     return;
   }
 

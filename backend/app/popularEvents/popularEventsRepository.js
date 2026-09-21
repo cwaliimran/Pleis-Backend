@@ -1,6 +1,10 @@
 const { default: mongoose } = require("mongoose");
 const PopularEvents = require("../../admin/browserControl/popularEvents/PopularEvents");
 const { getCurrentDateInTimezone, generateMeta } = require("../../helperUtils/responseUtil");
+const {
+  getVenueTypeObjectIdsForMainCategories,
+  eventVenueTypeMatchStages,
+} = require("../../admin/venueTypes/resolveCategoryVenueTypes");
 
 const getPopularEvents = async (
   page,
@@ -191,17 +195,18 @@ const getPopularEventsForHome = async (
     ],
   };
 
-  const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
-
-  const categoryFilter = category
-    ? { "basicInfo.categories": { $in: [catObjId] } }
-    : {};
+  // Main carousel category → venue types (not event.basicInfo.categories)
+  const venueTypeIds = category
+    ? await getVenueTypeObjectIdsForMainCategories(category)
+    : [];
+  if (category && !venueTypeIds.length) {
+    return { data: [] };
+  }
 
   // base match for ALL events
   const eventMatch = {
     status: "active",
     ...dateFilter,
-    ...categoryFilter,
   };
 
   // 👉 only add geo filter when NOT null
@@ -229,6 +234,9 @@ const getPopularEventsForHome = async (
         as: "event",
         pipeline: [
           { $match: eventMatch },
+          ...(venueTypeIds.length
+            ? eventVenueTypeMatchStages(venueTypeIds)
+            : []),
 
           {
             $lookup: {

@@ -76,17 +76,17 @@ const getGlobalReferral = async () => {
   });
 };
 
+const findGlobalReferralSettingsDirect = async () => {
+  return GlobalReferralSettings.findOne({})
+    .select("userPoints referrerPoints minimumPurchases referralLimit")
+    .lean();
+};
+
 const getGlobalReferralSettings = async () => {
   return cache({
     namespace: ACTIVE_GLOBAL_REFERRAL_CACHE_KEY,
     ttl: 86400,
-
-    fetchFn: async () => {
-      return await GlobalReferralSettings
-        .findOne({})
-        .select("userPoints referrerPoints minimumPurchases referralLimit")
-        .lean();
-    },
+    fetchFn: findGlobalReferralSettingsDirect,
   });
 };
 
@@ -333,4 +333,5 @@ module.exports = {
   getUserGlobalReferrals,
   resetUserReferralLimits,
   getGlobalReferralSettingsRepository: getGlobalReferralSettings,
+  findGlobalReferralSettingsDirect,
 };
