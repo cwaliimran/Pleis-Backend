@@ -27,6 +27,8 @@
     "pm2:startup": "pm2 startup",
     "update:alias": "node aliasConfig/update-aliases.js",
     "smoke:modules": "NODE_ENV=prodtest node backend/smokeLoadModules.js",
+    "backfill:event-markers": "NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js",
+    "backfill:event-markers:dry": "NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js --dry-run",
     "smoke:modules:strict": "NODE_ENV=prodtest node backend/smokeLoadModules.js --strict",
     "smoke:modules:routes": "NODE_ENV=prodtest node backend/smokeLoadModules.js --routes",
     "smoke:hit": "NODE_ENV=dev node backend/smokeHitEndpoints.js",

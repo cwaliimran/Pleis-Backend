@@ -21,6 +21,11 @@ const organizationSchema = new mongoose.Schema(
           type: String,
           default: "",
         },
+        /** 120×120 WebP map pin — generated when logo changes */
+        logoMarker: {
+          type: String,
+          default: "",
+        },
         cover: {
           type: String,
           default: "",
