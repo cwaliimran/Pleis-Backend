@@ -124,8 +124,29 @@ Mustache-style `{{TOKEN}}` HTML:
 
 ## How a payment becomes a document
 
+Timing (product override — not always at payment):
+
+| Kind | When enqueued |
+| --- | --- |
+| `ticketing_invoices` | First staff check-in of a **paid** ticket on the order (`eventRepository` check-in / bulk-checkin). Free / zero-amount orders skipped. JobId = once per order. |
+| `ordering_confirmation` | Menu order `status=completed` **and** `paymentStatus=paid` **and** amount > 0 (admin/staff in-app order updates). |
+| `reservation_confirmation` | **Min-spend only:** first voucher spend on placeOrder (full voucher face value). Free and paid non-min-spend reservations never enqueue. |
+| `subscription_invoice` | At subscription payment (unchanged). |
+
+### Plain confirmation emails (non-fiscal, free / €0 only)
+
+Free / zero-amount bookings that **skip** the fiscal queue still get a plain Mailgun confirmation (no Billko invoice, no Payment Confirmation PDF, no fiscal wording):
+
+| Product | When sent |
+| --- | --- |
+| Free tickets (`orderPricing.total === 0`, `paymentStatus=paid`) | After successful booking create (ticketing controller post-commit) |
+| €0 menu orders | At `placeOrder` after commit |
+| Free reservations (`amount === 0`, `status=confirmed`) | After create (app/staff) or when organizer/staff sets status to `confirmed` |
+
+Idempotent via `plainConfirmationEmailSentAt` (menu/reservation) or `meta.plainConfirmationEmailSentAt` (ticketing). Helper: `helperUtils/plainConfirmationEmailService.js` — reuses the paid `confirmation-email.html` shell (no PDF / no fiscal wording).
+
 ```
-Payment succeeds (Monri webhook / dummy charge / staff POS)
+Enqueue trigger (scan / completed+paid / first voucher use / subscription pay)
         │
         ▼
 enqueueFiscalDocument({ kind, orderId })     backend/bullmq/queues.js
@@ -147,19 +168,21 @@ jobs/documentService.handleSuccessfulPayment
 
 Enqueue sources:
 
-- `paymentsWebhook/services/paymentWebhookService.js` after Monri marks an order paid
-- Dummy-charge finalizers (ticketing / menu / reservation / subscription)
-- Staff and admin in-app ordering services (cash / card captured in venue)
-- `admin/ticketing/testPayTicketingOrder.js`
-- `admin/reservation/testPayUserReservation.js`
+- Staff event check-in / bulk-checkin (`fiscalTiming.enqueueTicketingInvoicesOnScan`)
+- Admin/staff in-app ordering updates when completed+paid (`fiscalTiming.maybeEnqueueOrderingConfirmation`)
+- placeOrder first min-spend voucher spend (`fiscalTiming.maybeEnqueueReservationVoucherFiscal`)
+- Reservation/ticketing payment finalizers do **not** enqueue reservation confirmations (min-spend only at voucher spend)
+- `paymentsWebhook` for **subscription** only (ticketing/ordering/reservation deferred as above)
+- Dummy-charge subscription finalizer; admin test-pay helpers
+- `admin/ticketing/testPayTicketingOrder.js` / `admin/reservation/testPayUserReservation.js` (payment only; ticketing fiscal not at pay)
 
 Mapping from order type:
 
 | Order type | Job kind | Document |
 | --- | --- | --- |
-| `ticketingbookings` | `ticketing_invoices` | Fiscal invoices + payment confirmation |
-| `menuorders` | `ordering_confirmation` | Payment confirmation (PDF) |
-| `userreservations` | `reservation_confirmation` | Payment confirmation (PDF) |
+| `ticketingbookings` | `ticketing_invoices` | Fiscal invoices + payment confirmation (at check-in) |
+| `menuorders` | `ordering_confirmation` | Payment confirmation (PDF) at completed+paid |
+| `userreservations` | `reservation_confirmation` | Payment confirmation (PDF); **min-spend only**, at first voucher use; free/non-min-spend never |
 | `subscription` | `subscription_invoice` | Fiscal e-invoice |
 
 ---

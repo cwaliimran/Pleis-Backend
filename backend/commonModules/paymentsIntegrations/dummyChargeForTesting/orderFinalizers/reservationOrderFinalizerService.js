@@ -13,7 +13,6 @@ const {
   sendMenuOrderNotification,
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
-const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 const { getUserReservationDetails } = require("../../../../app/reservations/reservationRepository");
 const { userReservationsFormatter } = require("../../../../app/reservations/formaters/reservationFormetter");
@@ -247,22 +246,8 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         }),
         "LEDGER_RESERVATION_CAPTURE",
       );
-      fireAndForget(
-        enqueueFiscalDocument({
-          kind: "reservation_confirmation",
-          orderId: userReservation._id,
-        }),
-        "FISCAL_RESERVATION_CONFIRMATION",
-      );
-      if (menuOrder?._id) {
-        fireAndForget(
-          enqueueFiscalDocument({
-            kind: "ordering_confirmation",
-            orderId: menuOrder._id,
-          }),
-          "FISCAL_ORDERING_CONFIRMATION",
-        );
-      }
+      // Reservation fiscal: only min-spend, on first voucher spend (fiscalTiming).
+      // Free / paid non-min-spend: never enqueue. Pre-order menu → completed+paid.
     }
 
     if (userReservation.amount && userReservation.amount > 0) {

@@ -4,6 +4,9 @@ const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
 const MenuItems = require("@MenuItemsModel");
 const { formatOrdersForUI } = require("../../../admin/inAppOrdering/formatters/formatOrdersForUI");
+const {
+  visibleOnOrderBoardMatch,
+} = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
 
 
 
@@ -62,7 +65,8 @@ const getOrders = async ({
             $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1))
           }
         }),
-        "items.menuItem": { $in: menuItemIds }
+        "items.menuItem": { $in: menuItemIds },
+        ...visibleOnOrderBoardMatch, // Hide unpaid card/Apple Pay until paid
       }
     },
 

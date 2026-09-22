@@ -2,30 +2,13 @@ const { UserReservations } = require("@UserReservationsModel");
 const {
   reservationOrderFinalizerService,
 } = require("../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
-const { enqueueFiscalDocument } = require("../../bullmq/queues");
 const {
   sendResponse,
   validateParams,
 } = require("../../helperUtils/responseUtil");
-
-async function requeueReservationConfirmations(reservation) {
-  const fiscalJobs = [`reservation_confirmation-${reservation._id}`];
-  await enqueueFiscalDocument({
-    kind: "reservation_confirmation",
-    orderId: reservation._id,
-  });
-
-  const menuOrderId = reservation.preOrderMenuItemsOrder?._id || reservation.preOrderMenuItemsOrder;
-  if (menuOrderId) {
-    fiscalJobs.push(`ordering_confirmation-${menuOrderId}`);
-    await enqueueFiscalDocument({
-      kind: "ordering_confirmation",
-      orderId: menuOrderId,
-    });
-  }
-
-  return fiscalJobs;
-}
+const {
+  isMinSpendReservation,
+} = require("../../commonModules/fiscalDocuments/fiscalTiming");
 
 async function testPayUserReservation(req, res) {
   try {
@@ -39,7 +22,7 @@ async function testPayUserReservation(req, res) {
     }
 
     const reservation = await UserReservations.findById(req.params.id).select(
-      "status paymentDetails preOrderMenuItemsOrder amount",
+      "status paymentDetails preOrderMenuItemsOrder amount reservationSnapshot",
     );
     if (!reservation) {
       return sendResponse({
@@ -50,18 +33,21 @@ async function testPayUserReservation(req, res) {
     }
 
     const alreadyPaid = reservation.paymentDetails?.paymentStatus === "paid";
+    const fiscalNote = isMinSpendReservation(reservation)
+      ? "min-spend reservation_confirmation enqueues on first voucher use"
+      : "free / non-min-spend reservations never enqueue reservation_confirmation";
 
     if (alreadyPaid) {
-      const fiscalJobs = await requeueReservationConfirmations(reservation);
       return sendResponse({
         res,
         statusCode: 200,
-        translationKey: "reservation_already_paid_fiscal_requeued",
+        translationKey: "reservation_already_paid",
         data: {
           reservationId: String(reservation._id),
           status: reservation.status,
           paymentStatus: reservation.paymentDetails?.paymentStatus,
-          fiscalJobs,
+          fiscalJobs: [],
+          note: fiscalNote,
         },
       });
     }
@@ -93,15 +79,8 @@ async function testPayUserReservation(req, res) {
     });
 
     const updated = await UserReservations.findById(reservation._id)
-      .select("status paymentDetails amount preOrderMenuItemsOrder")
+      .select("status paymentDetails amount preOrderMenuItemsOrder reservationSnapshot")
       .lean();
-
-    const menuOrderId =
-      updated?.preOrderMenuItemsOrder?._id || updated?.preOrderMenuItemsOrder;
-    const fiscalJobs = [`reservation_confirmation-${reservation._id}`];
-    if (menuOrderId) {
-      fiscalJobs.push(`ordering_confirmation-${menuOrderId}`);
-    }
 
     return sendResponse({
       res,
@@ -112,7 +91,10 @@ async function testPayUserReservation(req, res) {
         transactionId,
         status: updated?.status,
         paymentStatus: updated?.paymentDetails?.paymentStatus,
-        fiscalJobs,
+        fiscalJobs: [],
+        note: isMinSpendReservation(updated)
+          ? "min-spend reservation_confirmation enqueues on first voucher use"
+          : "free / non-min-spend reservations never enqueue reservation_confirmation",
       },
     });
   } catch (error) {

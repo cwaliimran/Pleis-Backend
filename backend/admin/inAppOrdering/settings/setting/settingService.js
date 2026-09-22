@@ -16,7 +16,7 @@ const updateSetttings = async (organization, data) => {
       paymentMethod: data.paymentMethod,
       automaticOrderAcceptance: data.automaticOrderAcceptance,
     });
-  };  
+  }
 
   // -----------------------------
   // ALLOWED FIELDS
@@ -39,6 +39,11 @@ const updateSetttings = async (organization, data) => {
 
   Object.assign(Setttings, updateData);
   await Setttings.save();
+  await SetttingsRepo.invalidateOrganizationSettingsCache(organization);
+  await SetttingsRepo.syncOrganizationPaymentMethodsFromSetting(
+    organization,
+    Setttings.toObject ? Setttings.toObject() : Setttings,
+  );
 
   return Setttings;
 };

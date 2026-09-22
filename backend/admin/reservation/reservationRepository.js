@@ -1312,6 +1312,8 @@ const consumeReservationVoucher = async ({
         Number(voucher?.discountAmount || 0) - Number(voucher?.usedAmount || 0),
         0,
       ),
+      reservationId: reservation?._id || null,
+      isFirstVoucherUse: false,
     };
   }
 
@@ -1346,6 +1348,8 @@ const consumeReservationVoucher = async ({
     voucherAmount,
     orderAmountDue: amount - voucherAmount,
     remainingBalance: newRemaining,
+    reservationId: reservation._id,
+    isFirstVoucherUse: used === 0,
   };
 };
 

@@ -17,7 +17,6 @@ const {
   sendMenuOrderNotification,
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
-const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
@@ -181,13 +180,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     }
 
     if (result.status === "paid") {
-      fireAndForget(
-        enqueueFiscalDocument({
-          kind: "ordering_confirmation",
-          orderId: menuOrder._id,
-        }),
-        "FISCAL_ORDERING_CONFIRMATION",
-      );
+      // ordering_confirmation deferred until status=completed AND paid (fiscalTiming)
       fireAndForget(
         recordPaidCaptureLedger({
           orderId: menuOrder._id,

@@ -15,7 +15,7 @@ const {
 const webhookRepository = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/webhookRepository");
 const { getOrgCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
 const { fireAndForget } = require("../../../helperUtils/responseUtil");
-const { enqueueFiscalDocument } = require("../../../bullmq/queues");
+const { maybeEnqueueOrderingConfirmation } = require("../../../commonModules/fiscalDocuments/fiscalTiming");
 const { syncMonriTransactionStatus } = require("../../../commonModules/paymentsIntegrations/monri/monriRepository");
 
 const getDateRange = (period) => {
@@ -321,14 +321,10 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
 
   await order.save();
 
+  // Confirmation when delivered (completed) AND paid; amount>0 gated in helper
+  maybeEnqueueOrderingConfirmation(order);
+
   if (paymentChanged && order.paymentStatus === "paid") {
-    fireAndForget(
-      enqueueFiscalDocument({
-        kind: "ordering_confirmation",
-        orderId: order._id,
-      }),
-      "FISCAL_ORDERING_CONFIRMATION",
-    );
     fireAndForget(
       syncMonriTransactionStatus(order._id, "paid"),
       "MONRI_TX_SYNC_PAID",

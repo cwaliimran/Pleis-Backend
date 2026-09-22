@@ -577,20 +577,44 @@ const getOrganizationPickupSettings = async (organizationId) => {
     params: {},
     ttl: null,
     fetchFn: async () => {
-      const org = await Organizations.findById(organizationId)
-        .select(
-          "inAppOrderingSettings.paymentMethods inAppOrderingSettings.deliveryMethods inAppOrderingSettings.tips",
-        )
-        .lean();
+      const [org, appSettings] = await Promise.all([
+        Organizations.findById(organizationId)
+          .select(
+            "inAppOrderingSettings.paymentMethods inAppOrderingSettings.deliveryMethods inAppOrderingSettings.tips",
+          )
+          .lean(),
+        // Setting is source of truth for payment / acceptance flags
+        require("../inAppOrdering/settings/setting/settingRepository").getSetttings({
+          organization: organizationId,
+        }),
+      ]);
 
       const settings = org?.inAppOrderingSettings || {};
+      const {
+        mapSettingToOrgPaymentMethods,
+      } = require("../../shared/organizations/orderingPaymentSettingsMap");
+
+      const hasAppSettings =
+        appSettings &&
+        (appSettings.paymentMethod ||
+          appSettings.automaticOrderAcceptance !== undefined);
 
       return {
-        paymentMethods:
-          settings.paymentMethods || { ...DEFAULT_PICKUP_SETTINGS.paymentMethods },
+        paymentMethods: hasAppSettings
+          ? mapSettingToOrgPaymentMethods(
+              appSettings,
+              settings.paymentMethods || {},
+            )
+          : settings.paymentMethods || {
+              ...DEFAULT_PICKUP_SETTINGS.paymentMethods,
+            },
         deliveryMethods:
-          settings.deliveryMethods || { ...DEFAULT_PICKUP_SETTINGS.deliveryMethods },
+          settings.deliveryMethods || {
+            ...DEFAULT_PICKUP_SETTINGS.deliveryMethods,
+          },
         tips: settings.tips || { ...DEFAULT_PICKUP_SETTINGS.tips },
+        // Mirror Setting shape so clients that already read appSettings stay aligned
+        appSettings: hasAppSettings ? appSettings : {},
       };
     },
   });

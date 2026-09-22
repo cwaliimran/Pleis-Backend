@@ -4,8 +4,17 @@ const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
 const ReservationRepo = require("./reservationRepository");
 const { getActiveEventsForOrg } = require("../../admin/events/eventRepository");
+const {
+  maybeSendFreeReservationConfirmation,
+} = require("../../helperUtils/plainConfirmationEmailService");
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
+  if (Reservation?._id) {
+    fireAndForget(
+      maybeSendFreeReservationConfirmation(Reservation._id),
+      "PLAIN_FREE_RESERVATION_CONFIRMATION",
+    );
+  }
   return Reservation;
 };
 
@@ -14,6 +23,13 @@ const updateReservationStatus = async (id, status) => {
     status: status,
   });
   if (!updated) return null;
+
+  if (status === "confirmed") {
+    fireAndForget(
+      maybeSendFreeReservationConfirmation(updated._id),
+      "PLAIN_FREE_RESERVATION_CONFIRMATION",
+    );
+  }
 
   if (status === "checkedIn") {
     // Handle checked-in logic if needed

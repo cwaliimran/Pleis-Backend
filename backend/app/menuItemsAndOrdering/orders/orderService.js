@@ -6,7 +6,7 @@ const clubMemberRepo = require("../../loyalty/clubMembers/clubMembersRepository"
 const {
   menuItemOrderFormatter,
 } = require("./formatter/menuItemOrderFormatter");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { generateMeta, fireAndForget } = require("../../../helperUtils/responseUtil");
 const {
   sendUserNotifications,
 } = require("../../../controllers/communicationController");
@@ -52,6 +52,34 @@ const {
 const {
   assertOrganizerBillkoReady,
 } = require("../../../commonModules/paymentsIntegrations/billko/billkoCredentials");
+const {
+  maybeEnqueueReservationVoucherFiscal,
+} = require("../../../commonModules/fiscalDocuments/fiscalTiming");
+const {
+  maybeSendFreeMenuOrderConfirmation,
+} = require("../../../helperUtils/plainConfirmationEmailService");
+const {
+  isAwaitingInAppPayment,
+} = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
+
+const assertPaymentMethodAllowed = (setting, paymentMethod) => {
+  const methods = setting?.paymentMethod || {};
+  if (paymentMethod === "cash" && methods.cash !== true) {
+    const err = new Error("Cash payment is not enabled for this organization");
+    err.statusCode = 400;
+    throw err;
+  }
+  if (
+    (paymentMethod === "card" || paymentMethod === "applePay") &&
+    methods.inAppPayment !== true
+  ) {
+    const err = new Error(
+      "In-app payment is not enabled for this organization",
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+};
 
 const orderNeedsConfirmation = (orderItems = [], orderCombos = []) =>
   orderItems.some((item) => item.status === "pending") ||
@@ -402,6 +430,7 @@ const placeOrder = async ({
       totalPrice = promoResult.finalAmount;
     }
     let voucherAmount = 0;
+    let pendingVoucherFiscal = null;
     if (reservationId) {
       const reservation = await validateReservationForOrder({
         reservationId,
@@ -422,9 +451,17 @@ const placeOrder = async ({
 
       voucherAmount = voucherResult.voucherAmount;
       totalPrice = voucherResult.orderAmountDue;
+
+      if (voucherResult.voucherAmount > 0) {
+        pendingVoucherFiscal = {
+          reservationId: reservation._id,
+          voucherAmountApplied: voucherResult.voucherAmount,
+        };
+      }
     }
 
     const setting = await getSetttings({ organization: organizationId });
+    assertPaymentMethodAllowed(setting, paymentMethod);
     totalPrice += Number(tip || 0);
     let orderData = {
       user: userId,
@@ -482,42 +519,63 @@ const placeOrder = async ({
     formattedOrder.user = userDetails;
     await session.commitTransaction();
     session.endSession();
-    // Emit socket event for new order (only for cash payments)
-    emitOrderEvent({
-      io: global.io,
-      eventName: "NEW_ORDER",
-      orderId: order._id,
-      organizationId: order.organization,
-      userId: order.user,
-      data: formattedOrder,
-    });
-    const staffIds = await getCheckedInStaffForOrganization(
-      organizationId,
-      timezone,
-    );
 
-    sendUserNotifications({
-      recipientIds: staffIds,
-      titleKey: "new_order_placed_title",
-      bodyKey: "new_order_placed_body",
-      bodyValues: {
-        status: formattedOrder.status,
-        amount: formattedOrder.totalPrice,
-      },
-      data: {
-        type: NotificationTypes.NEW_MENU_ITEMS_ORDER,
-        objectType: "menuorders",
-        organization_id: organizationId.toString(),
-      },
-      image:
-        order.items[0]?.menuItemSnapShot?.image ||
-        order.combos[0]?.items[0]?.menuItemSnapShot?.image ||
-        "noimage",
-      sender: userId,
-      objectId: formattedOrder._id,
-    });
+    // Full voucher face-value fiscal once on first spend (after commit)
+    if (pendingVoucherFiscal) {
+      fireAndForget(
+        maybeEnqueueReservationVoucherFiscal(pendingVoucherFiscal.reservationId, {
+          voucherAmountApplied: pendingVoucherFiscal.voucherAmountApplied,
+        }),
+        "FISCAL_RESERVATION_VOUCHER_FIRST_USE",
+      );
+    }
 
-    //TODO if paymentMethod is card/applePay and paid then send notification to staff as well, or maybe check from service where monri is processing payment
+    // Emit socket + staff push only when the order is board-visible.
+    // Card/Apple Pay pay-now orders wait until payment finalizer emits NEW_ORDER.
+    if (!isAwaitingInAppPayment(order)) {
+      emitOrderEvent({
+        io: global.io,
+        eventName: "NEW_ORDER",
+        orderId: order._id,
+        organizationId: order.organization,
+        userId: order.user,
+        data: formattedOrder,
+      });
+      const staffIds = await getCheckedInStaffForOrganization(
+        organizationId,
+        timezone,
+      );
+
+      sendUserNotifications({
+        recipientIds: staffIds,
+        titleKey: "new_order_placed_title",
+        bodyKey: "new_order_placed_body",
+        bodyValues: {
+          status: formattedOrder.status,
+          amount: formattedOrder.totalPrice,
+        },
+        data: {
+          type: NotificationTypes.NEW_MENU_ITEMS_ORDER,
+          objectType: "menuorders",
+          organization_id: organizationId.toString(),
+        },
+        image:
+          order.items[0]?.menuItemSnapShot?.image ||
+          order.combos[0]?.items[0]?.menuItemSnapShot?.image ||
+          "noimage",
+        sender: userId,
+        objectId: formattedOrder._id,
+      });
+    }
+
+    // €0 / free orders never go through payment confirmation fiscal email —
+    // send a plain order confirmation at placement.
+    if (!(Number(order.totalPrice) > 0)) {
+      fireAndForget(
+        maybeSendFreeMenuOrderConfirmation(order._id),
+        "PLAIN_FREE_MENU_ORDER_CONFIRMATION",
+      );
+    }
 
     return { order: formattedOrder };
   } catch (err) {

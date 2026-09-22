@@ -371,6 +371,12 @@ const updateOrganization = async ({ id, data }) => {
       sessionTimerLength: organization?.inAppOrderingSettings?.sessionTimerLength,
     };
     await invalidateOrganizationPickupSettingsCache(id);
+    const settingRepo = require("../../admin/inAppOrdering/settings/setting/settingRepository");
+    await settingRepo.syncSettingFromOrganizationPaymentMethods(
+      id,
+      organization.inAppOrderingSettings.paymentMethods,
+      organization.creator,
+    );
   }
 
 
