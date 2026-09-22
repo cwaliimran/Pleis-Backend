@@ -312,6 +312,16 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
 
   if (!updated) return null;
 
+  if (value === "confirmed") {
+    const {
+      maybeSendFreeReservationConfirmation,
+    } = require("../../helperUtils/plainConfirmationEmailService");
+    fireAndForget(
+      maybeSendFreeReservationConfirmation(updated._id),
+      "PLAIN_FREE_RESERVATION_CONFIRMATION",
+    );
+  }
+
   if (value === "checkedIn") {
     fireAndForget(
       (async () => {

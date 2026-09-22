@@ -295,13 +295,43 @@ function stepSourceGates() {
     "no second reservation confirmation email",
   );
   assert(
-    ticketFinalizer.includes("enqueueFiscalDocument"),
-    "ticketing still enqueues fiscal docs",
+    !ticketFinalizer.includes('kind: "ticketing_invoices"') &&
+      readSrc("backend/staff/events/eventRepository.js").includes(
+        "enqueueTicketingInvoicesOnScan",
+      ),
+    "ticketing fiscal deferred to check-in scan (not payment finalizer)",
   );
   assert(
     !ticketFinalizer.includes("Your tickets are confirmed") &&
       !ticketFinalizer.includes("ticketConfirmationEmailTemplate"),
-    "legacy ticket confirmation email removed (fiscal + PC confirmation instead)",
+    "paid ticketing finalizer has no legacy ticket confirmation (fiscal + PC instead)",
+  );
+  const plainConfirm = readSrc(
+    "backend/helperUtils/plainConfirmationEmailService.js",
+  );
+  assert(
+    plainConfirm.includes("renderPaymentConfirmationEmailHtml") &&
+      plainConfirm.includes("PLAIN_COPY_OVERRIDES") &&
+      plainConfirm.includes("attachments: []") &&
+      plainConfirm.includes("buildConfirmationOpenUrl") &&
+      !plainConfirm.includes("ticketConfirmationEmailTemplate") &&
+      !plainConfirm.includes("menuOrderConfirmationEmailTemplate") &&
+      !plainConfirm.includes("reservationConfirmationEmailTemplate") &&
+      !plainConfirm.includes("enqueueFiscalDocument") &&
+      !plainConfirm.includes("issuePaymentConfirmation"),
+    "plain free/€0 confirmation emails reuse paid confirmation-email shell (no fiscal enqueue / PC PDF)",
+  );
+  assert(
+    readSrc(
+      "backend/app/bookings/ticketings/ticketingBookingController.js",
+    ).includes("maybeSendFreeTicketingConfirmation") &&
+      readSrc(
+        "backend/app/menuItemsAndOrdering/orders/orderService.js",
+      ).includes("maybeSendFreeMenuOrderConfirmation") &&
+      readSrc(
+        "backend/app/reservations/reservationController.js",
+      ).includes("maybeSendFreeReservationConfirmation"),
+    "plain confirms hooked on free ticket / €0 order / free reservation paths",
   );
   assert(
     ticketing.includes("issuePaymentConfirmation") &&

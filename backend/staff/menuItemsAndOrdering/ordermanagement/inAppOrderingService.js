@@ -5,7 +5,7 @@ const { sendUserNotifications } = require("../../../controllers/communicationCon
 const { NotificationTypes } = require("@NotificationsModel");
 const { emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
 const { fireAndForget } = require("../../../helperUtils/responseUtil");
-const { enqueueFiscalDocument } = require("../../../bullmq/queues");
+const { maybeEnqueueOrderingConfirmation } = require("../../../commonModules/fiscalDocuments/fiscalTiming");
 const { syncMonriTransactionStatus } = require("../../../commonModules/paymentsIntegrations/monri/monriRepository");
 
 
@@ -104,14 +104,10 @@ const updateOrders = async (staffId, id, data) => {
 
   await order.save();
 
+  // Confirmation when delivered (completed) AND paid; amount>0 gated in helper
+  maybeEnqueueOrderingConfirmation(order);
+
   if (data.paymentStatus === "paid") {
-    fireAndForget(
-      enqueueFiscalDocument({
-        kind: "ordering_confirmation",
-        orderId: order._id,
-      }),
-      "FISCAL_ORDERING_CONFIRMATION",
-    );
     fireAndForget(
       syncMonriTransactionStatus(order._id, "paid"),
       "MONRI_TX_SYNC_PAID",

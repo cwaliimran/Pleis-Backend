@@ -9,6 +9,9 @@ const { generateMeta, fireAndForget } = require("../../helperUtils/responseUtil"
 const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
 const crypto = require("crypto");
 const { User } = require("@UserModel");
+const {
+  enqueueTicketingInvoicesOnScan,
+} = require("../../commonModules/fiscalDocuments/fiscalTiming");
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
   return Events.find(query).select("basicInfo schedule")
@@ -596,6 +599,11 @@ const checkInEventAttendee = async (eventId, ticketBookingId, scannedBy = null) 
     });
 
     await attendee.save();
+    // Once per paid order (jobId); safe on later scans of sibling tickets
+    fireAndForget(
+      enqueueTicketingInvoicesOnScan(attendee.order),
+      "FISCAL_TICKETING_ON_SCAN",
+    );
     return { success: true, attendee };
   }
 
@@ -616,7 +624,13 @@ const checkInEventAttendee = async (eventId, ticketBookingId, scannedBy = null) 
 
   await attendee.save();
 
-
+  // First visit for this ticket still counts as service consume for the order
+  if (currentVisits === 0) {
+    fireAndForget(
+      enqueueTicketingInvoicesOnScan(attendee.order),
+      "FISCAL_TICKETING_ON_SCAN",
+    );
+  }
 
   return { success: true, attendee };
 };
@@ -903,6 +917,24 @@ const bulkCheckInEventAttendees = async (eventId, scans, scannedBy) => {
     },
     { $set: { status: "used" } }
   );
+
+  // Fiscal once per paid order among accepted scans (jobId dedupes)
+  if (writeResult.modifiedCount > 0) {
+    const scannedBookingIds = scans
+      .map((s) => s._id)
+      .filter(Boolean)
+      .map((id) => new mongoose.Types.ObjectId(id));
+    const orderIds = await TicketingBookings.distinct("order", {
+      _id: { $in: scannedBookingIds },
+      "ticket.snapshot.event": eventObjectId,
+    });
+    for (const orderId of orderIds) {
+      fireAndForget(
+        enqueueTicketingInvoicesOnScan(orderId),
+        "FISCAL_TICKETING_ON_SCAN",
+      );
+    }
+  }
 
   return {
     acceptedCount: writeResult.modifiedCount,

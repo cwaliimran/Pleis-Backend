@@ -102,11 +102,19 @@ const getTicketingBookings = async (query = {}, options = {}) => {
 
 
 const getTicketingBookingById = async (id) => {
-  const bookingId = new mongoose.Types.ObjectId(id);
+  // Frontend may send MongoDB _id or human-readable ticketBookingId (e.g. TBK-XXXXXX)
+  const isObjectId =
+    typeof id === "string" &&
+    mongoose.Types.ObjectId.isValid(id) &&
+    /^[a-fA-F0-9]{24}$/.test(id);
+
+  const match = isObjectId
+    ? { _id: new mongoose.Types.ObjectId(id) }
+    : { ticketBookingId: String(id).toUpperCase() };
 
   const result = await TicketingBookings.aggregate([
-    // 1️⃣ Match booking
-    { $match: { _id: bookingId } },
+    // 1️⃣ Match booking by _id or ticketBookingId
+    { $match: match },
 
     // 2️⃣ Populate organization
     {

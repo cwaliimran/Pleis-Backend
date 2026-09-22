@@ -11,6 +11,9 @@ const MenuOrders = require("@OrdersModel");
 const { formatOrdersForUI } = require("../formatters/formatOrdersForUI");
 const { getModelCounts } = require("@utils/dbUtils/queryUtil");
 const { getFullImageUrl } = require("@utils/imageHelper");
+const {
+  visibleOnOrderBoardMatch,
+} = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
 
 const withFullItemImage = (item) => {
   if (!item?.menuItemSnapShot) return item;
@@ -153,6 +156,7 @@ const getOrders = async ({
   const eventCountQuery = {
     ...statusFilter,
     ...keywordMatch,
+    ...visibleOnOrderBoardMatch,
     organization: { $in: organizationsIds }, // Add organization match
   };
 
@@ -176,6 +180,7 @@ const getOrders = async ({
     {
       $match: {
         organization: { $in: organizationsIds }, // Match against the parsed organizations
+        ...visibleOnOrderBoardMatch, // Hide unpaid card/Apple Pay until paid
       },
     },
 
@@ -333,10 +338,12 @@ const getOrders = async ({
       Orders.countDocuments({
         organization: { $in: organizationsIds },
         status: { $nin: ["cancelled", "completed", "rejected","expired"] },
-      }), 
+        ...visibleOnOrderBoardMatch,
+      }),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
         status: { $in: ["cancelled", "completed", "rejected","expired"] },
+        ...visibleOnOrderBoardMatch,
       }),
       getEventsCounts(eventCountQuery),
     ]);

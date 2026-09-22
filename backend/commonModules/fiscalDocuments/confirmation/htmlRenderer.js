@@ -100,9 +100,10 @@ function dataTokens(data) {
   };
 }
 
-function fillTokens(html, data, itemRowsHtml, kind) {
+function fillTokens(html, data, itemRowsHtml, kind, copyOverrides = {}) {
   const locale = resolveLocale(data.locale);
-  html = fillRawTokens(html, copyTokens(getCopy(locale), kind));
+  const tokens = { ...copyTokens(getCopy(locale), kind), ...copyOverrides };
+  html = fillRawTokens(html, tokens);
   html = fillEscapedTokens(html, dataTokens(data));
   return html.split("{{ITEM_ROWS}}").join(itemRowsHtml || "");
 }
@@ -195,8 +196,17 @@ function injectActionsBar(html, options) {
   return bar + html;
 }
 
-function applyTemplate(html, data, { itemRowsHtml, hasVoucher, isCancellation, filename, documentUrl, injectActions, kind }) {
-  html = fillTokens(html, data, itemRowsHtml, kind);
+function applyTemplate(html, data, {
+  itemRowsHtml,
+  hasVoucher,
+  isCancellation,
+  filename,
+  documentUrl,
+  injectActions,
+  kind,
+  copyOverrides,
+}) {
+  html = fillTokens(html, data, itemRowsHtml, kind, copyOverrides);
   if (!hasVoucher) {
     html = stripDataBlock(html, "voucher");
   }
@@ -231,7 +241,7 @@ function renderPaymentConfirmationHtml(data, options = {}) {
   });
 }
 
-function renderPaymentConfirmationEmailHtml(data) {
+function renderPaymentConfirmationEmailHtml(data, options = {}) {
   const view = {
     ...data,
     logoSrc: data.logoSrc || resolveLogoSrc({ forEmail: true }),
@@ -242,6 +252,7 @@ function renderPaymentConfirmationEmailHtml(data) {
     isCancellation: Boolean(view.isCancellation),
     injectActions: false,
     kind: "email",
+    copyOverrides: options.copyOverrides || {},
   });
   return stripEmbeddedFonts(html);
 }

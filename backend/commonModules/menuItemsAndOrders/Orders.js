@@ -110,6 +110,11 @@ const OrdersSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Set when a plain (non-fiscal) €0 confirmation email is sent
+    plainConfirmationEmailSentAt: {
+      type: Date,
+      default: null,
+    },
     transactionId: {
       type: String,
       default: null,

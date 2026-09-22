@@ -134,6 +134,8 @@ const scanQrController = async (req, res) => {
 
 
 
+      // Preview only — check-in (staff/events checkIn) consumes the ticket and
+      // enqueues ticketing_invoices for paid orders (see fiscalTiming).
       return sendResponse({
         res,
         statusCode: 200,
@@ -152,8 +154,7 @@ const scanQrController = async (req, res) => {
       const reservationData =
         await getUserReservationDetailsService(id, timezone);
 
-
-      if (!reservationData) {
+      if (!reservationData?.reservation) {
         return sendResponse({
           res,
           statusCode: 404,
