@@ -24,6 +24,15 @@ const createOrganization = async ({ data, timezone }) => {
     data.basicInfo.media.logoMarker = logoMarker || "";
   }
   let org = await organizationRepo.createOrganization(data);
+  // Keep Setting in sync when create payload includes payment flags
+  if (data?.inAppOrderingSettings?.paymentMethods) {
+    const settingRepo = require("../inAppOrdering/settings/setting/settingRepository");
+    await settingRepo.syncSettingFromOrganizationPaymentMethods(
+      org._id,
+      data.inAppOrderingSettings.paymentMethods,
+      org.creator || data.creator,
+    );
+  }
   return formatOrganization(org, [], timezone);
 };
 
@@ -293,69 +302,66 @@ const updateOrganization = async ({ id, data, timezone }) => {
 
     // ---------- UPDATE inAppOrderingSettings ----------
     if (inAppOrderingSettings !== undefined) {
+      const existingSettings =
+        organization.inAppOrderingSettings?.toObject?.() ||
+        organization.inAppOrderingSettings ||
+        {};
+
       organization.inAppOrderingSettings = {
+        ...existingSettings,
         paymentMethods: {
           instantPayment:
             inAppOrderingSettings?.paymentMethods?.instantPayment ??
-            organization?.inAppOrderingSettings?.paymentMethods?.instantPayment ??
+            existingSettings?.paymentMethods?.instantPayment ??
             false,
 
           payLater: {
             allow:
               inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
-              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+              existingSettings?.paymentMethods?.payLater?.allow ??
               false,
 
             enableOrderAcceptance:
               inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
-              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+              existingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
               false,
 
             chargeOnAcceptance:
               inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
-              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+              existingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
               false,
 
             chargeOnDelivery:
               inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
-              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+              existingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
               false,
           },
 
           cashPayment:
             inAppOrderingSettings?.paymentMethods?.cashPayment ??
-            organization?.inAppOrderingSettings?.paymentMethods?.cashPayment ??
+            existingSettings?.paymentMethods?.cashPayment ??
             false,
         },
 
         deliveryMethods: {
           counterPickup:
             inAppOrderingSettings?.deliveryMethods?.counterPickup ??
-            organization?.inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+            existingSettings?.deliveryMethods?.counterPickup ??
             true,
 
           tableDelivery:
             inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
-            organization?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+            existingSettings?.deliveryMethods?.tableDelivery ??
             false,
 
           toGo:
             inAppOrderingSettings?.deliveryMethods?.toGo ??
-            organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
+            existingSettings?.deliveryMethods?.toGo ??
             false,
         },
-        // Preserve v2 fields when updating payment/delivery via v1
-        tips: organization?.inAppOrderingSettings?.tips,
-        sessionTimerLength: organization?.inAppOrderingSettings?.sessionTimerLength,
       };
+      organization.markModified("inAppOrderingSettings");
       await organizationRepo.invalidateOrganizationPickupSettingsCache(id);
-      // Mirror payment flags into Setting (placeOrder / admin settings source)
-      const settingRepo = require("../inAppOrdering/settings/setting/settingRepository");
-      await settingRepo.syncSettingFromOrganizationPaymentMethods(
-        id,
-        organization.inAppOrderingSettings.paymentMethods,
-        organization.creator,
-      );
     }
 
 
@@ -379,6 +385,16 @@ const updateOrganization = async ({ id, data, timezone }) => {
     await organization.save({ session });
 
     await session.commitTransaction();
+
+    // Sync Setting after Org commit so dual-write can't leave Setting ahead of a rolled-back Org
+    if (inAppOrderingSettings !== undefined) {
+      const settingRepo = require("../inAppOrdering/settings/setting/settingRepository");
+      await settingRepo.syncSettingFromOrganizationPaymentMethods(
+        id,
+        organization.inAppOrderingSettings?.paymentMethods,
+        organization.creator,
+      );
+    }
 
     // Return formatted organization
     return formatOrganization(organization, [], timezone);

@@ -24,6 +24,14 @@ const createOrganization = async ({ data }) => {
     }) || "";
   }
   let org = await organizationRepo.createOrganization(data);
+  if (data?.inAppOrderingSettings?.paymentMethods) {
+    const settingRepo = require("../../admin/inAppOrdering/settings/setting/settingRepository");
+    await settingRepo.syncSettingFromOrganizationPaymentMethods(
+      org._id,
+      data.inAppOrderingSettings.paymentMethods,
+      org.creator || data.creator,
+    );
+  }
   return formatOrganization(org);
 };
 
@@ -315,68 +323,66 @@ const updateOrganization = async ({ id, data }) => {
 
   // ---------- UPDATE inAppOrderingSettings ----------
   if (inAppOrderingSettings !== undefined) {
+    const existingSettings =
+      organization.inAppOrderingSettings?.toObject?.() ||
+      organization.inAppOrderingSettings ||
+      {};
+
     organization.inAppOrderingSettings = {
+      ...existingSettings,
       paymentMethods: {
         instantPayment:
           inAppOrderingSettings?.paymentMethods?.instantPayment ??
-          organization?.inAppOrderingSettings?.paymentMethods?.instantPayment ??
+          existingSettings?.paymentMethods?.instantPayment ??
           false,
 
         payLater: {
           allow:
             inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
-            organization?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+            existingSettings?.paymentMethods?.payLater?.allow ??
             false,
 
           enableOrderAcceptance:
             inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
-            organization?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+            existingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
             false,
 
           chargeOnAcceptance:
             inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
-            organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+            existingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
             false,
 
           chargeOnDelivery:
             inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
-            organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+            existingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
             false,
         },
 
         cashPayment:
           inAppOrderingSettings?.paymentMethods?.cashPayment ??
-          organization?.inAppOrderingSettings?.paymentMethods?.cashPayment ??
+          existingSettings?.paymentMethods?.cashPayment ??
           false,
       },
 
       deliveryMethods: {
         counterPickup:
           inAppOrderingSettings?.deliveryMethods?.counterPickup ??
-          organization?.inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+          existingSettings?.deliveryMethods?.counterPickup ??
           true,
 
         tableDelivery:
           inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
-          organization?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+          existingSettings?.deliveryMethods?.tableDelivery ??
           false,
 
         toGo:
           inAppOrderingSettings?.deliveryMethods?.toGo ??
-          organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
+          existingSettings?.deliveryMethods?.toGo ??
           false,
       },
-      // Preserve v2 fields when updating payment/delivery via v1
-      tips: organization?.inAppOrderingSettings?.tips,
-      sessionTimerLength: organization?.inAppOrderingSettings?.sessionTimerLength,
     };
+    organization.markModified("inAppOrderingSettings");
     await invalidateOrganizationPickupSettingsCache(id);
-    const settingRepo = require("../../admin/inAppOrdering/settings/setting/settingRepository");
-    await settingRepo.syncSettingFromOrganizationPaymentMethods(
-      id,
-      organization.inAppOrderingSettings.paymentMethods,
-      organization.creator,
-    );
   }
 
 
@@ -397,6 +403,15 @@ const updateOrganization = async ({ id, data }) => {
   }
 
   await organization.save();
+
+  if (inAppOrderingSettings !== undefined) {
+    const settingRepo = require("../../admin/inAppOrdering/settings/setting/settingRepository");
+    await settingRepo.syncSettingFromOrganizationPaymentMethods(
+      id,
+      organization.inAppOrderingSettings?.paymentMethods,
+      organization.creator,
+    );
+  }
 
   /* ================= SUBSCRIPTION UPDATE ================= */
   const user = await User.findById(userId);

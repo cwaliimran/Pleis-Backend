@@ -37,7 +37,27 @@ const updateSetttings = async (organization, data) => {
     return Setttings;
   }
 
+  const prevPaymentMethod =
+    Setttings.paymentMethod?.toObject?.() || Setttings.paymentMethod || {};
+
   Object.assign(Setttings, updateData);
+  // Deep-merge paymentMethod so sparse PUTs don't wipe sibling flags
+  if (data.paymentMethod && typeof data.paymentMethod === "object") {
+    Setttings.paymentMethod = {
+      inAppPayment:
+        data.paymentMethod.inAppPayment !== undefined
+          ? data.paymentMethod.inAppPayment
+          : prevPaymentMethod.inAppPayment,
+      payNow:
+        data.paymentMethod.payNow !== undefined
+          ? data.paymentMethod.payNow
+          : prevPaymentMethod.payNow,
+      cash:
+        data.paymentMethod.cash !== undefined
+          ? data.paymentMethod.cash
+          : prevPaymentMethod.cash,
+    };
+  }
   await Setttings.save();
   await SetttingsRepo.invalidateOrganizationSettingsCache(organization);
   await SetttingsRepo.syncOrganizationPaymentMethodsFromSetting(

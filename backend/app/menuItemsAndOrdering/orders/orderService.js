@@ -62,7 +62,7 @@ const {
   isAwaitingInAppPayment,
 } = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
 
-const assertPaymentMethodAllowed = (setting, paymentMethod) => {
+const assertPaymentMethodAllowed = (setting, paymentMethod, paymentTiming) => {
   const methods = setting?.paymentMethod || {};
   if (paymentMethod === "cash" && methods.cash !== true) {
     const err = new Error("Cash payment is not enabled for this organization");
@@ -75,6 +75,31 @@ const assertPaymentMethodAllowed = (setting, paymentMethod) => {
   ) {
     const err = new Error(
       "In-app payment is not enabled for this organization",
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+  // payNow setting: card/Apple Pay must settle up front; payLater timing only when payNow is off
+  if (
+    (paymentMethod === "card" || paymentMethod === "applePay") &&
+    paymentTiming === "payLater" &&
+    methods.payNow === true
+  ) {
+    const err = new Error(
+      "Pay later is not enabled for in-app payments at this organization",
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+  if (
+    (paymentMethod === "card" || paymentMethod === "applePay") &&
+    paymentTiming === "payNow" &&
+    methods.payNow !== true &&
+    methods.inAppPayment === true
+  ) {
+    // in-app allowed only as settle-later — reject forced payNow
+    const err = new Error(
+      "Pay now is not enabled for this organization",
     );
     err.statusCode = 400;
     throw err;
@@ -461,7 +486,7 @@ const placeOrder = async ({
     }
 
     const setting = await getSetttings({ organization: organizationId });
-    assertPaymentMethodAllowed(setting, paymentMethod);
+    assertPaymentMethodAllowed(setting, paymentMethod, paymentTiming);
     totalPrice += Number(tip || 0);
     let orderData = {
       user: userId,
@@ -769,6 +794,17 @@ const updateOrder = async ({
       const isOnlinePayment =
         paymentForStatus === "applePay" || paymentForStatus === "card";
       const needsConfirmation = orderNeedsConfirmation(orderItems, orderCombos);
+
+      if (paymentMethod !== undefined) {
+        const settingForMethod = await getSetttings({
+          organization: organizationId,
+        });
+        assertPaymentMethodAllowed(
+          settingForMethod,
+          paymentMethod,
+          existingOrder.paymentTiming,
+        );
+      }
 
       if (isOnlinePayment || needsConfirmation) {
         orderStatus = "pending";
