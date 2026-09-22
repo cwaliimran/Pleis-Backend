@@ -14,6 +14,10 @@ const { getFullImageUrl } = require("@utils/imageHelper");
 const {
   visibleOnOrderBoardMatch,
 } = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
+const {
+  activeOnOrderBoardMatch,
+  pastOnOrderBoardMatch,
+} = require("../../../commonModules/menuItemsAndOrders/orderLifecycle");
 
 const withFullItemImage = (item) => {
   if (!item?.menuItemSnapShot) return item;
@@ -120,13 +124,10 @@ const getOrders = async ({
 
   if (status && status.trim()) {
     if (status.trim() === "active") {
-      statusFilter = {
-        status: { $nin: ["cancelled", "completed", "rejected","expired"] },
-      };
+      // Doc: Active until BOTH axes terminal (Delivered+Paid / cancelled / rejected)
+      statusFilter = { ...activeOnOrderBoardMatch };
     } else if (status.trim() === "past") {
-      statusFilter = {
-        status: { $in: ["cancelled", "completed", "rejected","expired"] },
-      };
+      statusFilter = { ...pastOnOrderBoardMatch };
     }
   }
   if (paymentStatus && paymentStatus.trim()) {
@@ -337,12 +338,12 @@ const getOrders = async ({
       MenuOrders.aggregate(pipeline),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $nin: ["cancelled", "completed", "rejected","expired"] },
+        ...activeOnOrderBoardMatch,
         ...visibleOnOrderBoardMatch,
       }),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $in: ["cancelled", "completed", "rejected","expired"] },
+        ...pastOnOrderBoardMatch,
         ...visibleOnOrderBoardMatch,
       }),
       getEventsCounts(eventCountQuery),

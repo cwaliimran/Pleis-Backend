@@ -1417,10 +1417,17 @@ const getUserReservationDetails = async (id) => {
         },
       },
 
-      // 4️⃣ Convert optionalEventId
+      // 4️⃣ Convert optionalEventId (safe: null/invalid → null)
       {
         $addFields: {
-          optionalEventId: { $toObjectId: "$optionalEventId" },
+          optionalEventId: {
+            $convert: {
+              input: "$optionalEventId",
+              to: "objectId",
+              onError: null,
+              onNull: null,
+            },
+          },
         },
       },
 

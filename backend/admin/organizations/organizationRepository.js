@@ -30,7 +30,7 @@ const {
 const { getActiveSubscription } = require("../usersManagement/usersRepository");
 const { cache, invalidate } = require("@redisCache");
 
-const ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY = "organizationPickupSettings";
+const ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY = "organizationPickupSettings:v2";
 
 const getOrgPickupSettingsCacheKey = (organizationId) =>
   `${ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY}:${String(organizationId)}`;
@@ -575,7 +575,8 @@ const getOrganizationPickupSettings = async (organizationId) => {
   return cache({
     namespace: getOrgPickupSettingsCacheKey(organizationId),
     params: {},
-    ttl: null,
+    // Match settings TTL so a missed invalidate cannot stick forever
+    ttl: 30,
     fetchFn: async () => {
       const [org, appSettings] = await Promise.all([
         Organizations.findById(organizationId)

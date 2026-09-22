@@ -70,11 +70,12 @@ const OrdersSchema = new mongoose.Schema(
         "pending",
         "confirmed",
         "sent",
-        "completed",
+        "ready",
+        "delivered", // fulfilment terminal (doc); prefer over legacy completed
+        "completed", // legacy alias of delivered — still accepted
         "cancelled",
         "rejected",
         "preorder",
-        "ready",
         "expired",
       ],
       default: "pending",
@@ -89,6 +90,15 @@ const OrdersSchema = new mongoose.Schema(
       required: true,
       enum: ["payNow", "payLater"],
       default: "payNow",
+    },
+    /**
+     * Auto-accept + Pay now: order exists while guest pays, but must not appear
+     * on staff/admin boards until payment succeeds (Post-Order Screen Flow).
+     */
+    hideUntilPaid: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
 
     notes: { type: String, default: "" },

@@ -297,8 +297,7 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         "LEDGER_TICKETING_CAPTURE",
       );
       // ticketing_invoices: deferred to first paid-ticket check-in (fiscalTiming)
-      // ordering_confirmation: deferred until menu order completed+paid
-      // reservation_confirmation: only min-spend on first voucher spend (never at pay)
+      // ordering / reservation confirmations: enqueued at payment in their finalizers
     }
 
     if (order.orderPricing?.total && order.orderPricing.total > 0) {

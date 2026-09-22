@@ -27,7 +27,8 @@ function applyLedgerListFilters(match, query = {}) {
  *
  * Phase C (ledger/fiscalizeService + offAppFiscalizeService + admin /payouts):
  *   Fiscalize batch, commission eRačun, off-app batch. Live Billko gated by
- *   BILLKO_FISCALIZE_ENABLED=true (dry-run otherwise).
+ *   BILLKO_FISCALIZE_ENABLED=true (same flag also gates ticketing / subscription
+ *   invoice create in fiscalDocuments; dry-run / skip otherwise).
  *
  * Imperial Lake B2B (billkoImperialLakeClient + billkoB2bDocumentsService):
  *   GET /admin/payouts/billko/incoming|outgoing + POST …/report-payment.
@@ -42,7 +43,7 @@ function remainingWiringNotes() {
       "Ticketing→HELD; Ordering→PENDING; Reservation/Subscription→EXCLUDED with machine reason. Cash ordering→EXCLUDED OFF_APP_PAYMENT.",
     payouts: "Phase B: statement generate/confirm/cancel + pain.001 download under /admin/payouts. Manual bank upload only.",
     fiscalize:
-      "Phase C: POST /admin/payouts/fiscalize (PAID + NOT_FISCALIZED) → Pleis→organizer commission eRačun. Gate: BILLKO_FISCALIZE_ENABLED.",
+      "Phase C: POST /admin/payouts/fiscalize (PAID + NOT_FISCALIZED) → Pleis→organizer commission eRačun. Gate: BILLKO_FISCALIZE_ENABLED (also gates ticketing/subscription Billko creates).",
     offApp:
       "Phase C: /admin/payouts/off-app-batches — ordering cash/external; confirm → commission eRačun; never in pain.001.",
     billkoLake:
@@ -57,7 +58,7 @@ function remainingWiringNotes() {
         "PLEIS_LOCKED_IBAN / PLEIS_OPERATING_IBAN config",
       ],
       phaseCDelivered: [
-        "Fiscalize batch / commission eRačun (BILLKO_FISCALIZE_ENABLED)",
+        "Fiscalize batch / commission eRačun (BILLKO_FISCALIZE_ENABLED; also gates ticketing/subscription Billko)",
         "off-app batch generate/confirm/cancel",
       ],
       lakeDelivered: [

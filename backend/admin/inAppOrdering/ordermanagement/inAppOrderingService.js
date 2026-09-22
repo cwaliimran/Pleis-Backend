@@ -17,6 +17,13 @@ const { getOrgCompanyOrganizer } = require("../../../admin/organizations/organiz
 const { fireAndForget } = require("../../../helperUtils/responseUtil");
 const { maybeEnqueueOrderingConfirmation } = require("../../../commonModules/fiscalDocuments/fiscalTiming");
 const { syncMonriTransactionStatus } = require("../../../commonModules/paymentsIntegrations/monri/monriRepository");
+const {
+  assertFulfilmentTransition,
+  assertPaymentTransition,
+  normalizeFulfilmentStatus,
+  resolveStaffNextActions,
+  resolveGuestNextStep,
+} = require("../../../commonModules/menuItemsAndOrders/orderLifecycle");
 
 const getDateRange = (period) => {
   const now = new Date();
@@ -155,14 +162,43 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   const updateTypes = [];
 
   /* ===============================
-     1️⃣ STATUS
+     1️⃣ STATUS (fulfilment axis)
   =============================== */
   if (data.status !== undefined && data.status !== order.status) {
-    order.status = data.status;
-    if (["pending", "confirmed", "rejected"].includes(data.status)) {
+    if (
+      (data.status === "rejected" || normalizeFulfilmentStatus(data.status) === "rejected") &&
+      !(data.reasonForRejection || data.resaonForRejection)
+    ) {
+      return { error: "rejection_reason_required" };
+    }
+    if (
+      data.status === "cancelled" &&
+      !data.reasonForCancellation
+    ) {
+      return { error: "cancellation_reason_required" };
+    }
+
+    let nextStatus;
+    try {
+      nextStatus = assertFulfilmentTransition(order, data.status);
+    } catch (e) {
+      return { error: e.message || "invalid_fulfilment_transition" };
+    }
+
+    order.status = nextStatus;
+    if (["pending", "confirmed", "rejected"].includes(nextStatus)) {
       order.items.forEach((item) => {
-        item.status = data.status;
+        item.status = nextStatus === "delivered" ? item.status : nextStatus;
       });
+    }
+    if (nextStatus === "delivered" || nextStatus === "completed") {
+      (order.items || []).forEach((item) => {
+        item.isdelivered = true;
+      });
+      (order.combos || []).forEach((combo) => {
+        combo.isdelivered = true;
+      });
+      deliveryChanged = true;
     }
     statusChanged = true;
     updateTypes.push("status");
@@ -172,6 +208,12 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
      2️⃣ PAYMENT STATUS
   =============================== */
   if (data.paymentStatus !== undefined && data.paymentStatus !== order.paymentStatus) {
+    try {
+      assertPaymentTransition(order, data.paymentStatus);
+    } catch (e) {
+      return { error: e.message || "invalid_payment_transition" };
+    }
+
     order.paymentStatus = data.paymentStatus;
     paymentChanged = true;
     updateTypes.push("payment");
@@ -181,11 +223,11 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
     }
 
     /* ==========================
-           🎯 Loyalty Points
+           🎯 Loyalty Points — only when newly marked paid
         ========================== */
     const totalPrice = order.totalPrice || 0;
 
-    if (totalPrice > 0) {
+    if (data.paymentStatus === "paid" && totalPrice > 0) {
       const saveTransaction = await webhookRepository.saveIfNotProcessed({
         provider: "cash",
         orderNumber: order._id,
@@ -321,7 +363,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
 
   await order.save();
 
-  // Confirmation when delivered (completed) AND paid; amount>0 gated in helper
+  // Payment confirmation when paid (amount>0 gated in helper); not at delivery
   maybeEnqueueOrderingConfirmation(order);
 
   if (paymentChanged && order.paymentStatus === "paid") {
@@ -374,7 +416,11 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
     });
   }
 
-  return order;
+  const plain = typeof order.toObject === "function" ? order.toObject() : order;
+  if (plain.status === "completed") plain.status = "delivered";
+  plain.nextActions = resolveStaffNextActions(order);
+  plain.guestNextStep = resolveGuestNextStep(order);
+  return plain;
 };
 
 const updateInAppOrders = async (organization, isOrderingEnabled) => {

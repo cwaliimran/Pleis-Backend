@@ -1,14 +1,16 @@
 const Setttings = require("./Setting");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const { cache, invalidate } = require("@redisCache");
+const { cache, invalidate, setJson, l1ClearPrefix } = require("@redisCache");
 const Organizations = require("@OrganizationModel");
 const {
   mapSettingToOrgPaymentMethods,
 } = require("../../../../shared/organizations/orderingPaymentSettingsMap");
 
-const IN_APP_ORDERING_SETTINGS_CACHE_KEY = "inAppOrderingSettings";
-const ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY = "organizationPickupSettings";
+const IN_APP_ORDERING_SETTINGS_CACHE_KEY = "inAppOrderingSettings:v2";
+const ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY = "organizationPickupSettings:v2";
+/** Safety net: if invalidate is skipped (Redis blip), stale entries expire. */
+const SETTINGS_CACHE_TTL_SEC = 30;
 
 const normalizeOrgId = (organizationId) => {
   if (!organizationId) return "";
@@ -21,6 +23,29 @@ const normalizeOrgId = (organizationId) => {
 const getOrgCacheKey = (organizationId) =>
   `${IN_APP_ORDERING_SETTINGS_CACHE_KEY}:${normalizeOrgId(organizationId)}`;
 
+const getPickupCacheKey = (organizationId) =>
+  `${ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY}:${normalizeOrgId(organizationId)}`;
+
+const toPlainSetting = (doc) => {
+  if (!doc) return {};
+  if (typeof doc.toObject === "function") return doc.toObject();
+  return doc;
+};
+
+/**
+ * Clear L1 + Redis, then write-through the fresh Setting doc.
+ * Prevents forever-stale hits when invalidate was skipped while Redis was down.
+ */
+const warmOrganizationSettingsCache = async (organizationId, settingDoc) => {
+  const orgId = normalizeOrgId(organizationId);
+  if (!orgId) return;
+  const key = getOrgCacheKey(orgId);
+  const plain = toPlainSetting(settingDoc);
+  l1ClearPrefix(key);
+  await invalidate(key);
+  await setJson(key, plain, SETTINGS_CACHE_TTL_SEC);
+};
+
 const invalidateOrganizationSettingsCache = async (organizationId) => {
   if (!organizationId) return;
   await invalidate(getOrgCacheKey(organizationId));
@@ -28,9 +53,7 @@ const invalidateOrganizationSettingsCache = async (organizationId) => {
 
 const invalidatePickupSettingsCache = async (organizationId) => {
   if (!organizationId) return;
-  await invalidate(
-    `${ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY}:${normalizeOrgId(organizationId)}`,
-  );
+  await invalidate(getPickupCacheKey(organizationId));
 };
 
 /**
@@ -77,8 +100,9 @@ const getSetttings = async ({ organization }) => {
   return cache({
     namespace: getOrgCacheKey(organization),
     params: {},
-    ttl: null, // rarely changes — invalidate on write
-    memoryTtl: 300, // L1 warm path for placeOrder / menu reads
+    ttl: SETTINGS_CACHE_TTL_SEC,
+    // No process L1 — other API/worker processes (or Redis-down writes) would serve stale
+    memoryTtl: 0,
     fetchFn: () => fetchSettingsFromDb(organization),
   });
 };
@@ -145,10 +169,10 @@ const findSetttingsById = async (organization) => {
 const findByIdAndUpdate = async (id, data) => {
   const updated = await Setttings.findByIdAndUpdate(id, data, { new: true });
   if (updated?.organization) {
-    await invalidateOrganizationSettingsCache(updated.organization);
+    await warmOrganizationSettingsCache(updated.organization, updated);
     await syncOrganizationPaymentMethodsFromSetting(
       updated.organization,
-      updated.toObject ? updated.toObject() : updated,
+      toPlainSetting(updated),
     );
   }
   return updated;
@@ -158,10 +182,10 @@ const createSetttings = async (data) => {
   const newSetttings = new Setttings(data);
   await newSetttings.save();
   const orgId = newSetttings.organization || data.organization;
-  await invalidateOrganizationSettingsCache(orgId);
+  await warmOrganizationSettingsCache(orgId, newSetttings);
   await syncOrganizationPaymentMethodsFromSetting(
     orgId,
-    newSetttings.toObject ? newSetttings.toObject() : newSetttings,
+    toPlainSetting(newSetttings),
   );
   return newSetttings;
 };
@@ -205,8 +229,8 @@ const syncSettingFromOrganizationPaymentMethods = async (
   existing.paymentMethod = mapped.paymentMethod;
   existing.automaticOrderAcceptance = mapped.automaticOrderAcceptance;
   await existing.save();
-  await invalidateOrganizationSettingsCache(orgId);
-  // Org already has the paymentMethods the caller wrote — only refresh caches
+  await warmOrganizationSettingsCache(orgId, existing);
+  // Org already has the paymentMethods the caller wrote — only refresh pickup
   await invalidatePickupSettingsCache(orgId);
   return existing;
 };
@@ -218,6 +242,7 @@ module.exports = {
   getSetttingsSummary,
   createSetttings,
   invalidateOrganizationSettingsCache,
+  warmOrganizationSettingsCache,
   syncOrganizationPaymentMethodsFromSetting,
   syncSettingFromOrganizationPaymentMethods,
 };

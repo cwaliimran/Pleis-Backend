@@ -12,6 +12,7 @@ const {
   isInvalidApiKeyError,
   refundInvoice,
   isBillkoStornoEnabled,
+  isBillkoFiscalizeEnabled,
 } = require("../../paymentsIntegrations/billko/billkoClient");
 const {
   stripPdfPayload,
@@ -142,6 +143,15 @@ async function ensureInvoice({
     }
     await storeInvoicePdfIfAvailable(existing);
     return existing;
+  }
+
+  if (!isBillkoFiscalizeEnabled()) {
+    console.log(
+      "[billko] fiscalize disabled — skipping ensureInvoice",
+      kind,
+      orderNumber,
+    );
+    return null;
   }
 
   let remote = [];
@@ -284,82 +294,94 @@ async function issueTicketingInvoices(orderId) {
       : Promise.resolve(null),
   ]);
 
-  const seller = await getOrganizerSeller(order.companyOrganizer, organization);
+  const fiscalizeEnabled = isBillkoFiscalizeEnabled();
+  // PC path does not need a Billko API key; only live invoice create does.
+  const seller = fiscalizeEnabled
+    ? await getOrganizerSeller(order.companyOrganizer, organization)
+    : await getOrganizerParty(order.companyOrganizer, organization);
   const ticketLines = groupTicketLines(bookings);
-  const paymentType = mapGatewayPaymentType(order.paymentDetails?.paymentMethod);
-  const billingInformation = buildBillingInformation(
-    {
-      ...(billing || {}),
-      email: billing?.email || profile.email,
-    },
-    {
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      email: profile.email,
-    },
-  );
   const orderNumber = String(order._id);
   const feeTotal = toGross(order.orderPricing?.taxAmount || 0);
 
   const invoices = [];
 
-  if (feeTotal > 0) {
-    const feeProducts = buildServiceFeeProducts(ticketLines, feeTotal);
-    const feePayload = buildCreateInvoicePayload({
+  if (!fiscalizeEnabled) {
+    console.log(
+      "[billko] fiscalize disabled — skipping ticketing invoices",
       orderNumber,
-      products: feeProducts,
+    );
+  } else {
+    const paymentType = mapGatewayPaymentType(order.paymentDetails?.paymentMethod);
+    const billingInformation = buildBillingInformation(
+      {
+        ...(billing || {}),
+        email: billing?.email || profile.email,
+      },
+      {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+      },
+    );
+
+    if (feeTotal > 0) {
+      const feeProducts = buildServiceFeeProducts(ticketLines, feeTotal);
+      const feePayload = buildCreateInvoicePayload({
+        orderNumber,
+        products: feeProducts,
+        paymentType,
+        billingInformation,
+      });
+      invoices.push(
+        await ensureInvoice({
+          kind: "service_fee",
+          seller: "pleis",
+          apiKey: getPleisBillkoApiKey(),
+          payload: feePayload,
+          orderType: "ticketingbookings",
+          orderId: order._id,
+          orderNumber,
+          organization: order.organization,
+          companyOrganizer: order.companyOrganizer,
+          user: userId,
+          uniqueCodePrefix: "FEE-",
+        }),
+      );
+    }
+
+    // Billko §4.3: organizer lines need attribution. Product note prints under
+    // each line; invoice-level note is also set because one organizer covers the
+    // whole ticket invoice (and our PDF reads {{INVOICE_NOTE}}).
+    const organizerAttributionNote = buildOrganizerAttributionNote(seller);
+    const ticketProducts = buildTicketProducts(
+      ticketLines,
+      organizerAttributionNote,
+    );
+    const ticketPayload = buildCreateInvoicePayload({
+      orderNumber,
+      products: ticketProducts,
       paymentType,
       billingInformation,
+      note: organizerAttributionNote,
     });
     invoices.push(
       await ensureInvoice({
-        kind: "service_fee",
-        seller: "pleis",
-        apiKey: getPleisBillkoApiKey(),
-        payload: feePayload,
+        kind: "tickets",
+        seller: "organizer",
+        apiKey: seller.apiKey,
+        payload: ticketPayload,
         orderType: "ticketingbookings",
         orderId: order._id,
         orderNumber,
         organization: order.organization,
         companyOrganizer: order.companyOrganizer,
         user: userId,
-        uniqueCodePrefix: "FEE-",
+        uniqueCodePrefix: "TCK-",
       }),
     );
+
+    await maybeEmailTicketingInvoicePdfs(orderNumber, userId);
   }
-
-  // Billko §4.3: organizer lines need attribution. Product note prints under
-  // each line; invoice-level note is also set because one organizer covers the
-  // whole ticket invoice (and our PDF reads {{INVOICE_NOTE}}).
-  const organizerAttributionNote = buildOrganizerAttributionNote(seller);
-  const ticketProducts = buildTicketProducts(
-    ticketLines,
-    organizerAttributionNote,
-  );
-  const ticketPayload = buildCreateInvoicePayload({
-    orderNumber,
-    products: ticketProducts,
-    paymentType,
-    billingInformation,
-    note: organizerAttributionNote,
-  });
-  invoices.push(
-    await ensureInvoice({
-      kind: "tickets",
-      seller: "organizer",
-      apiKey: seller.apiKey,
-      payload: ticketPayload,
-      orderType: "ticketingbookings",
-      orderId: order._id,
-      orderNumber,
-      organization: order.organization,
-      companyOrganizer: order.companyOrganizer,
-      user: userId,
-      uniqueCodePrefix: "TCK-",
-    }),
-  );
-
-  await maybeEmailTicketingInvoicePdfs(orderNumber, userId);
 
   const customerName =
     [billing?.firstName, billing?.lastName].filter(Boolean).join(" ") ||
@@ -856,6 +878,14 @@ async function issueSubscriptionInvoice(transactionId) {
     kind: "subscription",
   });
   if (existing?.billkoId) return existing;
+
+  if (!isBillkoFiscalizeEnabled()) {
+    console.log(
+      "[billko] fiscalize disabled — skipping subscription invoice",
+      tx.orderNumber,
+    );
+    return null;
+  }
 
   const User = require("mongoose").model("User");
   const user = await User.findById(tx.userId)

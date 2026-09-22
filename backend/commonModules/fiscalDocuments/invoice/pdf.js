@@ -272,6 +272,18 @@ function renderTicketingInvoiceEmailHtml({
 
 async function maybeEmailTicketingInvoicePdfs(orderNumber, userId) {
   if (!orderNumber) return { sent: false, reason: "missing_order_number" };
+
+  const {
+    isBillkoFiscalizeEnabled,
+  } = require("../../paymentsIntegrations/billko/billkoClient");
+  if (!isBillkoFiscalizeEnabled()) {
+    console.log(
+      "[billko] fiscalize disabled — skipping ticketing invoice PDF email",
+      orderNumber,
+    );
+    return { sent: false, reason: "fiscalize_disabled" };
+  }
+
   const BillkoInvoice = require("../models/BillkoInvoice.model");
   const rows = await BillkoInvoice.find({
     orderNumber,

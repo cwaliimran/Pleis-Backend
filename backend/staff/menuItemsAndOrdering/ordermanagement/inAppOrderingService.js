@@ -7,6 +7,13 @@ const { emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
 const { fireAndForget } = require("../../../helperUtils/responseUtil");
 const { maybeEnqueueOrderingConfirmation } = require("../../../commonModules/fiscalDocuments/fiscalTiming");
 const { syncMonriTransactionStatus } = require("../../../commonModules/paymentsIntegrations/monri/monriRepository");
+const {
+  assertFulfilmentTransition,
+  assertPaymentTransition,
+  normalizeFulfilmentStatus,
+  resolveStaffNextActions,
+  resolveGuestNextStep,
+} = require("../../../commonModules/menuItemsAndOrders/orderLifecycle");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -32,23 +39,64 @@ const updateOrders = async (staffId, id, data) => {
     return { error: "Cant_Cancel_paid_order" };
   }
 
+  const updateTypes = [];
+
   /* ===============================
      1️⃣ UPDATE ORDER STATUS (OPTIONAL)
   =============================== */
-  if (data.status !== undefined) {
-    order.status = data.status;
-
+  if (data.status !== undefined && data.status !== order.status) {
+    if (
+      normalizeFulfilmentStatus(data.status) === "rejected" &&
+      !(data.reasonForRejection || data.resaonForRejection)
+    ) {
+      return { error: "rejection_reason_required" };
+    }
+    if (data.status === "cancelled" && !data.reasonForCancellation) {
+      return { error: "cancellation_reason_required" };
+    }
+    let nextStatus;
+    try {
+      nextStatus = assertFulfilmentTransition(order, data.status);
+    } catch (e) {
+      return { error: e.message || "invalid_fulfilment_transition" };
+    }
+    order.status = nextStatus;
+    if (nextStatus === "delivered") {
+      (order.items || []).forEach((item) => {
+        item.isdelivered = true;
+      });
+      (order.combos || []).forEach((combo) => {
+        combo.isdelivered = true;
+      });
+    }
+    if (data.reasonForRejection || data.resaonForRejection) {
+      order.reasonForRejection =
+        data.reasonForRejection || data.resaonForRejection;
+    }
+    if (data.reasonForCancellation) {
+      order.reasonForCancellation = data.reasonForCancellation;
+    }
+    updateTypes.push("status");
   }
 
   /* ===============================
      2️⃣ UPDATE PAYMENT STATUS (OPTIONAL)
   =============================== */
-  if (data.paymentStatus !== undefined) {
+  if (
+    data.paymentStatus !== undefined &&
+    data.paymentStatus !== order.paymentStatus
+  ) {
+    try {
+      assertPaymentTransition(order, data.paymentStatus);
+    } catch (e) {
+      return { error: e.message || "invalid_payment_transition" };
+    }
     order.paymentStatus = data.paymentStatus;
 
     if (data.paymentStatus === "paid" && !order.paidAt) {
       order.paidAt = new Date();
     }
+    updateTypes.push("payment");
   }
 
   /* ===============================
@@ -61,6 +109,7 @@ const updateOrders = async (staffId, id, data) => {
     (order.combos || []).forEach((combo) => {
       combo.isdelivered = data.deliveredall;
     });
+    updateTypes.push("delivery");
   } else {
     /* ===============================
        4️⃣ DELIVER SELECTED MENU ITEMS
@@ -77,6 +126,7 @@ const updateOrders = async (staffId, id, data) => {
           item.isdelivered = true;
         }
       });
+      updateTypes.push("delivery");
     }
 
     /* ===============================
@@ -98,13 +148,14 @@ const updateOrders = async (staffId, id, data) => {
           combo.isdelivered = true;
         }
       });
+      updateTypes.push("delivery");
     }
   }
 
 
   await order.save();
 
-  // Confirmation when delivered (completed) AND paid; amount>0 gated in helper
+  // Payment confirmation when paid (amount>0 gated in helper); not at delivery
   maybeEnqueueOrderingConfirmation(order);
 
   if (data.paymentStatus === "paid") {
@@ -114,16 +165,6 @@ const updateOrders = async (staffId, id, data) => {
     );
   }
 
-  const updateTypes = [];
-  if (data.status !== undefined) updateTypes.push("status");
-  if (data.paymentStatus !== undefined) updateTypes.push("payment");
-  if (
-    typeof data.deliveredall === "boolean" ||
-    data.deliveredMenuItem ||
-    data.deliveredCombo
-  ) {
-    updateTypes.push("delivery");
-  }
   emitOrderUpdate(order, updateTypes.length ? updateTypes : ["order"]);
 
 
@@ -139,11 +180,16 @@ const updateOrders = async (staffId, id, data) => {
       type: NotificationTypes.ORDER_UPDATE,
       objectType: "menuorders",
     },
-    image: order.items[0].menuItemSnapShot.image || null,
+    image: order.items?.[0]?.menuItemSnapShot?.image || null,
     sender: order.organization,
     objectId: order._id,
   });
-  return order;
+
+  const plain = typeof order.toObject === "function" ? order.toObject() : order;
+  if (plain.status === "completed") plain.status = "delivered";
+  plain.nextActions = resolveStaffNextActions(order);
+  plain.guestNextStep = resolveGuestNextStep(order);
+  return plain;
 };
 
 const deleteOrders = async (id) => {
