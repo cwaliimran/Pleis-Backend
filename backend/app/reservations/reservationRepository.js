@@ -1320,17 +1320,21 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
 };
 
 const getUserReservationDetails = async (id) => {
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new Error("Invalid Reservation ID");
-  }
+  // Frontend may send MongoDB _id or human-readable bookingId (e.g. RSV-XXXXXX)
+  const isObjectId =
+    typeof id === "string" &&
+    mongoose.Types.ObjectId.isValid(id) &&
+    /^[a-fA-F0-9]{24}$/.test(id);
+
+  const match = isObjectId
+    ? { _id: new mongoose.Types.ObjectId(id) }
+    : { bookingId: String(id).toUpperCase() };
 
   try {
-    const reservationId = new mongoose.Types.ObjectId(id);
-
     const pipeline = [
-      // 1️⃣ Match reservation
+      // 1️⃣ Match reservation by _id or bookingId
       {
-        $match: { _id: reservationId },
+        $match: match,
       },
 
       // 2️⃣ Lookup unified wallet transactions (entityId = reservation._id)
@@ -1531,6 +1535,7 @@ const getUserReservationDetails = async (id) => {
           transactions: 1, // ✅ included here
 
           _id: 1,
+          bookingId: 1,
           userId: 1,
           amount: 1,
           timingSlots: 1,

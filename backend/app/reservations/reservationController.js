@@ -7,9 +7,13 @@ const {
   convertTimezoneToUtc,
   convertTimezoneToUtcDateOnly,
   convertToUtcDateOnly,
+  fireAndForget,
 } = require("../../helperUtils/responseUtil");
 const reservationService = require("./reservationService");
 const { validateReservationPayload } = require("./validators/reservationValidation");
+const {
+  maybeSendFreeReservationConfirmation,
+} = require("../../helperUtils/plainConfirmationEmailService");
 
 const createReservation = async (req, res) => {
   const session = await mongoose.startSession();
@@ -47,6 +51,14 @@ const createReservation = async (req, res) => {
     }
 
     await session.commitTransaction();
+
+    const reservationId = result.reservation?._id;
+    if (reservationId) {
+      fireAndForget(
+        maybeSendFreeReservationConfirmation(reservationId),
+        "PLAIN_FREE_RESERVATION_CONFIRMATION",
+      );
+    }
 
     return sendResponse({
       res,

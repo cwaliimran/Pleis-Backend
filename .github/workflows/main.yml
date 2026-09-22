@@ -24,11 +24,12 @@ jobs:
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D6B5A721CC1F4065BA303A78D3C5B578 }}
           package: .
 
-      - name: Deploy to Azure Web App (Worker — Pleis-worker)
-        uses: azure/webapps-deploy@v3
-        env:
-          SCM_DO_BUILD_DURING_DEPLOYMENT: true
-        with:
-          app-name: 'Pleis-worker'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_PLEIS_WORKER }}
-          package: .
+      # Temporarily disabled — re-enable when worker deploy is needed again
+      # - name: Deploy to Azure Web App (Worker — Pleis-worker)
+      #   uses: azure/webapps-deploy@v3
+      #   env:
+      #     SCM_DO_BUILD_DURING_DEPLOYMENT: true
+      #   with:
+      #     app-name: 'Pleis-worker'
+      #     publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_PLEIS_WORKER }}
+      #     package: .

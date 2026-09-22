@@ -11,7 +11,6 @@ const {
 const menuItemsService = require("./menuItemsService");
 const deliveryOptionsService = require("../../../admin/organizations/deliveryOptions/deliveryOptionsService");
 const { getOrganizationPickupSettings } = require("../../../admin/organizations/organizationRepository");
-const { getSetttings } = require("../../../admin/inAppOrdering/settings/setting/settingRepository");
 
 const getMenuItems = async (req, res) => {
   const { status = "active", organization } = req.query;
@@ -238,10 +237,9 @@ const getPickupOptions = async (req, res) => {
     return;
 
   try {
-    const [deliveryOptions, orderingSettings, appSettings] = await Promise.all([
+    const [deliveryOptions, orderingSettings] = await Promise.all([
       deliveryOptionsService.getActiveDeliveryOptions(organization),
       getOrganizationPickupSettings(organization),
-      getSetttings({ organization }),
     ]);
     return sendResponse({
       res,
@@ -252,7 +250,8 @@ const getPickupOptions = async (req, res) => {
         paymentMethods: orderingSettings.paymentMethods,
         deliveryMethods: orderingSettings.deliveryMethods,
         tips: orderingSettings.tips,
-        appSettings,
+        // Same Setting doc placeOrder enforces (also mirrored into paymentMethods)
+        appSettings: orderingSettings.appSettings || {},
       },
     });
   } catch (error) {
