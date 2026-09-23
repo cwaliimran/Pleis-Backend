@@ -24,6 +24,9 @@ const triggerBadgeEngine = require("@triggerGlobalStreak");
 const {
   recordPaidCaptureLedger,
 } = require("../../ledger/ledgerWriter");
+const {
+  maybeEnqueueOrderingConfirmation,
+} = require("../../../fiscalDocuments/fiscalTiming");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -75,6 +78,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.paymentStatus = "paid";
       menuOrder.paidAt = new Date();
       menuOrder.transactionId = result.transactionId || null;
+      menuOrder.hideUntilPaid = false;
 
       await menuOrder.save({ session });
       await syncMonriTransactionStatus(menuOrderId, "paid", {
@@ -180,7 +184,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     }
 
     if (result.status === "paid") {
-      // ordering_confirmation deferred until status=completed AND paid (fiscalTiming)
+      maybeEnqueueOrderingConfirmation(menuOrder);
       fireAndForget(
         recordPaidCaptureLedger({
           orderId: menuOrder._id,

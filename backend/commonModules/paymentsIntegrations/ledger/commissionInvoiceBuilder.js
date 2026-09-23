@@ -71,9 +71,7 @@ function buildCommissionInvoicePayload(input) {
   });
 }
 
-function isBillkoFiscalizeEnabled() {
-  return process.env.BILLKO_FISCALIZE_ENABLED === "true";
-}
+const { isBillkoFiscalizeEnabled } = require("../billko/billkoClient");
 
 module.exports = {
   buildCommissionInvoicePayload,

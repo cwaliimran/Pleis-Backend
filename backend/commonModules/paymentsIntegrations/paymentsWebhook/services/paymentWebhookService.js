@@ -206,8 +206,10 @@ const processPaymentWebhook = async ({
 
     const fiscalKind = {
       subscription: "subscription_invoice",
+      menuorders: "ordering_confirmation",
+      userreservations: "reservation_confirmation",
     }[orderType];
-    // ticketing / ordering / reservation customer docs: deferred (scan / completed+paid / first voucher use)
+    // ticketing_invoices: check-in (fiscalTiming). ordering/reservation also enqueued in finalizers.
     if (fiscalKind) {
       fireAndForget(
         enqueueFiscalDocument({ kind: fiscalKind, orderId }),

@@ -53,14 +53,17 @@ const {
   assertOrganizerBillkoReady,
 } = require("../../../commonModules/paymentsIntegrations/billko/billkoCredentials");
 const {
-  maybeEnqueueReservationVoucherFiscal,
-} = require("../../../commonModules/fiscalDocuments/fiscalTiming");
-const {
   maybeSendFreeMenuOrderConfirmation,
 } = require("../../../helperUtils/plainConfirmationEmailService");
+const { maybeEnqueueOrderingConfirmation } = require("../../../commonModules/fiscalDocuments/fiscalTiming");
 const {
   isAwaitingInAppPayment,
 } = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
+const {
+  resolvePostOrderFlow,
+  resolveStaffNextActions,
+  resolveGuestNextStep,
+} = require("../../../commonModules/menuItemsAndOrders/orderLifecycle");
 
 const assertPaymentMethodAllowed = (setting, paymentMethod, paymentTiming) => {
   const methods = setting?.paymentMethod || {};
@@ -106,13 +109,21 @@ const assertPaymentMethodAllowed = (setting, paymentMethod, paymentTiming) => {
   }
 };
 
-const orderNeedsConfirmation = (orderItems = [], orderCombos = []) =>
-  orderItems.some((item) => item.status === "pending") ||
-  orderCombos.some((combo) =>
-    (combo.items || []).some(
-      (item) => item.menuItemSnapShot?.isRequiresOrderConfirmation,
-    ),
+/**
+ * If ANY line (or combo component) requires staff confirmation, the whole
+ * order stays Pending even when automaticOrderAcceptance is on.
+ */
+const orderNeedsConfirmation = (orderItems = [], orderCombos = []) => {
+  const itemNeedsConfirm = (item) =>
+    item?.status === "pending" ||
+    item?.menuItemSnapShot?.isRequiresOrderConfirmation === true;
+
+  if (orderItems.some(itemNeedsConfirm)) return true;
+
+  return orderCombos.some((combo) =>
+    (combo.items || []).some(itemNeedsConfirm),
   );
+};
 
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
@@ -376,11 +387,15 @@ const placeOrder = async ({
       );
       if (!firstComboItemId) throw new Error("Invalid combos in cart");
 
-      const comboOrgId =
+      const comboOrgData =
         await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
+      const comboOrgId = comboOrgData?.organization ?? comboOrgData;
 
       if (!organizationId) {
         organizationId = comboOrgId;
+        if (comboOrgData?.isOrderingEnabled === false) {
+          throw new Error("In-app ordering is not enabled for this organization");
+        }
       } else if (comboOrgId.toString() !== organizationId.toString()) {
         throw new Error(
           "Combos and items must belong to the same organization",
@@ -418,7 +433,7 @@ const placeOrder = async ({
       totalSaleDiscount += priced.saleDiscountPerUnit * i.quantity;
       totalPrice += finalPrice;
 
-      const status = menuItem.isRequiresOrderConfirmation
+      const status = menuItem.isRequiresOrderConfirmation === true
         ? "pending"
         : "confirmed";
 
@@ -455,7 +470,6 @@ const placeOrder = async ({
       totalPrice = promoResult.finalAmount;
     }
     let voucherAmount = 0;
-    let pendingVoucherFiscal = null;
     if (reservationId) {
       const reservation = await validateReservationForOrder({
         reservationId,
@@ -476,17 +490,20 @@ const placeOrder = async ({
 
       voucherAmount = voucherResult.voucherAmount;
       totalPrice = voucherResult.orderAmountDue;
-
-      if (voucherResult.voucherAmount > 0) {
-        pendingVoucherFiscal = {
-          reservationId: reservation._id,
-          voucherAmountApplied: voucherResult.voucherAmount,
-        };
-      }
     }
 
     const setting = await getSetttings({ organization: organizationId });
-    assertPaymentMethodAllowed(setting, paymentMethod, paymentTiming);
+    const methods = setting?.paymentMethod || {};
+    const isOnlinePayment =
+      paymentMethod === "applePay" || paymentMethod === "card";
+    // Org setting owns timing for in-app methods (client must not invent payLater when payNow is on)
+    const resolvedPaymentTiming = isOnlinePayment
+      ? methods.payNow === true
+        ? "payNow"
+        : "payLater"
+      : paymentTiming || "payLater";
+
+    assertPaymentMethodAllowed(setting, paymentMethod, resolvedPaymentTiming);
     totalPrice += Number(tip || 0);
     let orderData = {
       user: userId,
@@ -494,7 +511,7 @@ const placeOrder = async ({
       items: orderItems,
       combos: orderCombos,
       totalPrice,
-      paymentTiming,
+      paymentTiming: resolvedPaymentTiming,
       reservation: reservationId || null,
       priceBreakdown: {
         itemsTotal,
@@ -513,18 +530,48 @@ const placeOrder = async ({
       deliveryOption,
       orderType: "online",
     };
+
+    /*
+     * Post-Order Screen Flow (acceptance first, then payment timing):
+     * 1) Auto-accept? → Confirmed, else Pending (staff Confirm/Reject) — always board-visible
+     * 2) Only when auto-accepted AND Pay now AND in-app amount due:
+     *    payment happens before Confirmed → hideUntilPaid until gateway succeeds
+     */
+    const autoAccepted =
+      setting?.automaticOrderAcceptance === true && !isOrderNeedingConfirmation;
+    const payNowEnabled = methods.payNow === true;
+    const amountDue = Number(totalPrice) > 0;
+
     let orderStatus = "pending";
-    if (paymentMethod === "applePay" || paymentMethod === "card") {
+    let hideUntilPaid = false;
+
+    if (autoAccepted) {
+      if (isOnlinePayment && payNowEnabled && amountDue) {
+        // Pay before Confirmed — hidden until gateway succeeds
+        orderStatus = "pending";
+        hideUntilPaid = true;
+        orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
+      } else {
+        orderStatus = "confirmed";
+        // Doc §7.1: cash + Pay now + auto-accept → Paid up front.
+        // Do NOT apply when the order is payLater (cash-only venues often
+        // still have paymentMethod.payNow=true in settings).
+        if (
+          paymentMethod === "cash" &&
+          resolvedPaymentTiming === "payNow" &&
+          amountDue
+        ) {
+          orderData.paymentStatus = "paid";
+          orderData.paidAt = new Date();
+        }
+      }
+    } else {
+      // Staff must accept — Pending + Unpaid stays on the board (Confirm / Reject)
       orderStatus = "pending";
-      orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
-    } else if (
-      setting.automaticOrderAcceptance &&
-      setting.automaticOrderAcceptance === true &&
-      !isOrderNeedingConfirmation
-    ) {
-      orderStatus = "confirmed";
     }
+
     orderData.status = orderStatus;
+    orderData.hideUntilPaid = hideUntilPaid;
 
     let order = await orderRepo.createOrder(orderData, session);
 
@@ -544,16 +591,6 @@ const placeOrder = async ({
     formattedOrder.user = userDetails;
     await session.commitTransaction();
     session.endSession();
-
-    // Full voucher face-value fiscal once on first spend (after commit)
-    if (pendingVoucherFiscal) {
-      fireAndForget(
-        maybeEnqueueReservationVoucherFiscal(pendingVoucherFiscal.reservationId, {
-          voucherAmountApplied: pendingVoucherFiscal.voucherAmountApplied,
-        }),
-        "FISCAL_RESERVATION_VOUCHER_FIRST_USE",
-      );
-    }
 
     // Emit socket + staff push only when the order is board-visible.
     // Card/Apple Pay pay-now orders wait until payment finalizer emits NEW_ORDER.
@@ -600,7 +637,22 @@ const placeOrder = async ({
         maybeSendFreeMenuOrderConfirmation(order._id),
         "PLAIN_FREE_MENU_ORDER_CONFIRMATION",
       );
+    } else if (order.paymentStatus === "paid") {
+      // Cash auto Pay now — confirmation at place (same as mark-paid path)
+      maybeEnqueueOrderingConfirmation(order);
     }
+
+    const postOrderFlow = resolvePostOrderFlow({
+      autoAccepted,
+      paymentTiming: order.paymentTiming,
+      hideUntilPaid: order.hideUntilPaid === true,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalPrice: order.totalPrice,
+    });
+    formattedOrder.postOrderFlow = postOrderFlow;
+    formattedOrder.nextActions = resolveStaffNextActions(order);
+    formattedOrder.guestNextStep = resolveGuestNextStep(order);
 
     return { order: formattedOrder };
   } catch (err) {
@@ -706,7 +758,7 @@ const updateOrder = async ({
           }
           const priced = buildPricedMenuItemSnapshot(menuItem);
 
-          const status = menuItem.isRequiresOrderConfirmation
+          const status = menuItem.isRequiresOrderConfirmation === true
             ? "pending"
             : "confirmed";
 
@@ -756,8 +808,10 @@ const updateOrder = async ({
           throw new Error("Invalid combos in cart");
         }
 
-        const comboOrganizationId =
+        const comboOrgData =
           await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
+        const comboOrganizationId =
+          comboOrgData?.organization ?? comboOrgData;
 
         if (comboOrganizationId.toString() !== organizationId.toString()) {
           throw new Error(

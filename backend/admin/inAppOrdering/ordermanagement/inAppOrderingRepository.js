@@ -14,6 +14,10 @@ const { getFullImageUrl } = require("@utils/imageHelper");
 const {
   visibleOnOrderBoardMatch,
 } = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
+const {
+  activeOnOrderBoardMatch,
+  pastOnOrderBoardMatch,
+} = require("../../../commonModules/menuItemsAndOrders/orderLifecycle");
 
 const withFullItemImage = (item) => {
   if (!item?.menuItemSnapShot) return item;
@@ -120,20 +124,46 @@ const getOrders = async ({
 
   if (status && status.trim()) {
     if (status.trim() === "active") {
-      statusFilter = {
-        status: { $nin: ["cancelled", "completed", "rejected","expired"] },
-      };
+      // Doc: Active until BOTH axes terminal (Delivered+Paid / cancelled / rejected)
+      statusFilter = { ...activeOnOrderBoardMatch };
     } else if (status.trim() === "past") {
-      statusFilter = {
-        status: { $in: ["cancelled", "completed", "rejected","expired"] },
-      };
+      statusFilter = { ...pastOnOrderBoardMatch };
     }
   }
+
+  const mergeIntoStatusFilter = (clause) => {
+    if (!clause || !Object.keys(clause).length) return;
+    if (!Object.keys(statusFilter).length) {
+      statusFilter = clause;
+      return;
+    }
+    statusFilter = { $and: [statusFilter, clause] };
+  };
+
+  // Payment-axis filter (paid / pending / failed / unpaidClosed)
   if (paymentStatus && paymentStatus.trim()) {
-    statusFilter.paymentStatus = paymentStatus.trim();
+    const ps = paymentStatus.trim();
+    if (ps === "unpaidClosed") {
+      // New walk-away + legacy Mark as Unpaid wrote status:expired
+      mergeIntoStatusFilter({
+        $or: [{ paymentStatus: "unpaidClosed" }, { status: "expired" }],
+      });
+    } else {
+      mergeIntoStatusFilter({ paymentStatus: ps });
+    }
   }
+
   if (orderStatus && orderStatus.trim()) {
-    statusFilter = { status: orderStatus.trim() };
+    const os = orderStatus.trim();
+    // Admin used to map Mark as Unpaid → status expired; filter may still
+    // send expired or unpaidClosed as orderStatus.
+    if (os === "unpaidClosed" || os === "expired") {
+      mergeIntoStatusFilter({
+        $or: [{ paymentStatus: "unpaidClosed" }, { status: "expired" }],
+      });
+    } else {
+      mergeIntoStatusFilter({ status: os });
+    }
   }
 
 
@@ -152,10 +182,21 @@ const getOrders = async ({
     statusFilter.createdAt = { $gte: startDate, $lte: endDate };
   }
 
+  // Spreading two objects that both use `$or` / `$and` would overwrite one side
+  // (past board uses `$or`; keyword search also uses `$or`). Always AND them.
+  const boardAndKeywordClauses = [statusFilter, keywordMatch].filter(
+    (clause) => clause && Object.keys(clause).length > 0
+  );
+  const boardAndKeywordMatch =
+    boardAndKeywordClauses.length === 0
+      ? {}
+      : boardAndKeywordClauses.length === 1
+        ? boardAndKeywordClauses[0]
+        : { $and: boardAndKeywordClauses };
+
   // Create query for event count
   const eventCountQuery = {
-    ...statusFilter,
-    ...keywordMatch,
+    ...boardAndKeywordMatch,
     ...visibleOnOrderBoardMatch,
     organization: { $in: organizationsIds }, // Add organization match
   };
@@ -278,8 +319,7 @@ const getOrders = async ({
     },
     {
       $match: {
-        ...statusFilter,
-        ...keywordMatch, // Combine the filters in the match stage
+        ...boardAndKeywordMatch,
       },
     },
 
@@ -337,12 +377,12 @@ const getOrders = async ({
       MenuOrders.aggregate(pipeline),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $nin: ["cancelled", "completed", "rejected","expired"] },
+        ...activeOnOrderBoardMatch,
         ...visibleOnOrderBoardMatch,
       }),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $in: ["cancelled", "completed", "rejected","expired"] },
+        ...pastOnOrderBoardMatch,
         ...visibleOnOrderBoardMatch,
       }),
       getEventsCounts(eventCountQuery),

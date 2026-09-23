@@ -131,6 +131,12 @@ function menuItemOrderFormatter(order, timezone) {
   }
 
   delete obj.__v;
+
+  // Doc alias: expose delivered; keep completed for older clients reading the same value
+  if (obj.status === "completed") {
+    obj.status = "delivered";
+  }
+
   return obj;
 }
 

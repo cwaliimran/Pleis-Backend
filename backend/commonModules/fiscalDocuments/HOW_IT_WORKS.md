@@ -7,6 +7,8 @@ This module issues two kinds of post-payment documents:
 
 Ticketing gets both: Billko fiscal invoices plus a Pleis payment confirmation that lists event, ticket types, and individual ticket IDs. Menu orders and reservations only get payment confirmations (Billko §5).
 
+Live Billko fiscalization (ticketing invoices, subscription e-invoices, Phase C commission eRačun) requires `BILLKO_FISCALIZE_ENABLED=true`. When the flag is off, ticketing still gets a payment confirmation; Billko invoice create and invoice PDF emails are skipped.
+
 It does **not** fiscalize menu orders or reservations. Those historically had Billko invoice helpers (`issueOrderingInvoices`, `issueReservationInvoices` in `jobs/documentService.js`); they are kept as unused helpers. Live jobs for those products only issue payment confirmations.
 
 ---
@@ -55,15 +57,22 @@ Authenticated endpoints:
 
 | `kind` | Handler | Output |
 | --- | --- | --- |
-| `ticketing_invoices` | `issueTicketingInvoices` | Two Billko invoices (Pleis service fee + organizer tickets), PDFs emailed, plus payment confirmation PDF/email with event and ticket details |
+| `ticketing_invoices` | `issueTicketingInvoices` | When `BILLKO_FISCALIZE_ENABLED=true`: two Billko invoices (Pleis service fee + organizer tickets) + PDF email. Always: payment confirmation PDF/email with event and ticket details. When fiscalize is off, Billko create + invoice emails are skipped; PC still runs. |
 | `ordering_confirmation` | `issueOrderingConfirmation` | Payment confirmation PDF + covering email with PDF attached |
 | `reservation_confirmation` | `issueReservationConfirmation` | Payment confirmation PDF + covering email with PDF attached; min-spend reservations also get a `PLS-…` voucher |
-| `subscription_invoice` | `issueSubscriptionInvoice` | One Pleis Billko e-invoice for the organizer |
+| `subscription_invoice` | `issueSubscriptionInvoice` | One Pleis Billko e-invoice for the organizer (skipped unless `BILLKO_FISCALIZE_ENABLED=true`) |
 | `ticketing_storno` | `stornoTicketingInvoices` | Plans ticket storno; live Billko only if `BILLKO_STORNO_ENABLED=true`. Full → `/invoices/refund`; partial → create type-1 + referent pair (`refund_storno`). Fee kept by default. |
 
 `applyBillkoCallback` is not a queue job. Billko’s webhook (`paymentsIntegrations/billko/billkoCallbackController.js`) calls it to update fiscalization numbers and then cache/email PDFs.
 
-`ensureInvoice` is the idempotent Billko create path: reuse local row if it already has a `billkoId`, else look up remote invoices by order number + product unique-code prefix, else `createInvoice`.
+`ensureInvoice` is the idempotent Billko create path: reuse local row if it already has a `billkoId`, else look up remote invoices by order number + product unique-code prefix, else `createInvoice`. Live create / remote lookup only when `BILLKO_FISCALIZE_ENABLED=true` (exact match; same gate as commission Fiscalize).
+
+### Live Billko fiscalize env gate
+
+- `BILLKO_FISCALIZE_ENABLED` must be exactly `true` for **all** live Billko fiscalization writes: ticketing invoices (`ensureInvoice` / `createInvoice`), subscription e-invoices, and Phase C payout commission eRačun. Unset / any other value → skip those writes (ticketing still issues a payment confirmation; commission Fiscalize stays dry-run).
+- Ticket invoice PDF emails are also skipped when the flag is off.
+- Ticket storno remains separately gated by `BILLKO_STORNO_ENABLED` (exact `true`).
+- Payment confirmations for ordering / reservation / ticketing are **not** gated by this flag.
 
 ### `confirmation/`
 
@@ -124,13 +133,13 @@ Mustache-style `{{TOKEN}}` HTML:
 
 ## How a payment becomes a document
 
-Timing (product override — not always at payment):
+Timing (aligned with Billko §1.3 for ordering/reservation; ticketing trigger is product override):
 
 | Kind | When enqueued |
 | --- | --- |
-| `ticketing_invoices` | First staff check-in of a **paid** ticket on the order (`eventRepository` check-in / bulk-checkin). Free / zero-amount orders skipped. JobId = once per order. |
-| `ordering_confirmation` | Menu order `status=completed` **and** `paymentStatus=paid` **and** amount > 0 (admin/staff in-app order updates). |
-| `reservation_confirmation` | **Min-spend only:** first voucher spend on placeOrder (full voucher face value). Free and paid non-min-spend reservations never enqueue. |
+| `ticketing_invoices` | First staff check-in of a **paid** ticket on the order (`eventRepository` check-in / bulk-checkin). Free / zero-amount orders skipped. JobId = once per order. **Doc §1.3/§4:** at payment; **product:** still at QR check-in. |
+| `ordering_confirmation` | Menu order `paymentStatus=paid` **and** amount > 0 (menu finalizer, webhook, admin/staff mark paid). Payment confirmation only — no Billko. |
+| `reservation_confirmation` | Reservation `paymentStatus=paid` **and** amount > 0 (reservation finalizer, webhook, test-pay). Payment confirmation only — no Billko; voucher block on PDF for min-spend. Free / €0: plain email only. |
 | `subscription_invoice` | At subscription payment (unchanged). |
 
 ### Plain confirmation emails (non-fiscal, free / €0 only)
@@ -146,7 +155,7 @@ Free / zero-amount bookings that **skip** the fiscal queue still get a plain Mai
 Idempotent via `plainConfirmationEmailSentAt` (menu/reservation) or `meta.plainConfirmationEmailSentAt` (ticketing). Helper: `helperUtils/plainConfirmationEmailService.js` — reuses the paid `confirmation-email.html` shell (no PDF / no fiscal wording).
 
 ```
-Enqueue trigger (scan / completed+paid / first voucher use / subscription pay)
+Enqueue trigger (check-in / payment / subscription pay)
         │
         ▼
 enqueueFiscalDocument({ kind, orderId })     backend/bullmq/queues.js
@@ -169,20 +178,20 @@ jobs/documentService.handleSuccessfulPayment
 Enqueue sources:
 
 - Staff event check-in / bulk-checkin (`fiscalTiming.enqueueTicketingInvoicesOnScan`)
-- Admin/staff in-app ordering updates when completed+paid (`fiscalTiming.maybeEnqueueOrderingConfirmation`)
-- placeOrder first min-spend voucher spend (`fiscalTiming.maybeEnqueueReservationVoucherFiscal`)
-- Reservation/ticketing payment finalizers do **not** enqueue reservation confirmations (min-spend only at voucher spend)
-- `paymentsWebhook` for **subscription** only (ticketing/ordering/reservation deferred as above)
+- Menu payment: finalizer + webhook + admin/staff when `paymentStatus` becomes paid (`fiscalTiming.maybeEnqueueOrderingConfirmation`)
+- Reservation payment: finalizer + webhook + test-pay (`fiscalTiming.maybeEnqueueReservationConfirmation`)
+- `paymentsWebhook` for subscription, ordering, and reservation (ticketing still deferred to scan)
 - Dummy-charge subscription finalizer; admin test-pay helpers
-- `admin/ticketing/testPayTicketingOrder.js` / `admin/reservation/testPayUserReservation.js` (payment only; ticketing fiscal not at pay)
+- `admin/ticketing/testPayTicketingOrder.js` (payment only; ticketing fiscal not at pay)
+- `admin/reservation/testPayUserReservation.js` (payment → confirmation via finalizer)
 
 Mapping from order type:
 
 | Order type | Job kind | Document |
 | --- | --- | --- |
-| `ticketingbookings` | `ticketing_invoices` | Fiscal invoices + payment confirmation (at check-in) |
-| `menuorders` | `ordering_confirmation` | Payment confirmation (PDF) at completed+paid |
-| `userreservations` | `reservation_confirmation` | Payment confirmation (PDF); **min-spend only**, at first voucher use; free/non-min-spend never |
+| `ticketingbookings` | `ticketing_invoices` | Fiscal invoices + payment confirmation (at check-in; doc says at payment) |
+| `menuorders` | `ordering_confirmation` | Payment confirmation (PDF) at payment |
+| `userreservations` | `reservation_confirmation` | Payment confirmation (PDF) at payment; free/€0 never |
 | `subscription` | `subscription_invoice` | Fiscal e-invoice |
 
 ---
@@ -190,12 +199,12 @@ Mapping from order type:
 ## Ticketing invoice flow
 
 1. Load paid `TicketingOrders` + bookings + billing + organizer + event.
-2. If Pleis collected a service fee (`orderPricing.taxAmount`), create a `service_fee` invoice on **Pleis** Billko (`FEE-…` unique codes).
-3. Create a `tickets` invoice on the **organizer** Billko account (`TCK-…` unique codes), with the commercial-agent attribution note on each product and at invoice level (`Stavka zaračunata u ime i za račun Organizatora: …`).
-4. Persist each as `BillkoInvoice`, generate HTML → PDF, upload to Azure.
-5. When the tickets invoice exists, email both PDFs once (`pdfEmailedAt`).
+2. If `BILLKO_FISCALIZE_ENABLED` is not exactly `true`, skip Billko invoice create + invoice PDF email (log: `fiscalize disabled — skipping ticketing invoices`) and continue at step 6.
+3. If Pleis collected a service fee (`orderPricing.taxAmount`), create a `service_fee` invoice on **Pleis** Billko (`FEE-…` unique codes).
+4. Create a `tickets` invoice on the **organizer** Billko account (`TCK-…` unique codes), with the commercial-agent attribution note on each product and at invoice level (`Stavka zaračunata u ime i za račun Organizatora: …`).
+5. Persist each as `BillkoInvoice`, generate HTML → PDF, upload to Azure. When the tickets invoice exists, email both PDFs once (`pdfEmailedAt`).
 6. Issue a `TICKETING` payment confirmation (event title/schedule/venue, ticket types, `TBK-…` IDs, service fee) and email the covering message with PDF attached.
-7. Later Billko callbacks update `fiscalizationNumber` / `fiscalProtectionCode` / status via `applyBillkoCallback` and may retry PDF store + email.
+7. Later Billko callbacks update `fiscalizationNumber` / `fiscalProtectionCode` / status via `applyBillkoCallback` and may retry PDF store + email (invoice emails still require `BILLKO_FISCALIZE_ENABLED=true`).
 
 Refunds: Monri refund handler issues a cancellation confirmation when a `PaymentConfirmation` exists (marks original `CANCELLED`, cancels min-spend voucher), and calls `stornoTicketingInvoices` for ticketing orders.
 
@@ -261,7 +270,7 @@ Outside this folder, the module is a dependency of:
 - `backend/commonModules/paymentsIntegrations/billko/` — fiscalization API and callback
 - `backend/commonModules/paymentsIntegrations/monri/` — refund → cancellation confirmation
 - Payment finalizers / webhook — enqueue jobs
-- `backend/commonModules/paymentsIntegrations/ledger/` — Phase A capture ledger + Phase B statement lifecycle + Phase C Fiscalize / off-app + Imperial Lake B2B document routes. Admin routes under `/api/v1/admin/payouts` (alias `/api/v1/admin/payout-statements`): statements (generate / list / get / pain.001 / confirm / cancel), `POST /fiscalize` + `GET /fiscalize/runs`, off-app batches (generate / list / get / confirm / cancel), `GET /billko/status|incoming|outgoing`, `GET /billko/documents/:id`, `POST /billko/documents/:id/report-payment`. Env: `PLEIS_NAME`, `PLEIS_OIB`, `PLEIS_LOCKED_IBAN`, `PLEIS_OPERATING_IBAN`, address fields, optional tip/ordering/ticketing commission rates, `BILLKO_FISCALIZE_ENABLED` (live commission eRačun; default dry-run), `BILLKO_LAKE_ENABLED` + `BILLKO_LAKE_API_KEY` or username/password (Imperial Lake payment reporting).
+- `backend/commonModules/paymentsIntegrations/ledger/` — Phase A capture ledger + Phase B statement lifecycle + Phase C Fiscalize / off-app + Imperial Lake B2B document routes. Admin routes under `/api/v1/admin/payouts` (alias `/api/v1/admin/payout-statements`): statements (generate / list / get / pain.001 / confirm / cancel), `POST /fiscalize` + `GET /fiscalize/runs`, off-app batches (generate / list / get / confirm / cancel), `GET /billko/status|incoming|outgoing`, `GET /billko/documents/:id`, `POST /billko/documents/:id/report-payment`. Env: `PLEIS_NAME`, `PLEIS_OIB`, `PLEIS_LOCKED_IBAN`, `PLEIS_OPERATING_IBAN`, address fields, optional tip/ordering/ticketing commission rates, `BILLKO_FISCALIZE_ENABLED` (gates **all** live Billko fiscalization: ticketing invoices, subscription e-invoices, and commission eRačun; default off), `BILLKO_LAKE_ENABLED` + `BILLKO_LAKE_API_KEY` or username/password (Imperial Lake payment reporting).
 
 ---
 

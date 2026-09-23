@@ -372,10 +372,18 @@ const getUserOrders = async (
 
 
 const getOrderDetails = async (orderId) => {
-  const _id = new mongoose.Types.ObjectId(orderId);
+  // Frontend may send MongoDB _id or human-readable bookingId (e.g. RWD-XXXXXX)
+  const isObjectId =
+    typeof orderId === "string" &&
+    mongoose.Types.ObjectId.isValid(orderId) &&
+    /^[a-fA-F0-9]{24}$/.test(orderId);
+
+  const match = isObjectId
+    ? { _id: new mongoose.Types.ObjectId(orderId) }
+    : { bookingId: String(orderId).toUpperCase() };
 
   const pipeline = [
-    { $match: { _id } },
+    { $match: match },
 
     // ---- Organizer populate ----
     {

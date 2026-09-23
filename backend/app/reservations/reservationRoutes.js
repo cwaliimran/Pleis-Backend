@@ -28,9 +28,9 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("Reservations");
 const apiRateLimiterDetails = createRateLimiter("Reservations/:id");
 
-// Create a new Reservation
-router.post("/transfer", auth, transferReservation);
-router.post("/", auth, createReservation);
+// Create a new Reservation — registered app users only (not guest)
+router.post("/transfer", auth, roleMiddleware(["user"]), transferReservation);
+router.post("/", auth, roleMiddleware(["user"]), createReservation);
 
 // Get all Reservations with pagination
 router.get("/", auth, getReservations);

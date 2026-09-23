@@ -46,7 +46,40 @@ const RESERVATION_NOTIFICATION_MAP = {
     titleKey: "reservation_completed_title",
     bodyKey: "reservation_completed_body",
   },
+
+  RESERVATION_PENDING_PAYMENT: {
+    type: NotificationTypes.RESERVATION_PENDING_PAYMENT,
+    titleKey: "reservation_pending_payment_title",
+    bodyKey: "reservation_pending_payment_body",
+  },
+
+  RESERVATION_NEEDS_CONFIRMATION: {
+    type: NotificationTypes.RESERVATION_NEEDS_CONFIRMATION,
+    titleKey: "reservation_needs_confirmation_title",
+    bodyKey: "reservation_needs_confirmation_body",
+  },
+
+  RESERVATION_STATUS_UPDATED: {
+    type: NotificationTypes.RESERVATION_STATUS_UPDATED,
+    titleKey: "reservation_status_updated_title",
+    bodyKey: "reservation_status_updated_body",
+    bodyValues: (_reservation, context) => ({ status: context.status || "" }),
+  },
 };
+
+const STATUS_TO_NOTIFICATION_ACTION = {
+  confirmed: "RESERVATION_CONFIRMED",
+  cancelled: "RESERVATION_CANCELLED",
+  rejected: "RESERVATION_REJECTED",
+  checkedIn: "RESERVATION_CHECKED_IN",
+  completed: "RESERVATION_COMPLETED",
+  pendingPayment: "RESERVATION_PENDING_PAYMENT",
+  needsConfirmation: "RESERVATION_NEEDS_CONFIRMATION",
+};
+
+const resolveReservationStatusAction = (status) =>
+  STATUS_TO_NOTIFICATION_ACTION[status] || "RESERVATION_STATUS_UPDATED";
+
 
 
 /**
@@ -99,7 +132,7 @@ const sendReservationNotification = async ({
       data: {
         type: config.type,
         reservationId,
-        objectType: "reservations",
+        objectType: "userreservations",
       },
       sender: reservation.organizationId,
       objectId: reservationId,
@@ -111,4 +144,7 @@ const sendReservationNotification = async ({
   }
 };
 
-module.exports = { sendReservationNotification };
+module.exports = {
+  sendReservationNotification,
+  resolveReservationStatusAction,
+};

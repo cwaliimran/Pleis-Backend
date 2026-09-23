@@ -1,23 +1,28 @@
 /**
- * Customer fiscal-document enqueue timing (product override of Billko-at-payment).
+ * Customer document enqueue timing (Billko §1.3 + product rules).
  *
- * - Ticketing: once per paid order on first staff check-in (jobId ticketing_invoices-{orderId});
- *   free / zero-amount orders skipped
- * - Ordering: when status=completed AND paymentStatus=paid AND amount>0
- * - Reservation: only min-spend, once on first voucher spend (full voucher face value).
- *   Free and paid non-min-spend reservations never enqueue.
+ * - Ticketing: Billko fiscal invoices (fee + tickets) once per paid order on first
+ *   staff check-in (jobId ticketing_invoices-{orderId}); free / zero-amount skipped.
+ *   Doc §1.3/§4 issues at payment; product keeps check-in trigger.
+ *   Live Billko create only when BILLKO_FISCALIZE_ENABLED=true; payment confirmation
+ *   still issues when the flag is off.
+ * - Ordering: payment confirmation only, at payment (paid + amount > 0). No Billko.
+ * - Reservation: payment confirmation only, at payment (paid + amount > 0). No Billko.
+ *   Free / €0: plain email only (not this queue).
  */
 const { TicketingOrders } = require("../bookings/ticketings/TicketingOrders");
-const { UserReservations } = require("@UserReservationsModel");
 const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../bullmq/queues");
-
-const ORDERING_DELIVERED_STATUS = "completed";
 
 function orderAmount(order) {
   const n = Number(
     order?.priceBreakdown?.finalTotal ?? order?.totalPrice ?? 0,
   );
+  return Number.isFinite(n) ? n : 0;
+}
+
+function reservationAmount(reservation) {
+  const n = Number(reservation?.amount || 0);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -52,10 +57,10 @@ async function enqueueTicketingInvoicesOnScan(orderId) {
   });
 }
 
+/** Payment confirmation only — call when menu order becomes paid. */
 function maybeEnqueueOrderingConfirmation(order) {
   if (!order?._id) return;
   if (order.paymentStatus !== "paid") return;
-  if (String(order.status) !== ORDERING_DELIVERED_STATUS) return;
   if (!(orderAmount(order) > 0)) return;
 
   fireAndForget(
@@ -67,39 +72,24 @@ function maybeEnqueueOrderingConfirmation(order) {
   );
 }
 
-/**
- * Min-spend voucher: enqueue reservation_confirmation once on first spend.
- * Call on any successful voucher apply; jobId + fiscalDocumentEnqueuedAt prevent duplicates.
- * Confirmation fiscalizes the full original voucher face value (not the partial spend).
- */
-async function maybeEnqueueReservationVoucherFiscal(reservationId, {
-  voucherAmountApplied = 0,
-} = {}) {
-  if (!reservationId || !(Number(voucherAmountApplied) > 0)) return null;
+/** Payment confirmation only — call when reservation becomes paid (amount > 0). */
+function maybeEnqueueReservationConfirmation(reservation) {
+  if (!reservation?._id) return;
+  if (reservation.paymentDetails?.paymentStatus !== "paid") return;
+  if (!(reservationAmount(reservation) > 0)) return;
 
-  const reservation = await UserReservations.findById(reservationId)
-    .select("voucher")
-    .lean();
-  if (!(Number(reservation?.voucher?.discountAmount) > 0)) return null;
-  if (reservation.voucher.fiscalDocumentEnqueuedAt) return null;
-
-  const job = await enqueueFiscalDocument({
-    kind: "reservation_confirmation",
-    orderId: reservationId,
-  });
-
-  await UserReservations.updateOne(
-    { _id: reservationId, "voucher.fiscalDocumentEnqueuedAt": null },
-    { $set: { "voucher.fiscalDocumentEnqueuedAt": new Date() } },
+  fireAndForget(
+    enqueueFiscalDocument({
+      kind: "reservation_confirmation",
+      orderId: reservation._id,
+    }),
+    "FISCAL_RESERVATION_CONFIRMATION",
   );
-
-  return job;
 }
 
 module.exports = {
-  ORDERING_DELIVERED_STATUS,
   isMinSpendReservation,
   enqueueTicketingInvoicesOnScan,
   maybeEnqueueOrderingConfirmation,
-  maybeEnqueueReservationVoucherFiscal,
+  maybeEnqueueReservationConfirmation,
 };

@@ -1,33 +1,37 @@
 /**
- * In-app (card / Apple Pay) pay-now orders must not appear on staff/admin
- * order boards until payment succeeds. Cash / pay-later unpaid orders do.
+ * Board visibility for menu orders (admin / staff ordermanagement).
  *
- * €0 orders are never gated — there is nothing to charge.
+ * Per Post-Order Screen Flow + Order Statuses docs:
+ * - Staff-accept (auto off): Pending unpaid MUST appear so staff can Confirm / Reject.
+ * - Pay later: Confirmed/Pending unpaid MUST appear (settle later).
+ * - Auto-accept + Pay now: guest pays before the order is board-visible;
+ *   those rows set hideUntilPaid=true at place and stay hidden until paid.
+ *
+ * €0 orders are never gated.
  */
-const awaitingInAppPaymentClause = {
-  paymentMethod: { $in: ["card", "applePay"] },
+const awaitingUpfrontPaymentClause = {
+  hideUntilPaid: true,
   paymentStatus: "pending",
   totalPrice: { $gt: 0 },
 };
 
 /** Mongo match fragment: order is visible on ordermanagement boards. */
 const visibleOnOrderBoardMatch = {
-  $nor: [awaitingInAppPaymentClause],
+  $nor: [awaitingUpfrontPaymentClause],
 };
 
 const isAwaitingInAppPayment = (order = {}) => {
-  const method = order.paymentMethod;
-  const status = order.paymentStatus;
   const total = Number(order.totalPrice || 0);
   return (
-    (method === "card" || method === "applePay") &&
-    status === "pending" &&
+    order.hideUntilPaid === true &&
+    order.paymentStatus === "pending" &&
     total > 0
   );
 };
 
 module.exports = {
-  awaitingInAppPaymentClause,
+  awaitingUpfrontPaymentClause,
+  awaitingInAppPaymentClause: awaitingUpfrontPaymentClause, // backwards-compatible alias
   visibleOnOrderBoardMatch,
   isAwaitingInAppPayment,
 };

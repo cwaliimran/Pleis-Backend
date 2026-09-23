@@ -254,7 +254,7 @@ const UserReservationsSchema = new mongoose.Schema(
       },
       discountAmount: { type: Number, default: 0 },
       usedAmount: { type: Number, default: 0 },
-      // Set when reservation_confirmation is enqueued on first voucher spend
+      // Legacy; reservation_confirmation now enqueues at payment (not voucher spend)
       fiscalDocumentEnqueuedAt: { type: Date, default: null },
     },
 

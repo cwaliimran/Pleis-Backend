@@ -2,11 +2,8 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
-  convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
-const mongoose = require("mongoose"); // Import mongoose
 
 const Orderservice = require("./inAppOrderingService");
 const {
@@ -27,6 +24,7 @@ const getOrders = async (req, res) => {
     activeorderStatus,
     pickupFilter,
     paymentStatus,
+    paymentMethod,
   } = req.query;
   try {
     if (!organization) {
@@ -37,6 +35,7 @@ const getOrders = async (req, res) => {
       });
     }
     const timezone = req.user.timezone;
+    // Same filter surface as admin getOrders — paymentMethod included.
     const { Orderss, meta } = await getOrdersService({
       timezone,
       page,
@@ -51,6 +50,7 @@ const getOrders = async (req, res) => {
       activeorderStatus,
       pickupFilter,
       paymentStatus,
+      paymentMethod,
     });
 
     return sendResponse({
@@ -70,6 +70,7 @@ const getOrders = async (req, res) => {
     });
   }
 };
+
 const updateOrders = async (req, res) => {
   const { id } = req.params;
   const {
@@ -78,6 +79,11 @@ const updateOrders = async (req, res) => {
     deliveredMenuItem,
     deliveredCombo,
     deliveredall,
+    reasonForRejection,
+    reasonForCancellation,
+    noteForRejection,
+    noteForCancellation,
+    paymentMethod,
   } = req.body;
   if (
     !validateParams(req, res, {
@@ -87,15 +93,20 @@ const updateOrders = async (req, res) => {
   )
     return;
 
+  // Align with admin updateOrders — reasons/notes required for reject/cancel.
   let data = {
     status,
     paymentStatus,
     deliveredMenuItem,
     deliveredCombo,
     deliveredall,
-    updatedBy: req.user._id,
+    reasonForRejection,
+    reasonForCancellation,
+    noteForRejection,
+    noteForCancellation,
+    paymentMethod,
+    updateBy: req.user._id,
   };
-  const staffId = req.user._id;
 
   try {
     const updated = await updateOrderDetailsService({ orderId: id, data });
@@ -131,6 +142,7 @@ const updateOrders = async (req, res) => {
     });
   }
 };
+
 const updateIsOrderingEnabled = async (req, res) => {
   let { organization, isOrderingEnabled } = req.body;
 
@@ -142,7 +154,10 @@ const updateIsOrderingEnabled = async (req, res) => {
     return;
 
   try {
-    const result = await Orderservice.updateIsOrderingEnabledService(organization, isOrderingEnabled);
+    const result = await Orderservice.updateIsOrderingEnabledService(
+      organization,
+      isOrderingEnabled,
+    );
 
     if (result && result.error) {
       return sendResponse({

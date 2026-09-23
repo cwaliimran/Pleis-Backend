@@ -2,7 +2,8 @@
  * On-demand Fiscalize batch (Payout §3.6 / Billko §9.3 / §14.4).
  * Selects payoutStatus=PAID + fiscalizationStatus in (NOT_FISCALIZED, FISCALIZATION_FAILED).
  * Issues Pleis→organizer commission eRačun (one per organizer).
- * Live Billko only when BILLKO_FISCALIZE_ENABLED=true.
+ * Live Billko only when BILLKO_FISCALIZE_ENABLED=true
+ * (same gate as ticketing / subscription invoice create).
  */
 
 const mongoose = require("mongoose");
