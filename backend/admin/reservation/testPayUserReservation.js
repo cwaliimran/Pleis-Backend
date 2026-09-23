@@ -6,9 +6,6 @@ const {
   sendResponse,
   validateParams,
 } = require("../../helperUtils/responseUtil");
-const {
-  isMinSpendReservation,
-} = require("../../commonModules/fiscalDocuments/fiscalTiming");
 
 async function testPayUserReservation(req, res) {
   try {
@@ -33,9 +30,10 @@ async function testPayUserReservation(req, res) {
     }
 
     const alreadyPaid = reservation.paymentDetails?.paymentStatus === "paid";
-    const fiscalNote = isMinSpendReservation(reservation)
-      ? "min-spend reservation_confirmation enqueues on first voucher use"
-      : "free / non-min-spend reservations never enqueue reservation_confirmation";
+    const fiscalNote =
+      Number(reservation.amount || 0) > 0
+        ? "reservation_confirmation enqueues at payment (confirmation only, no Billko fiscal)"
+        : "free / €0 reservations never enqueue reservation_confirmation (plain email only)";
 
     if (alreadyPaid) {
       return sendResponse({
@@ -92,9 +90,10 @@ async function testPayUserReservation(req, res) {
         status: updated?.status,
         paymentStatus: updated?.paymentDetails?.paymentStatus,
         fiscalJobs: [],
-        note: isMinSpendReservation(updated)
-          ? "min-spend reservation_confirmation enqueues on first voucher use"
-          : "free / non-min-spend reservations never enqueue reservation_confirmation",
+        note:
+          Number(updated?.amount || 0) > 0
+            ? "reservation_confirmation enqueues at payment (confirmation only, no Billko fiscal)"
+            : "free / €0 reservations never enqueue reservation_confirmation (plain email only)",
       },
     });
   } catch (error) {

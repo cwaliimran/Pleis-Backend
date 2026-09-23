@@ -59,7 +59,7 @@ const updateSetttings = async (organization, data) => {
     };
   }
   await Setttings.save();
-  await SetttingsRepo.invalidateOrganizationSettingsCache(organization);
+  await SetttingsRepo.warmOrganizationSettingsCache(organization, Setttings);
   await SetttingsRepo.syncOrganizationPaymentMethodsFromSetting(
     organization,
     Setttings.toObject ? Setttings.toObject() : Setttings,

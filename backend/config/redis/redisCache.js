@@ -309,4 +309,5 @@ module.exports = {
   pushBuffer,
   popBufferBatch,
   l1ClearPrefix,
+  setJson,
 };

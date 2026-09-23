@@ -228,6 +228,11 @@ function isBillkoStornoEnabled() {
   return process.env.BILLKO_STORNO_ENABLED === "true";
 }
 
+/** Live Billko fiscal writes (ticketing invoices, subscription e-invoices, commission eRačun). Exact `"true"` only. */
+function isBillkoFiscalizeEnabled() {
+  return process.env.BILLKO_FISCALIZE_ENABLED === "true";
+}
+
 function isInvalidApiKeyError(error) {
   const status = error?.billkoHttpStatus || error?.statusCode;
   return (
@@ -249,6 +254,7 @@ module.exports = {
   findInvoicesByOrderNumber,
   refundInvoice,
   isBillkoStornoEnabled,
+  isBillkoFiscalizeEnabled,
   isInvalidApiKeyError,
   billkoErrorDetails,
 };

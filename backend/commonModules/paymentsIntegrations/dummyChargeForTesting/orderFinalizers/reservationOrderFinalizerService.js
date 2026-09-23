@@ -26,6 +26,10 @@ const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmi
 const {
   recordPaidCaptureLedger,
 } = require("../../ledger/ledgerWriter");
+const {
+  maybeEnqueueReservationConfirmation,
+  maybeEnqueueOrderingConfirmation,
+} = require("../../../fiscalDocuments/fiscalTiming");
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
 
@@ -232,6 +236,21 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     }
 
     if (result.status === "paid") {
+      maybeEnqueueReservationConfirmation({
+        _id: userReservation._id,
+        amount: userReservation.amount,
+        paymentDetails: { paymentStatus: "paid" },
+      });
+      if (menuOrder?._id) {
+        const paidMenu =
+          (await MenuOrders.findById(menuOrder._id).lean()) || {
+            _id: menuOrder._id,
+            paymentStatus: "paid",
+            totalPrice: menuOrder.totalPrice,
+            priceBreakdown: menuOrder.priceBreakdown,
+          };
+        maybeEnqueueOrderingConfirmation(paidMenu);
+      }
       fireAndForget(
         recordPaidCaptureLedger({
           orderId: userReservation._id,
@@ -246,8 +265,6 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         }),
         "LEDGER_RESERVATION_CAPTURE",
       );
-      // Reservation fiscal: only min-spend, on first voucher spend (fiscalTiming).
-      // Free / paid non-min-spend: never enqueue. Pre-order menu → completed+paid.
     }
 
     if (userReservation.amount && userReservation.amount > 0) {
