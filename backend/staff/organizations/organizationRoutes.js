@@ -2,11 +2,9 @@ const express = require("express");
 const {
   getOrganizationsAsStaff,
   checkInToOrganization,
-  checkOutFromOrganization
+  checkOutFromOrganization,
 } = require("./organizationController");
-const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
-const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
@@ -17,6 +15,10 @@ router.get("/", getOrganizationsAsStaff);
 router.post("/:id/checkin", checkInToOrganization);
 router.post("/:id/checkout", checkOutFromOrganization);
 
-
+// Same delivery-options list used by admin/organizer order-management filters.
+router.use(
+  "/:organizationId/delivery-options",
+  require("../../admin/organizations/deliveryOptions/deliveryOptionsRoutes"),
+);
 
 module.exports = router;

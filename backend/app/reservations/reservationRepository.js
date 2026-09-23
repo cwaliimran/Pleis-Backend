@@ -23,7 +23,10 @@ const {
   getLogoByOrganization,
 } = require("../../admin/organizations/organizationRepository");
 const { createTransactionService } = require("../userWalletService/transactions/services/unifiedTransactionsService");
-const { TAX_RATE_RESERVATION } = require("../../config/CONSTANTS");
+const {
+  TAX_RATE_RESERVATION,
+  BYPASS_RESERVATION_PAYMENT,
+} = require("../../config/CONSTANTS");
 const { usePromoCode } = require("../promoCode/promoCodeRepository");
 const ReservationType = require("@ReservationTypeModel");
 const {
@@ -767,9 +770,18 @@ const createReservation = async (data, session) => {
       Number(reservationTypeData.amount || 0) > 0 ||
       Number(totalReservationAmount || 0) > 0;
     if (requiresUpfrontPayment) {
-      if (["card", "applePay"].includes(resolvedPaymentMethod)) {
+      if (
+        BYPASS_RESERVATION_PAYMENT ||
+        ["card", "applePay"].includes(resolvedPaymentMethod)
+      ) {
         data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
         data.status = "pendingPayment";
+        if (BYPASS_RESERVATION_PAYMENT && !resolvedPaymentMethod) {
+          data.paymentDetails = {
+            ...(data.paymentDetails || {}),
+            paymentMethod: "card",
+          };
+        }
       } else {
         return { success: false, error: "Payment method is required" };
       }
@@ -823,7 +835,7 @@ const createReservation = async (data, session) => {
     data.status === "pendingPayment" ||
     hasPaidPreOrder;
 
-  if (needsPayment) {
+  if (needsPayment && !BYPASS_RESERVATION_PAYMENT) {
     await assertOrganizerBillkoReady(data.companyOrganizer);
   }
 
@@ -1320,17 +1332,21 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
 };
 
 const getUserReservationDetails = async (id) => {
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new Error("Invalid Reservation ID");
-  }
+  // Frontend may send MongoDB _id or human-readable bookingId (e.g. RSV-XXXXXX)
+  const isObjectId =
+    typeof id === "string" &&
+    mongoose.Types.ObjectId.isValid(id) &&
+    /^[a-fA-F0-9]{24}$/.test(id);
+
+  const match = isObjectId
+    ? { _id: new mongoose.Types.ObjectId(id) }
+    : { bookingId: String(id).toUpperCase() };
 
   try {
-    const reservationId = new mongoose.Types.ObjectId(id);
-
     const pipeline = [
-      // 1️⃣ Match reservation
+      // 1️⃣ Match reservation by _id or bookingId
       {
-        $match: { _id: reservationId },
+        $match: match,
       },
 
       // 2️⃣ Lookup unified wallet transactions (entityId = reservation._id)
@@ -1413,10 +1429,17 @@ const getUserReservationDetails = async (id) => {
         },
       },
 
-      // 4️⃣ Convert optionalEventId
+      // 4️⃣ Convert optionalEventId (safe: null/invalid → null)
       {
         $addFields: {
-          optionalEventId: { $toObjectId: "$optionalEventId" },
+          optionalEventId: {
+            $convert: {
+              input: "$optionalEventId",
+              to: "objectId",
+              onError: null,
+              onNull: null,
+            },
+          },
         },
       },
 
@@ -1531,6 +1554,7 @@ const getUserReservationDetails = async (id) => {
           transactions: 1, // ✅ included here
 
           _id: 1,
+          bookingId: 1,
           userId: 1,
           amount: 1,
           timingSlots: 1,

@@ -7,9 +7,19 @@ const {
   convertTimezoneToUtc,
   convertTimezoneToUtcDateOnly,
   convertToUtcDateOnly,
+  fireAndForget,
 } = require("../../helperUtils/responseUtil");
 const reservationService = require("./reservationService");
 const { validateReservationPayload } = require("./validators/reservationValidation");
+const {
+  maybeSendFreeReservationConfirmation,
+} = require("../../helperUtils/plainConfirmationEmailService");
+const { BYPASS_RESERVATION_PAYMENT } = require("../../config/CONSTANTS");
+const {
+  reservationOrderFinalizerService,
+} = require("../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
+const { UserReservations } = require("@UserReservationsModel");
+const { reservationsFormatter } = require("./formaters/reservationFormetter");
 
 const createReservation = async (req, res) => {
   const session = await mongoose.startSession();
@@ -48,11 +58,45 @@ const createReservation = async (req, res) => {
 
     await session.commitTransaction();
 
+    const reservationId = result.reservation?._id;
+    let responseData = result.reservation;
+
+    if (
+      BYPASS_RESERVATION_PAYMENT &&
+      reservationId &&
+      (result.reservation?.status === "pendingPayment" ||
+        (result.reservation?.paymentDetails?.paymentStatus === "pending" &&
+          Number(result.reservation?.amount || 0) > 0))
+    ) {
+      await reservationOrderFinalizerService({
+        reservationId,
+        result: {
+          status: "paid",
+          transactionId: `BYPASS_${Date.now()}`,
+        },
+      });
+
+      const paidReservation = await UserReservations.findById(reservationId);
+      if (paidReservation) {
+        responseData = reservationsFormatter(
+          paidReservation,
+          req.user?.timezone || "UTC",
+        );
+      }
+    }
+
+    if (reservationId) {
+      fireAndForget(
+        maybeSendFreeReservationConfirmation(reservationId),
+        "PLAIN_FREE_RESERVATION_CONFIRMATION",
+      );
+    }
+
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "Reservation_created_successfully",
-      data: result.reservation,
+      data: responseData,
     });
   } catch (error) {
     if (session.inTransaction()) {

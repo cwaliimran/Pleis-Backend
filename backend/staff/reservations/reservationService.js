@@ -1,19 +1,41 @@
 // services/reservationservice.js
 const { EventCheckins } = require("@EventCheckinsModel");
+const { UserReservations } = require("@UserReservationsModel");
 const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
 const ReservationRepo = require("./reservationRepository");
 const { getActiveEventsForOrg } = require("../../admin/events/eventRepository");
+const {
+  maybeSendFreeReservationConfirmation,
+} = require("../../helperUtils/plainConfirmationEmailService");
+const {
+  sendReservationNotification,
+  resolveReservationStatusAction,
+} = require("../../controllers/notificationHelper/reservationNotificationService");
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
+  if (Reservation?._id) {
+    fireAndForget(
+      maybeSendFreeReservationConfirmation(Reservation._id),
+      "PLAIN_FREE_RESERVATION_CONFIRMATION",
+    );
+  }
   return Reservation;
 };
 
 const updateReservationStatus = async (id, status) => {
+  const existing = await UserReservations.findById(id).select("status userId").lean();
   const updated = await ReservationRepo.findByIdAndUpdate(id, {
     status: status,
   });
   if (!updated) return null;
+
+  if (status === "confirmed") {
+    fireAndForget(
+      maybeSendFreeReservationConfirmation(updated._id),
+      "PLAIN_FREE_RESERVATION_CONFIRMATION",
+    );
+  }
 
   if (status === "checkedIn") {
     // Handle checked-in logic if needed
@@ -69,6 +91,17 @@ const updateReservationStatus = async (id, status) => {
       "RESERVATION_EVENT_CHECKIN"
     );
 
+  }
+
+  if (updated.userId && existing?.status !== status) {
+    fireAndForget(
+      sendReservationNotification({
+        reservationId: updated._id,
+        action: resolveReservationStatusAction(status),
+        context: { status },
+      }),
+      `RESERVATION_${String(status).toUpperCase()}_NOTIFICATION`,
+    );
   }
 
   return true;

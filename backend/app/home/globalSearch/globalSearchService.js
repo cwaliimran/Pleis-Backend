@@ -4,6 +4,7 @@ const { getActiveTagsService } = require("../../../admin/tags/tagsService");
 const { getActiveTagsTypes } = require("../../../admin/tagTypes/tagTypesService");
 const TagTypesModel = require("../../../admin/tagTypes/TagTypesModel");
 const { getPublicVenueTypes } = require("../../../admin/venueTypes/venueTypesService");
+const { Favorites } = require("../../../commonModules/favorites/Favorite");
 const { formatNearByOrganization } = require("../../../commonModules/organizations/formatter/formatOrganization");
 const { formatSuggestedClub } = require("../../loyalty/clubMembers/formatters/formatSuggestedClubs");
 const { getPublicCategories } = require("../../publicCategories/categoriesService");
@@ -63,6 +64,106 @@ const USER_FILTER_KEYS = new Set([
   "loyaltyClubs",
 ]);
 
+/** Favorite targetType for filterKey drill-downs (loyaltyClubs has none). */
+const FILTER_KEY_FAVORITE_TYPE = {
+  forYouEvents: "event",
+  thisWeekEvents: "event",
+  forYouOrganizations: "organization",
+  nearYouOrganizations: "organization",
+  topPicks: "organization",
+  trendingOrganizations: "organization",
+  newlyListedOrganizations: "organization",
+  customCategoryByTags: "organization",
+};
+
+/**
+ * Attach isFavorite after Redis cache.
+ * Geo keyword/filter caches are shared across users — never bake this into the payload.
+ */
+async function attachIsFavoriteFlags(userId, items, targetType) {
+  if (!Array.isArray(items) || !items.length || !targetType) return items || [];
+
+  if (!userId) {
+    return items.map((item) =>
+      item && typeof item === "object" ? { ...item, isFavorite: false } : item
+    );
+  }
+
+  const ids = items.map((item) => item?._id).filter(Boolean);
+  if (!ids.length) {
+    return items.map((item) =>
+      item && typeof item === "object" ? { ...item, isFavorite: false } : item
+    );
+  }
+
+  const favs = await Favorites.find({
+    user: userId,
+    targetType,
+    targetId: { $in: ids },
+  })
+    .select("targetId")
+    .lean();
+
+  const favSet = new Set(favs.map((f) => String(f.targetId)));
+
+  return items.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    return {
+      ...item,
+      isFavorite: favSet.has(String(item._id)),
+    };
+  });
+}
+
+async function enrichKeywordSectionsWithFavorites(userId, sections) {
+  if (!Array.isArray(sections)) return sections;
+
+  return Promise.all(
+    sections.map(async (section) => {
+      if (!section) return section;
+      if (section.key === "events") {
+        return {
+          ...section,
+          data: await attachIsFavoriteFlags(userId, section.data, "event"),
+        };
+      }
+      if (section.key === "organizations") {
+        return {
+          ...section,
+          data: await attachIsFavoriteFlags(
+            userId,
+            section.data,
+            "organization"
+          ),
+        };
+      }
+      return section;
+    })
+  );
+}
+
+async function enrichFilterKeyPayloadWithFavorites(userId, filterKey, payload) {
+  if (!payload || !Array.isArray(payload.data)) return payload;
+
+  let targetType = FILTER_KEY_FAVORITE_TYPE[filterKey] || null;
+
+  // customCategory objects are Event | Organizations | User — infer from first item
+  if (filterKey === "customCategory" && payload.data.length) {
+    const sample = payload.data[0];
+    if (sample?.schedule != null || sample?.basicInfo?.venueLocation != null) {
+      targetType = "event";
+    } else if (sample?.basicInfo?.name != null) {
+      targetType = "organization";
+    }
+  }
+
+  if (!targetType) return payload;
+
+  return {
+    ...payload,
+    data: await attachIsFavoriteFlags(userId, payload.data, targetType),
+  };
+}
 function toValidObjectIds(ids) {
   return [...(Array.isArray(ids) ? ids : ids ? [ids] : [])]
     .filter((id) => isStrictObjectId(id))
@@ -322,7 +423,7 @@ const globalSearchService = async (ctx) => {
       : ctx.longitude,
   };
 
-  const sections = await cacheSearchGeo({
+  const cachedSections = await cacheSearchGeo({
     section: "keyword",
     geoHash: cell.hash,
     params: {
@@ -337,6 +438,12 @@ const globalSearchService = async (ctx) => {
     },
     fetchFn: () => fetchKeywordSearchSections(searchCtx, type),
   });
+
+  // User-specific — must run after shared geo cache
+  const sections = await enrichKeywordSectionsWithFavorites(
+    ctx.userId,
+    cachedSections
+  );
 
   // Side effect outside cache — still record on warm hits when results exist
   const shouldLogSearch = sections.some(
@@ -461,16 +568,15 @@ const getFilterKeySearchService = async (ctx) => {
       skip,
     });
 
+  let payload;
   if (resolved.cacheKind === "geo" || GEO_FILTER_KEYS.has(filterKey)) {
-    return cacheSearchGeo({
+    payload = await cacheSearchGeo({
       section: `fk:${filterKey}`,
       geoHash: cell.hash,
       params: baseParams,
       fetchFn: run,
     });
-  }
-
-  if (resolved.cacheKind === "user" || USER_FILTER_KEYS.has(filterKey)) {
+  } else if (resolved.cacheKind === "user" || USER_FILTER_KEYS.has(filterKey)) {
     const fineGeo =
       filterKey === "nearYouOrganizations" && userLocation
         ? encodeGeohash(
@@ -480,7 +586,7 @@ const getFilterKeySearchService = async (ctx) => {
           ) || cell.hash
         : cell.hash;
 
-    return cacheSearchUser({
+    payload = await cacheSearchUser({
       section: `fk:${filterKey}`,
       userId: resolvedCtx.userId,
       params: {
@@ -489,9 +595,16 @@ const getFilterKeySearchService = async (ctx) => {
       },
       fetchFn: run,
     });
+  } else {
+    throw new Error(`Unsupported filterKey: ${filterKey}`);
   }
 
-  throw new Error(`Unsupported filterKey: ${filterKey}`);
+  // User-specific — after cache (geo keys are shared across users)
+  return enrichFilterKeyPayloadWithFavorites(
+    resolvedCtx.userId,
+    filterKey,
+    payload
+  );
 };
 
 async function fetchFilterKeyPayload({

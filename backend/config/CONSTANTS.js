@@ -19,6 +19,13 @@ const SERVICE_FEE_RATE = 0.08;
 const TAX_RATE_RESERVATION = 0;
 
 /**
+ * When true, reservations that require payment are marked paid immediately on create
+ * (no Monri / gateway). For frontend testing while Monri is unavailable.
+ * Set to false before production or when Monri is live again.
+ */
+const BYPASS_RESERVATION_PAYMENT = false;
+
+/**
  * App-level defaults for public brand URLs / emails / deep links.
  * Prefer process.env.* when set; these are fallbacks so call sites never re-hardcode.
  */
@@ -125,6 +132,7 @@ module.exports = {
   computeTicketingServiceFeeCents,
   computeTicketingServiceFeeEur,
   TAX_RATE_RESERVATION,
+  BYPASS_RESERVATION_PAYMENT,
 
   PLEIS_WEB,
   PLEIS_SUPPORT_EMAIL,

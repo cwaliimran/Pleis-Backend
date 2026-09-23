@@ -2,30 +2,10 @@ const { UserReservations } = require("@UserReservationsModel");
 const {
   reservationOrderFinalizerService,
 } = require("../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
-const { enqueueFiscalDocument } = require("../../bullmq/queues");
 const {
   sendResponse,
   validateParams,
 } = require("../../helperUtils/responseUtil");
-
-async function requeueReservationConfirmations(reservation) {
-  const fiscalJobs = [`reservation_confirmation-${reservation._id}`];
-  await enqueueFiscalDocument({
-    kind: "reservation_confirmation",
-    orderId: reservation._id,
-  });
-
-  const menuOrderId = reservation.preOrderMenuItemsOrder?._id || reservation.preOrderMenuItemsOrder;
-  if (menuOrderId) {
-    fiscalJobs.push(`ordering_confirmation-${menuOrderId}`);
-    await enqueueFiscalDocument({
-      kind: "ordering_confirmation",
-      orderId: menuOrderId,
-    });
-  }
-
-  return fiscalJobs;
-}
 
 async function testPayUserReservation(req, res) {
   try {
@@ -39,7 +19,7 @@ async function testPayUserReservation(req, res) {
     }
 
     const reservation = await UserReservations.findById(req.params.id).select(
-      "status paymentDetails preOrderMenuItemsOrder amount",
+      "status paymentDetails preOrderMenuItemsOrder amount reservationSnapshot",
     );
     if (!reservation) {
       return sendResponse({
@@ -50,18 +30,22 @@ async function testPayUserReservation(req, res) {
     }
 
     const alreadyPaid = reservation.paymentDetails?.paymentStatus === "paid";
+    const fiscalNote =
+      Number(reservation.amount || 0) > 0
+        ? "reservation_confirmation enqueues at payment (confirmation only, no Billko fiscal)"
+        : "free / €0 reservations never enqueue reservation_confirmation (plain email only)";
 
     if (alreadyPaid) {
-      const fiscalJobs = await requeueReservationConfirmations(reservation);
       return sendResponse({
         res,
         statusCode: 200,
-        translationKey: "reservation_already_paid_fiscal_requeued",
+        translationKey: "reservation_already_paid",
         data: {
           reservationId: String(reservation._id),
           status: reservation.status,
           paymentStatus: reservation.paymentDetails?.paymentStatus,
-          fiscalJobs,
+          fiscalJobs: [],
+          note: fiscalNote,
         },
       });
     }
@@ -93,15 +77,8 @@ async function testPayUserReservation(req, res) {
     });
 
     const updated = await UserReservations.findById(reservation._id)
-      .select("status paymentDetails amount preOrderMenuItemsOrder")
+      .select("status paymentDetails amount preOrderMenuItemsOrder reservationSnapshot")
       .lean();
-
-    const menuOrderId =
-      updated?.preOrderMenuItemsOrder?._id || updated?.preOrderMenuItemsOrder;
-    const fiscalJobs = [`reservation_confirmation-${reservation._id}`];
-    if (menuOrderId) {
-      fiscalJobs.push(`ordering_confirmation-${menuOrderId}`);
-    }
 
     return sendResponse({
       res,
@@ -112,7 +89,11 @@ async function testPayUserReservation(req, res) {
         transactionId,
         status: updated?.status,
         paymentStatus: updated?.paymentDetails?.paymentStatus,
-        fiscalJobs,
+        fiscalJobs: [],
+        note:
+          Number(updated?.amount || 0) > 0
+            ? "reservation_confirmation enqueues at payment (confirmation only, no Billko fiscal)"
+            : "free / €0 reservations never enqueue reservation_confirmation (plain email only)",
       },
     });
   } catch (error) {

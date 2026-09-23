@@ -17,7 +17,6 @@ const {
   sendMenuOrderNotification,
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
-const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
@@ -25,6 +24,9 @@ const triggerBadgeEngine = require("@triggerGlobalStreak");
 const {
   recordPaidCaptureLedger,
 } = require("../../ledger/ledgerWriter");
+const {
+  maybeEnqueueOrderingConfirmation,
+} = require("../../../fiscalDocuments/fiscalTiming");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -76,6 +78,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.paymentStatus = "paid";
       menuOrder.paidAt = new Date();
       menuOrder.transactionId = result.transactionId || null;
+      menuOrder.hideUntilPaid = false;
 
       await menuOrder.save({ session });
       await syncMonriTransactionStatus(menuOrderId, "paid", {
@@ -181,13 +184,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     }
 
     if (result.status === "paid") {
-      fireAndForget(
-        enqueueFiscalDocument({
-          kind: "ordering_confirmation",
-          orderId: menuOrder._id,
-        }),
-        "FISCAL_ORDERING_CONFIRMATION",
-      );
+      maybeEnqueueOrderingConfirmation(menuOrder);
       fireAndForget(
         recordPaidCaptureLedger({
           orderId: menuOrder._id,

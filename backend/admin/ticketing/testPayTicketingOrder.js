@@ -1,6 +1,5 @@
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { ticketingOrderFinalizerService } = require("../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
-const { enqueueFiscalDocument } = require("../../bullmq/queues");
 const {
   sendResponse,
   validateParams,
@@ -31,19 +30,15 @@ async function testPayTicketingOrder(req, res) {
       order.paymentDetails?.paymentStatus === "paid";
 
     if (alreadyPaid) {
-      await enqueueFiscalDocument({
-        kind: "ticketing_invoices",
-        orderId: order._id,
-      });
       return sendResponse({
         res,
         statusCode: 200,
-        translationKey: "ticketing_already_paid_fiscal_requeued",
+        translationKey: "ticketing_already_paid",
         data: {
           orderId: String(order._id),
           status: order.status,
           paymentStatus: order.paymentDetails?.paymentStatus,
-          fiscalJob: `ticketing_invoices-${order._id}`,
+          note: "ticketing_invoices enqueue on first staff check-in, not at payment",
         },
       });
     }
@@ -79,7 +74,7 @@ async function testPayTicketingOrder(req, res) {
         transactionId,
         status: updated?.status,
         paymentStatus: updated?.paymentDetails?.paymentStatus,
-        fiscalJob: `ticketing_invoices-${order._id}`,
+        note: "ticketing_invoices enqueue on first staff check-in, not at payment",
       },
     });
   } catch (error) {

@@ -10,7 +10,6 @@ const { sendEventNotification } = require("../../../../controllers/notificationH
 const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { sendReservationNotification } = require("../../../../controllers/notificationHelper/reservationNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
-const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 const { ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemplates/ticketingEmailTemplates");
@@ -167,8 +166,7 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         throw new Error(trx.message || "wallet_update_failed");
       }
 
-      // Success: fiscal invoice PDFs + payment confirmation (event/ticket details)
-      // via enqueueFiscalDocument → ticketing_invoices. No legacy ticket confirmation email.
+      // Success: tickets marked valid. Fiscal invoices enqueue on staff check-in.
     }
 
     // =====================================================
@@ -298,31 +296,8 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         }),
         "LEDGER_TICKETING_CAPTURE",
       );
-      fireAndForget(
-        enqueueFiscalDocument({
-          kind: "ticketing_invoices",
-          orderId: order._id,
-        }),
-        "FISCAL_TICKETING_INVOICES",
-      );
-      if (userReservation?._id) {
-        fireAndForget(
-          enqueueFiscalDocument({
-            kind: "reservation_confirmation",
-            orderId: userReservation._id,
-          }),
-          "FISCAL_RESERVATION_CONFIRMATION",
-        );
-      }
-      if (menuOrder?._id) {
-        fireAndForget(
-          enqueueFiscalDocument({
-            kind: "ordering_confirmation",
-            orderId: menuOrder._id,
-          }),
-          "FISCAL_ORDERING_CONFIRMATION",
-        );
-      }
+      // ticketing_invoices: deferred to first paid-ticket check-in (fiscalTiming)
+      // ordering / reservation confirmations: enqueued at payment in their finalizers
     }
 
     if (order.orderPricing?.total && order.orderPricing.total > 0) {

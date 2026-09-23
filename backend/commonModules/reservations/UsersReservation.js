@@ -171,6 +171,12 @@ const UserReservationsSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Set when a plain (non-fiscal) free-reservation confirmation email is sent
+    plainConfirmationEmailSentAt: {
+      type: Date,
+      default: null,
+    },
+
     //menu item orders associated with this reservation when preOrdering is enabled against event
     preOrderMenuItemsOrder: {
       type: mongoose.Schema.Types.ObjectId,
@@ -248,6 +254,8 @@ const UserReservationsSchema = new mongoose.Schema(
       },
       discountAmount: { type: Number, default: 0 },
       usedAmount: { type: Number, default: 0 },
+      // Legacy; reservation_confirmation now enqueues at payment (not voucher spend)
+      fiscalDocumentEnqueuedAt: { type: Date, default: null },
     },
 
     userBillingInformation: {

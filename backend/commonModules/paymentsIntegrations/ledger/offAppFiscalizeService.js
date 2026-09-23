@@ -2,6 +2,7 @@
  * Off-app fiscalization batch (Payout §3.7).
  * Ordering paid outside Pleis (cash / external): no pain.001;
  * on confirm → Billko commission eRačun + mark off-app fiscalized.
+ * Live Billko gated by BILLKO_FISCALIZE_ENABLED=true (same as ticketing / Fiscalize).
  */
 
 const mongoose = require("mongoose");

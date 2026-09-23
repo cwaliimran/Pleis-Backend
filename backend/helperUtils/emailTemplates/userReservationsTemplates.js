@@ -122,14 +122,14 @@ const reservationConfirmationEmailTemplate = ({
       <table width="100%" cellpadding="10" cellspacing="0" style="border:1px solid #eee;border-radius:6px;">
         <tr>
           <td bgcolor="#f7f7f7"><strong>Type</strong></td>
-          <td>${reservation.reservationSnapshot.reservationType}</td>
+          <td>${reservation.reservationSnapshot?.reservationType || reservation.reservationType?.title || reservation.reservationType?.name || "-"}</td>
         </tr>
         <tr>
           <td bgcolor="#f7f7f7"><strong>Party Size</strong></td>
           <td>${reservation.partySize}</td>
         </tr>
         <tr>
-          <td bgcolor="#f7f7f7"><strong>Total Paid</strong></td>
+          <td bgcolor="#f7f7f7"><strong>Amount</strong></td>
           <td>${formatPrice(reservation.amount)}</td>
         </tr>
       </table>

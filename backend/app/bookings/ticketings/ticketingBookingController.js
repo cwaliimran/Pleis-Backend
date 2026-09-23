@@ -1,4 +1,4 @@
-const { sendResponse, getReadableErrorMessage, validateParams, convertTimezoneToUtc, parsePaginationParams } = require("@utils/responseUtil");
+const { sendResponse, getReadableErrorMessage, validateParams, convertTimezoneToUtc, parsePaginationParams, fireAndForget } = require("@utils/responseUtil");
 const { createTicketingBookingService,
   getTicketingBookingsService,
   getTicketingBookingByIdService,
@@ -12,6 +12,10 @@ const { validateTicketingPayload } = require("./validators/ticketingValidation")
 const { checkoutWithTicketsAndReservation } = require("./services/checkoutOrchestratorService");
 const { validateReservationPayload } = require("../../reservations/validators/reservationValidation");
 const { default: mongoose } = require("mongoose");
+const {
+  maybeSendFreeTicketingConfirmation,
+  maybeSendFreeReservationConfirmation,
+} = require("../../../helperUtils/plainConfirmationEmailService");
 
 const createTicketingBooking = async (req, res) => {
   const session = await mongoose.startSession();
@@ -63,6 +67,23 @@ const createTicketingBooking = async (req, res) => {
     }
 
     await session.commitTransaction();
+
+    // Plain confirmation for free/€0 tickets (and free reservation in combined checkout).
+    // Paid flows keep fiscal + payment-confirmation emails instead.
+    const orderId = result?.orderId || result?.order?._id;
+    if (orderId) {
+      fireAndForget(
+        maybeSendFreeTicketingConfirmation(orderId),
+        "PLAIN_FREE_TICKET_CONFIRMATION",
+      );
+    }
+    const reservationId = result?.reservationId || result?.reservation?._id;
+    if (reservationId) {
+      fireAndForget(
+        maybeSendFreeReservationConfirmation(reservationId),
+        "PLAIN_FREE_RESERVATION_CONFIRMATION",
+      );
+    }
 
     return sendResponse({
       res,

@@ -13,7 +13,6 @@ const {
   sendMenuOrderNotification,
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
-const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 const { getUserReservationDetails } = require("../../../../app/reservations/reservationRepository");
 const { userReservationsFormatter } = require("../../../../app/reservations/formaters/reservationFormetter");
@@ -27,6 +26,10 @@ const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmi
 const {
   recordPaidCaptureLedger,
 } = require("../../ledger/ledgerWriter");
+const {
+  maybeEnqueueReservationConfirmation,
+  maybeEnqueueOrderingConfirmation,
+} = require("../../../fiscalDocuments/fiscalTiming");
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
 
@@ -233,6 +236,21 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     }
 
     if (result.status === "paid") {
+      maybeEnqueueReservationConfirmation({
+        _id: userReservation._id,
+        amount: userReservation.amount,
+        paymentDetails: { paymentStatus: "paid" },
+      });
+      if (menuOrder?._id) {
+        const paidMenu =
+          (await MenuOrders.findById(menuOrder._id).lean()) || {
+            _id: menuOrder._id,
+            paymentStatus: "paid",
+            totalPrice: menuOrder.totalPrice,
+            priceBreakdown: menuOrder.priceBreakdown,
+          };
+        maybeEnqueueOrderingConfirmation(paidMenu);
+      }
       fireAndForget(
         recordPaidCaptureLedger({
           orderId: userReservation._id,
@@ -247,22 +265,6 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         }),
         "LEDGER_RESERVATION_CAPTURE",
       );
-      fireAndForget(
-        enqueueFiscalDocument({
-          kind: "reservation_confirmation",
-          orderId: userReservation._id,
-        }),
-        "FISCAL_RESERVATION_CONFIRMATION",
-      );
-      if (menuOrder?._id) {
-        fireAndForget(
-          enqueueFiscalDocument({
-            kind: "ordering_confirmation",
-            orderId: menuOrder._id,
-          }),
-          "FISCAL_ORDERING_CONFIRMATION",
-        );
-      }
     }
 
     if (userReservation.amount && userReservation.amount > 0) {

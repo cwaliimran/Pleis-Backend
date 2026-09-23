@@ -295,19 +295,73 @@ function stepSourceGates() {
     "no second reservation confirmation email",
   );
   assert(
-    ticketFinalizer.includes("enqueueFiscalDocument"),
-    "ticketing still enqueues fiscal docs",
+    !ticketFinalizer.includes('kind: "ticketing_invoices"') &&
+      readSrc("backend/staff/events/eventRepository.js").includes(
+        "enqueueTicketingInvoicesOnScan",
+      ),
+    "ticketing fiscal deferred to check-in scan (not payment finalizer)",
+  );
+  const fiscalTimingSrc = readSrc(
+    "backend/commonModules/fiscalDocuments/fiscalTiming.js",
+  );
+  assert(
+    fiscalTimingSrc.includes("maybeEnqueueOrderingConfirmation") &&
+      !fiscalTimingSrc.includes("ORDERING_DELIVERED_STATUS") &&
+      fiscalTimingSrc.includes("maybeEnqueueReservationConfirmation") &&
+      !fiscalTimingSrc.includes("maybeEnqueueReservationVoucherFiscal"),
+    "ordering/reservation confirmations enqueue at payment (no completed gate / no voucher fiscal)",
+  );
+  assert(
+    menuFinalizer.includes("maybeEnqueueOrderingConfirmation"),
+    "menu finalizer enqueues ordering_confirmation at payment",
+  );
+  assert(
+    resFinalizer.includes("maybeEnqueueReservationConfirmation"),
+    "reservation finalizer enqueues reservation_confirmation at payment",
   );
   assert(
     !ticketFinalizer.includes("Your tickets are confirmed") &&
       !ticketFinalizer.includes("ticketConfirmationEmailTemplate"),
-    "legacy ticket confirmation email removed (fiscal + PC confirmation instead)",
+    "paid ticketing finalizer has no legacy ticket confirmation (fiscal + PC instead)",
+  );
+  const plainConfirm = readSrc(
+    "backend/helperUtils/plainConfirmationEmailService.js",
+  );
+  assert(
+    plainConfirm.includes("renderPaymentConfirmationEmailHtml") &&
+      plainConfirm.includes("PLAIN_COPY_OVERRIDES") &&
+      plainConfirm.includes("attachments: []") &&
+      plainConfirm.includes("buildConfirmationOpenUrl") &&
+      !plainConfirm.includes("ticketConfirmationEmailTemplate") &&
+      !plainConfirm.includes("menuOrderConfirmationEmailTemplate") &&
+      !plainConfirm.includes("reservationConfirmationEmailTemplate") &&
+      !plainConfirm.includes("enqueueFiscalDocument") &&
+      !plainConfirm.includes("issuePaymentConfirmation"),
+    "plain free/€0 confirmation emails reuse paid confirmation-email shell (no fiscal enqueue / PC PDF)",
+  );
+  assert(
+    readSrc(
+      "backend/app/bookings/ticketings/ticketingBookingController.js",
+    ).includes("maybeSendFreeTicketingConfirmation") &&
+      readSrc(
+        "backend/app/menuItemsAndOrdering/orders/orderService.js",
+      ).includes("maybeSendFreeMenuOrderConfirmation") &&
+      readSrc(
+        "backend/app/reservations/reservationController.js",
+      ).includes("maybeSendFreeReservationConfirmation"),
+    "plain confirms hooked on free ticket / €0 order / free reservation paths",
   );
   assert(
     ticketing.includes("issuePaymentConfirmation") &&
       ticketing.includes('module: "TICKETING"') &&
       ticketing.includes("mapTicketingItems"),
     "ticketing job also issues payment confirmation with ticket/event items",
+  );
+  assert(
+    ticketing.includes("isBillkoFiscalizeEnabled") &&
+      ticketing.includes("fiscalize disabled — skipping ticketing invoices") &&
+      ticketing.includes("getOrganizerParty"),
+    "ticketing job skips Billko invoices when BILLKO_FISCALIZE_ENABLED is off; PC still runs",
   );
   assert(
     ticketFinalizer.includes("ticketFailedEmailTemplate"),
@@ -601,6 +655,7 @@ function stepRefundAndFields() {
 
   const {
     isBillkoStornoEnabled,
+    isBillkoFiscalizeEnabled,
   } = require("../../paymentsIntegrations/billko/billkoClient");
   const {
     buildPartialRefundInvoicePayload,
@@ -616,6 +671,10 @@ function stepRefundAndFields() {
   assert(
     isBillkoStornoEnabled() === false,
     "live Billko storno is disabled by default",
+  );
+  assert(
+    isBillkoFiscalizeEnabled() === false,
+    "live Billko fiscalize is disabled by default",
   );
   assert(
     isFullTicketRefund(null, 50) === true &&
@@ -675,6 +734,24 @@ function stepRefundAndFields() {
       stornoFn.includes("partial_create_refund_invoice") &&
       stornoFn.includes('kind: "refund_storno"'),
     "stornoTicketingInvoices has env gate + full/partial paths",
+  );
+  const ensureInvoiceFn = extractFn(
+    readSrc("backend/commonModules/fiscalDocuments/jobs/documentService.js"),
+    "ensureInvoice",
+  );
+  const subscriptionFn = extractFn(
+    readSrc("backend/commonModules/fiscalDocuments/jobs/documentService.js"),
+    "issueSubscriptionInvoice",
+  );
+  assert(
+    ensureInvoiceFn.includes("isBillkoFiscalizeEnabled") &&
+      ensureInvoiceFn.includes("fiscalize disabled — skipping ensureInvoice"),
+    "ensureInvoice gates live Billko create behind BILLKO_FISCALIZE_ENABLED",
+  );
+  assert(
+    subscriptionFn.includes("isBillkoFiscalizeEnabled") &&
+      subscriptionFn.includes("fiscalize disabled — skipping subscription invoice"),
+    "subscription invoice skipped when BILLKO_FISCALIZE_ENABLED is off",
   );
   assert(
     mapDeliveryStatus("delivered") === "delivered" &&

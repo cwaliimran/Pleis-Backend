@@ -30,7 +30,7 @@ const {
 const { getActiveSubscription } = require("../usersManagement/usersRepository");
 const { cache, invalidate } = require("@redisCache");
 
-const ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY = "organizationPickupSettings";
+const ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY = "organizationPickupSettings:v2";
 
 const getOrgPickupSettingsCacheKey = (organizationId) =>
   `${ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY}:${String(organizationId)}`;
@@ -575,22 +575,47 @@ const getOrganizationPickupSettings = async (organizationId) => {
   return cache({
     namespace: getOrgPickupSettingsCacheKey(organizationId),
     params: {},
-    ttl: null,
+    // Match settings TTL so a missed invalidate cannot stick forever
+    ttl: 30,
     fetchFn: async () => {
-      const org = await Organizations.findById(organizationId)
-        .select(
-          "inAppOrderingSettings.paymentMethods inAppOrderingSettings.deliveryMethods inAppOrderingSettings.tips",
-        )
-        .lean();
+      const [org, appSettings] = await Promise.all([
+        Organizations.findById(organizationId)
+          .select(
+            "inAppOrderingSettings.paymentMethods inAppOrderingSettings.deliveryMethods inAppOrderingSettings.tips",
+          )
+          .lean(),
+        // Setting is source of truth for payment / acceptance flags
+        require("../inAppOrdering/settings/setting/settingRepository").getSetttings({
+          organization: organizationId,
+        }),
+      ]);
 
       const settings = org?.inAppOrderingSettings || {};
+      const {
+        mapSettingToOrgPaymentMethods,
+      } = require("../../shared/organizations/orderingPaymentSettingsMap");
+
+      const hasAppSettings =
+        appSettings &&
+        (appSettings.paymentMethod ||
+          appSettings.automaticOrderAcceptance !== undefined);
 
       return {
-        paymentMethods:
-          settings.paymentMethods || { ...DEFAULT_PICKUP_SETTINGS.paymentMethods },
+        paymentMethods: hasAppSettings
+          ? mapSettingToOrgPaymentMethods(
+              appSettings,
+              settings.paymentMethods || {},
+            )
+          : settings.paymentMethods || {
+              ...DEFAULT_PICKUP_SETTINGS.paymentMethods,
+            },
         deliveryMethods:
-          settings.deliveryMethods || { ...DEFAULT_PICKUP_SETTINGS.deliveryMethods },
+          settings.deliveryMethods || {
+            ...DEFAULT_PICKUP_SETTINGS.deliveryMethods,
+          },
         tips: settings.tips || { ...DEFAULT_PICKUP_SETTINGS.tips },
+        // Mirror Setting shape so clients that already read appSettings stay aligned
+        appSettings: hasAppSettings ? appSettings : {},
       };
     },
   });

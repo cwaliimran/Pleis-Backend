@@ -76,16 +76,17 @@ const scanQrController = async (req, res) => {
       });
     }
     else if (type === "eventTicket") {
-      validateData.rawData.push("qrData.id");
+      const ticketLookupId = id || qrData.ticketBookingId || qrData.bookingId;
+      if (!ticketLookupId) validateData.rawData.push("qrData.id");
       validateData.rawData.push("qrData.organization");
 
       if (
         !validateParams(req, res, validateData)
       ) return;
 
-      const { id, organization } = qrData;
+      const { organization } = qrData;
 
-      let eventTicket = await getTicketingBookingByIdService(id, timezone);
+      let eventTicket = await getTicketingBookingByIdService(ticketLookupId, timezone);
       if (!eventTicket) {
         return sendResponse({
           res,
@@ -134,6 +135,8 @@ const scanQrController = async (req, res) => {
 
 
 
+      // Preview only — check-in (staff/events checkIn) consumes the ticket and
+      // enqueues ticketing_invoices for paid orders (see fiscalTiming).
       return sendResponse({
         res,
         statusCode: 200,
@@ -145,15 +148,14 @@ const scanQrController = async (req, res) => {
       });
     }
     else if (type === "userReservation") {
-      validateData.rawData.push("qrData.id");
+      const reservationLookupId = id || qrData.bookingId;
+      if (!reservationLookupId) validateData.rawData.push("qrData.id");
       if (!validateParams(req, res, validateData)) return;
 
-
       const reservationData =
-        await getUserReservationDetailsService(id, timezone);
+        await getUserReservationDetailsService(reservationLookupId, timezone);
 
-
-      if (!reservationData) {
+      if (!reservationData?.reservation) {
         return sendResponse({
           res,
           statusCode: 404,
@@ -223,12 +225,13 @@ const scanQrController = async (req, res) => {
       });
     }
     else if (type === "loyaltyReward") {
-      validateData.rawData.push("qrData.id");
+      const rewardLookupId = id || qrData.bookingId;
+      if (!rewardLookupId) validateData.rawData.push("qrData.id");
 
       if (!validateParams(req, res, validateData)) return;
 
       const loyaltyRewardOrder =
-        await getLoyaltyRewardOrderDetailsService(id);
+        await getLoyaltyRewardOrderDetailsService(rewardLookupId);
 
 
       if (!loyaltyRewardOrder) {
