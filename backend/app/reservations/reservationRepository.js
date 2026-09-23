@@ -23,7 +23,10 @@ const {
   getLogoByOrganization,
 } = require("../../admin/organizations/organizationRepository");
 const { createTransactionService } = require("../userWalletService/transactions/services/unifiedTransactionsService");
-const { TAX_RATE_RESERVATION } = require("../../config/CONSTANTS");
+const {
+  TAX_RATE_RESERVATION,
+  BYPASS_RESERVATION_PAYMENT,
+} = require("../../config/CONSTANTS");
 const { usePromoCode } = require("../promoCode/promoCodeRepository");
 const ReservationType = require("@ReservationTypeModel");
 const {
@@ -767,9 +770,18 @@ const createReservation = async (data, session) => {
       Number(reservationTypeData.amount || 0) > 0 ||
       Number(totalReservationAmount || 0) > 0;
     if (requiresUpfrontPayment) {
-      if (["card", "applePay"].includes(resolvedPaymentMethod)) {
+      if (
+        BYPASS_RESERVATION_PAYMENT ||
+        ["card", "applePay"].includes(resolvedPaymentMethod)
+      ) {
         data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
         data.status = "pendingPayment";
+        if (BYPASS_RESERVATION_PAYMENT && !resolvedPaymentMethod) {
+          data.paymentDetails = {
+            ...(data.paymentDetails || {}),
+            paymentMethod: "card",
+          };
+        }
       } else {
         return { success: false, error: "Payment method is required" };
       }
@@ -823,7 +835,7 @@ const createReservation = async (data, session) => {
     data.status === "pendingPayment" ||
     hasPaidPreOrder;
 
-  if (needsPayment) {
+  if (needsPayment && !BYPASS_RESERVATION_PAYMENT) {
     await assertOrganizerBillkoReady(data.companyOrganizer);
   }
 

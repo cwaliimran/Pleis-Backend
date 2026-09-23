@@ -34,6 +34,10 @@ const {
   sendUserNotifications,
 } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("../../models/Notifications");
+const {
+  sendReservationNotification,
+  resolveReservationStatusAction,
+} = require("../../controllers/notificationHelper/reservationNotificationService");
 const { getActiveEventsForOrg } = require("../events/eventRepository");
 const {
   EventCheckins,
@@ -366,35 +370,17 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
     );
   }
 
-  //notify user about the reservation status change
-  // fireAndForget(async () => {
-  //    sendUserNotifications({
-  //     recipientIds: [userReservation.userId.toString()],
-  //     title: "Reservation " + value,
-  //     body:
-  //       value === "confirmed"
-  //         ? "Your reservation has been confirmed"
-  //         : value === "cancelled"
-  //         ? "Your reservation has been cancelled"
-  //         : value === "checkedIn"
-  //         ? "Your reservation has been checked in"
-  //         : value === "rejected"
-  //         ? "Your reservation has been rejected"
-  //         : value === "needsConfirmation"
-  //         ? "Your reservation needs confirmation"
-  //         : value === "pendingPayment"
-  //         ? "Your reservation is pending payment"
-  //         : value === "completed"
-  //         ? "Your reservation has been completed"
-  //         : "Your reservation status has been changed to " + value,
-  //     data: {
-  //       type: NotificationTypes.RESERVATION_UPDATE,
-  //       objectType: "userreservations",
-  //     },
-  //     sender: changedBy ? changedBy.toString() : userReservation.companyOrganizer?.toString() || null,
-  //     objectId: userReservation._id?.toString() || null,
-  //   }).catch((err) => console.error("Error sending notifications in background:"));
-  // }, "RESERVATION_STATUS_CHANGE");
+  //notify user about every reservation status change
+  if (updated.userId && userReservation.status !== value) {
+    fireAndForget(
+      sendReservationNotification({
+        reservationId: updated._id,
+        action: resolveReservationStatusAction(value),
+        context: { status: value },
+      }),
+      `RESERVATION_${String(value).toUpperCase()}_NOTIFICATION`,
+    );
+  }
   return true;
 };
 
@@ -420,6 +406,21 @@ const updateUserReservation = async (data) => {
     "status",
   ];
 
+  const previousStatus = UserReservation.status;
+  const previousSnapshot = {
+    firstName: UserReservation.firstName,
+    lastName: UserReservation.lastName,
+    phoneNumber: UserReservation.phoneNumber,
+    partySize: UserReservation.partySize,
+    reservationType: String(UserReservation.reservationType || ""),
+    notes: UserReservation.notes,
+    numberOfTables: UserReservation.numberOfTables,
+    conditionType: UserReservation.conditionType,
+    amount: UserReservation.amount,
+    email: UserReservation.email,
+    status: UserReservation.status,
+  };
+
   const checkAvailability = await ReservationRepo.checkReservationAvailabilityForUpdate({
     reservationId: data.id,
     organizationId: UserReservation.organizationId,
@@ -429,13 +430,16 @@ const updateUserReservation = async (data) => {
     return { error: checkAvailability.message };
   }
 
+  const capacityChanges = new Set(checkAvailability.changes || []);
+  const timingActuallyChanged = capacityChanges.has("timing");
+
   // -----------------------------
   // Detect timing change
   // -----------------------------
   let oldTiming = null;
   let timingChanged = false;
 
-  if (data.timingSlots) {
+  if (data.timingSlots && timingActuallyChanged) {
     oldTiming = JSON.parse(JSON.stringify(UserReservation.timingSlots));
 
     if (!UserReservation.timingSlots) {
@@ -488,25 +492,54 @@ const updateUserReservation = async (data) => {
 
   await UserReservation.save();
 
-  // -----------------------------
-  // Notify user
-  // -----------------------------
-  if (UserReservation.userId) {
-    await sendUserNotifications({
-      recipientIds: [UserReservation.userId.toString()],
-      titleKey: "reservation_updated_title",
-      bodyKey: timingChanged
-        ? "reservation_updated_timing_body"
-        : "reservation_updated_details_body",
+  const statusChanged =
+    data.status !== undefined && previousStatus !== UserReservation.status;
 
-      data: {
-        type: NotificationTypes.RESERVATION_UPDATE,
-        objectType: "userreservations",
-      },
+  const detailsChanged = Object.keys(previousSnapshot).some((key) => {
+    if (key === "status") return false;
+    const nextVal = UserReservation[key];
+    const prevVal = previousSnapshot[key];
+    if (key === "reservationType") {
+      return String(nextVal || "") !== String(prevVal || "");
+    }
+    return String(nextVal ?? "") !== String(prevVal ?? "");
+  });
 
-      sender: data.userId,
-      objectId: UserReservation._id,
-    });
+  // -----------------------------
+  // Notify user (status > timing > details)
+  // -----------------------------
+  if (UserReservation.userId && (statusChanged || timingChanged || detailsChanged)) {
+    if (statusChanged) {
+      fireAndForget(
+        sendReservationNotification({
+          reservationId: UserReservation._id,
+          action: resolveReservationStatusAction(UserReservation.status),
+          context: { status: UserReservation.status },
+        }),
+        `RESERVATION_${String(UserReservation.status).toUpperCase()}_NOTIFICATION`,
+      );
+    } else if (timingChanged) {
+      fireAndForget(
+        sendReservationNotification({
+          reservationId: UserReservation._id,
+          action: "RESERVATION_TIMING_CHANGED",
+          context: { newTiming: "updated" },
+        }),
+        "RESERVATION_TIMING_CHANGED_NOTIFICATION",
+      );
+    } else {
+      await sendUserNotifications({
+        recipientIds: [UserReservation.userId.toString()],
+        titleKey: "reservation_updated_title",
+        bodyKey: "reservation_updated_details_body",
+        data: {
+          type: NotificationTypes.RESERVATION_UPDATE,
+          objectType: "userreservations",
+        },
+        sender: data.userId,
+        objectId: UserReservation._id,
+      });
+    }
   }
 
   return {
