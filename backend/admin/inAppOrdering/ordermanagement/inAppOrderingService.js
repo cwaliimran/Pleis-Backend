@@ -131,13 +131,20 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
      🚫 Guards
   =============================== */
 
-  // ❌ Cannot cancel paid order
-  if (order.paymentStatus === "paid" && data.status === "cancelled") {
+  // ❌ Cannot cancel paid / unpaid-closed order
+  if (
+    (order.paymentStatus === "paid" || order.paymentStatus === "unpaidClosed") &&
+    data.status === "cancelled"
+  ) {
     return { error: "Cant_Cancel_paid_order" };
   }
 
-  // ❌ Prevent payment change if already paid
-  if (order.paymentStatus === "paid" && data.paymentStatus !== undefined && data.paymentStatus !== "paid") {
+  // ❌ Prevent payment change if already paid or unpaid-closed
+  if (
+    (order.paymentStatus === "paid" || order.paymentStatus === "unpaidClosed") &&
+    data.paymentStatus !== undefined &&
+    data.paymentStatus !== order.paymentStatus
+  ) {
     return { error: "Cant_change_paid_payment_status" };
   }
 
@@ -417,7 +424,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   }
 
   const plain = typeof order.toObject === "function" ? order.toObject() : order;
-  if (plain.status === "completed") plain.status = "delivered";
+  if (plain.status === "completed" || plain.status === "sent") plain.status = "delivered";
   plain.nextActions = resolveStaffNextActions(order);
   plain.guestNextStep = resolveGuestNextStep(order);
   return plain;

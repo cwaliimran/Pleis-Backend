@@ -15,12 +15,12 @@ const TERMINAL_FULFILMENT = new Set([
   "completed",
 ]);
 
-/** Fulfilment values that mean "handed over" (doc Delivered; legacy completed). */
-const DELIVERED_STATUSES = ["delivered", "completed"];
+/** Fulfilment values that mean "handed over" (doc Delivered; legacy completed/sent). */
+const DELIVERED_STATUSES = ["delivered", "completed", "sent"];
 
 /**
- * Doc §8: Past only when BOTH axes are terminal:
- *   Delivered + Paid, or Delivered + Unpaid-closed, or Cancelled/Rejected/Expired.
+ * Doc §8: Past when fulfilment is canceled/rejected/expired, OR payment is
+ * unpaidClosed (walk-away, any fulfilment), OR Delivered + Paid.
  * Delivered + Unpaid stays Active (Mark as Paid / Mark as Unpaid).
  */
 const CLOSED_FULFILMENT_STATUSES = ["cancelled", "rejected", "expired"];
@@ -29,11 +29,12 @@ const CLOSED_FULFILMENT_STATUSES = ["cancelled", "rejected", "expired"];
 const activeOnOrderBoardMatch = {
   $and: [
     { status: { $nin: CLOSED_FULFILMENT_STATUSES } },
+    { paymentStatus: { $ne: "unpaidClosed" } },
     {
       $nor: [
         {
           status: { $in: DELIVERED_STATUSES },
-          paymentStatus: { $in: ["paid", "unpaidClosed"] },
+          paymentStatus: "paid",
         },
       ],
     },
@@ -44,25 +45,29 @@ const activeOnOrderBoardMatch = {
 const pastOnOrderBoardMatch = {
   $or: [
     { status: { $in: CLOSED_FULFILMENT_STATUSES } },
+    { paymentStatus: "unpaidClosed" },
     {
       status: { $in: DELIVERED_STATUSES },
-      paymentStatus: { $in: ["paid", "unpaidClosed"] },
+      paymentStatus: "paid",
     },
   ],
 };
 
 const normalizeFulfilmentStatus = (status) => {
-  if (status === "completed") return "delivered";
+  // Doc name is "delivered". Legacy Admin wrote "completed" (paid hand-over)
+  // or "sent" (unpaid hand-over awaiting settlement).
+  if (status === "completed" || status === "sent") return "delivered";
   return status;
 };
 
 const isPickupStyle = (order = {}) => {
-  const pickup = String(order.pickupType || "").toLowerCase();
+  const pickup = String(order.pickupType || "").toLowerCase().replace(/[_-\s]/g, "");
   return (
     pickup === "counter" ||
+    pickup === "counterpickup" ||
     pickup === "togo" ||
-    pickup === "to_go" ||
-    pickup === "togopickup"
+    pickup === "togopickup" ||
+    pickup === "pickup"
   );
 };
 
@@ -113,9 +118,16 @@ const assertFulfilmentTransition = (order, nextRaw) => {
   if (current === next) return next;
 
   if (TERMINAL_FULFILMENT.has(current) && current !== next) {
-    const err = new Error("invalid_fulfilment_transition");
-    err.statusCode = 400;
-    throw err;
+    // Delivered is fulfilment-terminal for Past when Paid, but doc §7.7 still
+    // allows Cancel while Delivered + Unpaid.
+    const cancelFromDelivered =
+      (current === "delivered" || current === "completed") &&
+      next === "cancelled";
+    if (!cancelFromDelivered) {
+      const err = new Error("invalid_fulfilment_transition");
+      err.statusCode = 400;
+      throw err;
+    }
   }
 
   const pickup = isPickupStyle(order);
@@ -125,6 +137,9 @@ const assertFulfilmentTransition = (order, nextRaw) => {
       ? ["ready", "cancelled", "delivered"]
       : ["delivered", "cancelled"],
     ready: ["delivered", "cancelled"],
+    // Doc §3.1 / §7.7: Cancel while Delivered + Unpaid
+    delivered: ["cancelled"],
+    completed: ["cancelled"],
     // legacy rows may still be "sent" / "pendingPayment"
     sent: ["confirmed", "ready", "delivered", "cancelled"],
     pendingPayment: ["confirmed", "cancelled", "rejected"],
@@ -144,29 +159,37 @@ const assertFulfilmentTransition = (order, nextRaw) => {
   return next;
 };
 
+/** Payment axis terminal (Past when combined with Delivered). */
+const isPaymentSettledOrClosed = (paymentStatus) =>
+  paymentStatus === "paid" || paymentStatus === "unpaidClosed";
+
 /**
- * Mark as Paid (staff): doc §3.2 — Unpaid + Delivered.
- * Pay-now gateway settlement is separate (finalizer); staff may still settle
- * cash/pay-later after delivery. Allow cash settle from confirmed for ops.
+ * Staff may Mark as Paid / Mark as Unpaid while payment is still open —
+ * before or after Delivered. Gateway pay-now settlement is separate.
+ * Once paid or unpaidClosed, payment is locked.
  */
 const assertPaymentTransition = (order, nextPaymentStatus) => {
   if (nextPaymentStatus == null) return;
   if (nextPaymentStatus === order.paymentStatus) return;
 
-  if (order.paymentStatus === "paid") {
+  if (isPaymentSettledOrClosed(order.paymentStatus)) {
     const err = new Error("Cant_change_paid_payment_status");
     err.statusCode = 400;
     throw err;
   }
 
-  if (nextPaymentStatus !== "paid") return;
+  if (nextPaymentStatus !== "paid" && nextPaymentStatus !== "unpaidClosed") {
+    return;
+  }
 
+  // Pending still awaiting Confirm/Reject — settle payment after acceptance.
   const fulfilment = normalizeFulfilmentStatus(order.status);
-  const payLater = order.paymentTiming === "payLater";
-  const delivered = fulfilment === "delivered";
-
-  if (payLater && !delivered) {
-    const err = new Error("mark_paid_requires_delivered");
+  if (fulfilment === "pending") {
+    const err = new Error(
+      nextPaymentStatus === "unpaidClosed"
+        ? "mark_unpaid_requires_confirmed"
+        : "mark_paid_requires_confirmed"
+    );
     err.statusCode = 400;
     throw err;
   }
@@ -177,7 +200,7 @@ const assertPaymentTransition = (order, nextPaymentStatus) => {
  */
 const resolveStaffNextActions = (order = {}) => {
   const fulfilment = normalizeFulfilmentStatus(order.status);
-  const unpaid = order.paymentStatus !== "paid";
+  const unpaid = !isPaymentSettledOrClosed(order.paymentStatus);
   const pickup = isPickupStyle(order);
   const actions = [];
 
@@ -186,10 +209,10 @@ const resolveStaffNextActions = (order = {}) => {
   } else if (fulfilment === "confirmed") {
     if (pickup) actions.push("ready");
     else actions.push("delivered");
-    if (unpaid) actions.push("cancel");
+    if (unpaid) actions.push("mark_paid", "mark_unpaid", "cancel");
   } else if (fulfilment === "ready") {
     actions.push("delivered");
-    if (unpaid) actions.push("cancel");
+    if (unpaid) actions.push("mark_paid", "mark_unpaid", "cancel");
   } else if (fulfilment === "delivered" && unpaid) {
     actions.push("mark_paid", "mark_unpaid", "cancel");
   }
@@ -202,10 +225,14 @@ const resolveStaffNextActions = (order = {}) => {
  */
 const resolveGuestNextStep = (order = {}) => {
   const fulfilment = normalizeFulfilmentStatus(order.status);
-  const unpaid = order.paymentStatus !== "paid";
+  const unpaid = !isPaymentSettledOrClosed(order.paymentStatus);
   const amountDue = Number(order.totalPrice) > 0;
 
-  if (fulfilment === "rejected" || fulfilment === "cancelled") {
+  if (
+    fulfilment === "rejected" ||
+    fulfilment === "cancelled" ||
+    order.paymentStatus === "unpaidClosed"
+  ) {
     return { key: "terminal", payInWallet: false };
   }
   if (!unpaid || !amountDue) {
@@ -250,4 +277,5 @@ module.exports = {
   assertPaymentTransition,
   resolveStaffNextActions,
   resolveGuestNextStep,
+  isPaymentSettledOrClosed,
 };

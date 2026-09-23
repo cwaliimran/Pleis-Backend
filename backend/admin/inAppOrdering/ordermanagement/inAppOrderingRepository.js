@@ -153,10 +153,21 @@ const getOrders = async ({
     statusFilter.createdAt = { $gte: startDate, $lte: endDate };
   }
 
+  // Spreading two objects that both use `$or` / `$and` would overwrite one side
+  // (past board uses `$or`; keyword search also uses `$or`). Always AND them.
+  const boardAndKeywordClauses = [statusFilter, keywordMatch].filter(
+    (clause) => clause && Object.keys(clause).length > 0
+  );
+  const boardAndKeywordMatch =
+    boardAndKeywordClauses.length === 0
+      ? {}
+      : boardAndKeywordClauses.length === 1
+        ? boardAndKeywordClauses[0]
+        : { $and: boardAndKeywordClauses };
+
   // Create query for event count
   const eventCountQuery = {
-    ...statusFilter,
-    ...keywordMatch,
+    ...boardAndKeywordMatch,
     ...visibleOnOrderBoardMatch,
     organization: { $in: organizationsIds }, // Add organization match
   };
@@ -279,8 +290,7 @@ const getOrders = async ({
     },
     {
       $match: {
-        ...statusFilter,
-        ...keywordMatch, // Combine the filters in the match stage
+        ...boardAndKeywordMatch,
       },
     },
 

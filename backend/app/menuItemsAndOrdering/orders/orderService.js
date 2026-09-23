@@ -55,6 +55,7 @@ const {
 const {
   maybeSendFreeMenuOrderConfirmation,
 } = require("../../../helperUtils/plainConfirmationEmailService");
+const { maybeEnqueueOrderingConfirmation } = require("../../../commonModules/fiscalDocuments/fiscalTiming");
 const {
   isAwaitingInAppPayment,
 } = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
@@ -540,6 +541,15 @@ const placeOrder = async ({
         orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
       } else {
         orderStatus = "confirmed";
+        // Doc §7.1: cash + Pay now + auto-accept → Paid up front (card still uses hideUntilPaid above)
+        if (
+          paymentMethod === "cash" &&
+          payNowEnabled &&
+          amountDue
+        ) {
+          orderData.paymentStatus = "paid";
+          orderData.paidAt = new Date();
+        }
       }
     } else {
       // Staff must accept — Pending + Unpaid stays on the board (Confirm / Reject)
@@ -613,6 +623,9 @@ const placeOrder = async ({
         maybeSendFreeMenuOrderConfirmation(order._id),
         "PLAIN_FREE_MENU_ORDER_CONFIRMATION",
       );
+    } else if (order.paymentStatus === "paid") {
+      // Cash auto Pay now — confirmation at place (same as mark-paid path)
+      maybeEnqueueOrderingConfirmation(order);
     }
 
     const postOrderFlow = resolvePostOrderFlow({

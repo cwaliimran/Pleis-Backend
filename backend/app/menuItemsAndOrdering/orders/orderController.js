@@ -17,6 +17,21 @@ const placeOrder = async (req, res) => {
     reservationId,
   } = req.body;
   try {
+    console.log("[placeOrder] payload", JSON.stringify({
+      userId: userId || req.user?._id,
+      paymentMethod,
+      paymentTiming,
+      pickupType,
+      tableNumber,
+      deliveryOption,
+      tip,
+      promoCode: promoCode || null,
+      reservationId: reservationId || null,
+      notes: notes || null,
+      items,
+      combos,
+    }));
+
     let validateData = {
       rawData: ["paymentMethod", "deliveryOption"],
       enumFields: {
@@ -54,6 +69,21 @@ const placeOrder = async (req, res) => {
       paymentTiming,
     });
 
+    console.log("[placeOrder] result", JSON.stringify({
+      orderNumber: order?.orderNumber,
+      _id: order?._id,
+      organization: order?.organization?._id || order?.organization,
+      status: order?.status,
+      paymentStatus: order?.paymentStatus,
+      paymentMethod: order?.paymentMethod,
+      paymentTiming: order?.paymentTiming,
+      hideUntilPaid: order?.hideUntilPaid,
+      totalPrice: order?.totalPrice,
+      postOrderFlow: order?.postOrderFlow,
+      guestNextStep: order?.guestNextStep,
+      nextActions: order?.nextActions,
+    }));
+
     return sendResponse({
       res,
       statusCode: 201,
@@ -61,6 +91,12 @@ const placeOrder = async (req, res) => {
       data: order,
     });
   } catch (error) {
+    console.error("[placeOrder] error", {
+      message: error?.message,
+      paymentMethod,
+      paymentTiming,
+      pickupType,
+    });
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,

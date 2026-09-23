@@ -34,8 +34,11 @@ const updateOrders = async (staffId, id, data) => {
     return { error: "Orders_not_found" };
   }
 
-  // ❌ Cannot cancel a paid order
-  if (order.paymentStatus === "paid" && data.status === "cancelled") {
+  // ❌ Cannot cancel a paid / unpaid-closed order
+  if (
+    (order.paymentStatus === "paid" || order.paymentStatus === "unpaidClosed") &&
+    data.status === "cancelled"
+  ) {
     return { error: "Cant_Cancel_paid_order" };
   }
 
@@ -186,7 +189,7 @@ const updateOrders = async (staffId, id, data) => {
   });
 
   const plain = typeof order.toObject === "function" ? order.toObject() : order;
-  if (plain.status === "completed") plain.status = "delivered";
+  if (plain.status === "completed" || plain.status === "sent") plain.status = "delivered";
   plain.nextActions = resolveStaffNextActions(order);
   plain.guestNextStep = resolveGuestNextStep(order);
   return plain;

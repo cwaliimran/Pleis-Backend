@@ -113,7 +113,8 @@ const OrdersSchema = new mongoose.Schema(
     // for applePay/card order can't be cancelled
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "failed"],
+      // unpaidClosed = doc §7.8 walk-away (Delivered + Mark as Unpaid)
+      enum: ["pending", "paid", "failed", "unpaidClosed"],
       default: "pending",
     },
     paidAt: {

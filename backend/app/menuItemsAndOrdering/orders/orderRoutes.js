@@ -1,5 +1,6 @@
 const express = require("express");
 const auth = require("../../../middlewares/authMiddleware");
+const roleMiddleware = require("../../../middlewares/roleMiddleware");
 const {
   placeOrder,
   getOrderDetails,
@@ -12,9 +13,12 @@ const router = express.Router();
 
 router.use(auth);
 
+// Guests cannot place or extend orders — registered app users only
+const requireAppUser = roleMiddleware(["user", "staff", "admin", "manager"]);
+
 // Place a new order
-router.post("/", placeOrder);
-router.post("/add-more", addMoreItemsToOrder);
+router.post("/", requireAppUser, placeOrder);
+router.post("/add-more", requireAppUser, addMoreItemsToOrder);
 
 // Get details of an order
 router.get("/:id", getOrderDetails);
