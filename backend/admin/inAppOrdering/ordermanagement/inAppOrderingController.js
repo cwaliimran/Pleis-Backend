@@ -18,7 +18,8 @@ const getOrders = async (req, res) => {
     range,
     organization,
     pickupFilter,
-    orderStatus
+    orderStatus,
+    paymentStatus,
   } = req.query;
   try {
     if (!organization) {
@@ -42,6 +43,7 @@ const getOrders = async (req, res) => {
       paymentMethod,
       pickupFilter,
       orderStatus,
+      paymentStatus,
     });
 
     return sendResponse({

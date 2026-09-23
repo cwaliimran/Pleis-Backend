@@ -130,11 +130,40 @@ const getOrders = async ({
       statusFilter = { ...pastOnOrderBoardMatch };
     }
   }
+
+  const mergeIntoStatusFilter = (clause) => {
+    if (!clause || !Object.keys(clause).length) return;
+    if (!Object.keys(statusFilter).length) {
+      statusFilter = clause;
+      return;
+    }
+    statusFilter = { $and: [statusFilter, clause] };
+  };
+
+  // Payment-axis filter (paid / pending / failed / unpaidClosed)
   if (paymentStatus && paymentStatus.trim()) {
-    statusFilter.paymentStatus = paymentStatus.trim();
+    const ps = paymentStatus.trim();
+    if (ps === "unpaidClosed") {
+      // New walk-away + legacy Mark as Unpaid wrote status:expired
+      mergeIntoStatusFilter({
+        $or: [{ paymentStatus: "unpaidClosed" }, { status: "expired" }],
+      });
+    } else {
+      mergeIntoStatusFilter({ paymentStatus: ps });
+    }
   }
+
   if (orderStatus && orderStatus.trim()) {
-    statusFilter = { status: orderStatus.trim() };
+    const os = orderStatus.trim();
+    // Admin used to map Mark as Unpaid → status expired; filter may still
+    // send expired or unpaidClosed as orderStatus.
+    if (os === "unpaidClosed" || os === "expired") {
+      mergeIntoStatusFilter({
+        $or: [{ paymentStatus: "unpaidClosed" }, { status: "expired" }],
+      });
+    } else {
+      mergeIntoStatusFilter({ status: os });
+    }
   }
 
 

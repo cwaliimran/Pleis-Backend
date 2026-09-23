@@ -109,13 +109,21 @@ const assertPaymentMethodAllowed = (setting, paymentMethod, paymentTiming) => {
   }
 };
 
-const orderNeedsConfirmation = (orderItems = [], orderCombos = []) =>
-  orderItems.some((item) => item.status === "pending") ||
-  orderCombos.some((combo) =>
-    (combo.items || []).some(
-      (item) => item.menuItemSnapShot?.isRequiresOrderConfirmation,
-    ),
+/**
+ * If ANY line (or combo component) requires staff confirmation, the whole
+ * order stays Pending even when automaticOrderAcceptance is on.
+ */
+const orderNeedsConfirmation = (orderItems = [], orderCombos = []) => {
+  const itemNeedsConfirm = (item) =>
+    item?.status === "pending" ||
+    item?.menuItemSnapShot?.isRequiresOrderConfirmation === true;
+
+  if (orderItems.some(itemNeedsConfirm)) return true;
+
+  return orderCombos.some((combo) =>
+    (combo.items || []).some(itemNeedsConfirm),
   );
+};
 
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
@@ -379,11 +387,15 @@ const placeOrder = async ({
       );
       if (!firstComboItemId) throw new Error("Invalid combos in cart");
 
-      const comboOrgId =
+      const comboOrgData =
         await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
+      const comboOrgId = comboOrgData?.organization ?? comboOrgData;
 
       if (!organizationId) {
         organizationId = comboOrgId;
+        if (comboOrgData?.isOrderingEnabled === false) {
+          throw new Error("In-app ordering is not enabled for this organization");
+        }
       } else if (comboOrgId.toString() !== organizationId.toString()) {
         throw new Error(
           "Combos and items must belong to the same organization",
@@ -421,7 +433,7 @@ const placeOrder = async ({
       totalSaleDiscount += priced.saleDiscountPerUnit * i.quantity;
       totalPrice += finalPrice;
 
-      const status = menuItem.isRequiresOrderConfirmation
+      const status = menuItem.isRequiresOrderConfirmation === true
         ? "pending"
         : "confirmed";
 
@@ -541,10 +553,12 @@ const placeOrder = async ({
         orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
       } else {
         orderStatus = "confirmed";
-        // Doc §7.1: cash + Pay now + auto-accept → Paid up front (card still uses hideUntilPaid above)
+        // Doc §7.1: cash + Pay now + auto-accept → Paid up front.
+        // Do NOT apply when the order is payLater (cash-only venues often
+        // still have paymentMethod.payNow=true in settings).
         if (
           paymentMethod === "cash" &&
-          payNowEnabled &&
+          resolvedPaymentTiming === "payNow" &&
           amountDue
         ) {
           orderData.paymentStatus = "paid";
@@ -744,7 +758,7 @@ const updateOrder = async ({
           }
           const priced = buildPricedMenuItemSnapshot(menuItem);
 
-          const status = menuItem.isRequiresOrderConfirmation
+          const status = menuItem.isRequiresOrderConfirmation === true
             ? "pending"
             : "confirmed";
 
@@ -794,8 +808,10 @@ const updateOrder = async ({
           throw new Error("Invalid combos in cart");
         }
 
-        const comboOrganizationId =
+        const comboOrgData =
           await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
+        const comboOrganizationId =
+          comboOrgData?.organization ?? comboOrgData;
 
         if (comboOrganizationId.toString() !== organizationId.toString()) {
           throw new Error(
