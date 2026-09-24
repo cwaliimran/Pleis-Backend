@@ -21,14 +21,14 @@ const createVenue = async (data) => {
       //get organization companyOrganizer
       let creator = await getOrgCompanyOrganizer(data.organization);
       data.creator = creator;
-      // Make all venues ifPrimary to false
-      await Venues.updateMany(
-        { organization: data.organization, isPrimary: true },
-        { isPrimary: false },
-        { session }
-      );
-      // Assign isPrimary true to the new venue
-      data.isPrimary = true;
+      // Only demote existing primaries when explicitly creating as primary
+      if (data.isPrimary) {
+        await Venues.updateMany(
+          { organization: data.organization, isPrimary: true },
+          { isPrimary: false },
+          { session }
+        );
+      }
     }
     // Create venue
     const venue = new Venues(data);

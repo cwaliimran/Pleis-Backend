@@ -216,6 +216,7 @@ const UserReservationsSchema = new mongoose.Schema(
             "reservationStatusChanged",
             "paymentStatusChanged",
             "cancelled",
+            "refundRequested",
             "refundProcessed",
           ],
           required: true,
@@ -278,4 +279,24 @@ UserReservationsSchema.index({
 
 const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);
 
-module.exports = { UserReservations };
+/** Statuses that hold seats / count toward booked capacity & occupancy. */
+const CAPACITY_CONSUMING_STATUSES = [
+  "pendingPayment",
+  "needsConfirmation",
+  "confirmed",
+  "checkedIn",
+];
+
+/** Statuses that must never increment reserved / occupancy counts. */
+const NON_CAPACITY_STATUSES = [
+  "cancelled",
+  "rejected",
+  "deleted",
+  "completed",
+];
+
+module.exports = {
+  UserReservations,
+  CAPACITY_CONSUMING_STATUSES,
+  NON_CAPACITY_STATUSES,
+};

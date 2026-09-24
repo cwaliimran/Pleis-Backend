@@ -58,17 +58,24 @@ const createReservationService = async (data, session) => {
   const occupancyPercentage = getOccupancyPercentage(existingReservation, capacityCheck);
 
   const { automaticResponse } = organizationPreferences?.reservationPreferences || {};
+  const autoAccept = automaticResponse?.autoAccept === true;
+  const autoReject = automaticResponse?.autoReject === true;
+  const maxGuest = automaticResponse?.maxGuestPerReservationForAutoAccept;
+  // 0 / null / undefined = unlimited (schema default is 0)
+  const maxGuestsOk =
+    maxGuest == null || Number(maxGuest) === 0 || Number(maxGuest) >= data.partySize;
 
-  if (
-    automaticResponse?.autoAccept === true &&
-    automaticResponse?.maxGuestPerReservationForAutoAccept >= data.partySize &&
-    occupancyPercentage <= 90
-  ) {
-    data.status = "confirmed";
-  }
-
-  if (automaticResponse?.autoReject === true && occupancyPercentage >= 99) {
+  // Free-path auto-confirm (global autoAccept wins; ignore type.requireConfirmationToApprove).
+  // Precedence: !autoAccept → needsConfirmation; autoReject@≥99 → rejected;
+  // autoAccept + ≤90% + maxGuestsOk → confirmed; else needsConfirmation.
+  if (!autoAccept) {
+    data.status = "needsConfirmation";
+  } else if (autoReject && occupancyPercentage >= 99) {
     data.status = "rejected";
+  } else if (occupancyPercentage <= 90 && maxGuestsOk) {
+    data.status = "confirmed";
+  } else {
+    data.status = "needsConfirmation";
   }
 
   const result = await ReservationRepo.createReservation(data, session);
@@ -285,6 +292,16 @@ const acceptReservationChange = async (id, userId) => {
   return reservation;
 };
 
+const ALLOWED_PAYMENT_STATUSES = new Set(["pending", "paid", "failed", "refunded"]);
+
+/** Coerce legacy/invalid paymentStatus (e.g. "unpaid") so document.save() passes enum validation. */
+const normalizePaymentStatusForSave = (reservation) => {
+  const current = reservation.paymentDetails?.paymentStatus;
+  if (current == null || ALLOWED_PAYMENT_STATUSES.has(current)) return;
+  reservation.paymentDetails.paymentStatus =
+    Number(reservation.amount || 0) === 0 ? "paid" : "pending";
+};
+
 const cancelReservation = async (id, userId) => {
   const reservation = await ReservationRepo.findUserReservationById(id);
 
@@ -300,7 +317,6 @@ const cancelReservation = async (id, userId) => {
       reservation.reservationChanges.push({
         changedBy: userId,
         action: "refundRequested",
-        status: "pending",
       });
     } catch (err) {
       console.error("Refund failed:", err);
@@ -312,10 +328,13 @@ const cancelReservation = async (id, userId) => {
   reservation.reservationChanges.push({
     changedBy: userId,
     action: "cancelled",
-    status: "completed",
   });
 
   reservation.status = "cancelled";
+
+  // Legacy free bookings may store paymentStatus "unpaid" (not in schema enum).
+  // Without normalizing, cancel's .save() fails validation on that nested path.
+  normalizePaymentStatusForSave(reservation);
 
   await reservation.save();
 
