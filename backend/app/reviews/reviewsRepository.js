@@ -41,12 +41,12 @@ const getReviews = async ({ organizationId, timezone, page, limit, keyword, stat
       $match: {
         ...(organizationId && { organization: organizationId }),  // Match organization if organizationId is provided
         status: status || { $ne: "deleted" }, // Default to excluding "deleted" status
-        ...(date && {
-          createdAt: {
-            $gte: new Date(date),
-            $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)), // Filter by the given date
-          },
-        }),
+        event: { $exists: false },
+        organization: { $exists: true },
+        createdAt: {
+          $gte: new Date(date),
+          $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)), // Filter by the given date
+        },
       },
     },
 

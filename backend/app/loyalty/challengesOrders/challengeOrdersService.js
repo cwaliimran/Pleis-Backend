@@ -318,20 +318,21 @@ console.log("resolveBuyMenuItemChallengeService===>", JSON.stringify(items, null
   for (const [menuItemId, incomingQty] of qtyMap.entries()) {
 
     const purchasedItem = await MenuItems.findById(menuItemId)
-      .select("presetType title creator")
+      .select("presetType title creator amountQuantity  ")
       .lean();
 
     if (!purchasedItem) continue;
 
     const equivalentMenuItemIds = [purchasedItem._id];
 
-    // Menu items that share presetType + title count toward the same challenge
+    // Menu items that share presetType + title + creator + amountQuantity count toward the same challenge
     if (purchasedItem.presetType && purchasedItem.title) {
       const equivalentItems = await MenuItems.find({
         _id: { $ne: purchasedItem._id },
         presetType: purchasedItem.presetType,
         title: purchasedItem.title,
-        creator: purchasedItem.creator
+        creator: purchasedItem.creator,
+        amountQuantity: purchasedItem.amountQuantity
       })
         .select("_id")
         .lean();

@@ -26,7 +26,7 @@ const createReviews = async (req, res) => {
   // Validate required fields
   if (
     !validateParams(req, res, {
-      rawData: ["organization", "event", "rating", "comment"],
+      rawData: ["organization", "rating", "comment"],
     })
   )
     return;
@@ -52,23 +52,13 @@ const createReviews = async (req, res) => {
 
   try {
     const reviews = await promoCodeService.createReviews(data);
-  
 
-    if (reviews.error) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "PromoCode_used_failed",
-        data: { error: reviews.error },
-      });
-    } else {
       return sendResponse({
         res,
         statusCode: 201,
         translationKey: "Reviews_created_successfully",
         data: reviews,
       });
-    }
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({

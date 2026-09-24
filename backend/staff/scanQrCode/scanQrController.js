@@ -5,12 +5,13 @@ const { sendResponse, validateParams } = require("@utils/responseUtil");
 const { User } = require("@UserModel");
 const { getUserReservationDetailsService } = require("../../app/reservations/reservationService");
 const { getLoyaltyRewardOrderDetailsService } = require("../../app/loyalty/rewardsOrders/rewardsOrdersService");
+const { resolveBuyMenuItemRewardAvailability } = require("../../app/loyalty/rewards/utils/equivalentMenuItems");
 const scanQrController = async (req, res) => {
   try {
     const { timezone } = req.user;
 
     const { qrData } = req.body;
-    const { publicId, user, companyOrganizer, type = "loyaltyCard", id } = qrData;
+    const { publicId, user, companyOrganizer, organization, type = "loyaltyCard", id } = qrData;
 
     let validateData = {
       rawData: [
@@ -281,6 +282,46 @@ const scanQrController = async (req, res) => {
           warning: `Reward already ${loyaltyRewardOrder.status}`,
           warningCode: "reward_expired",
         });
+      }
+
+      // buyMenuItemReward: match equivalents and require one on organizer active menus
+      // (scoped to qrData.organization when provided)
+      const snapshot = loyaltyRewardOrder.snapshot;
+      if (snapshot?.rewardType === "buyMenuItemReward" && snapshot?.menuItem) {
+        const organizerId =
+          loyaltyRewardOrder.companyOrganizer?._id ||
+          loyaltyRewardOrder.companyOrganizer ||
+          companyOrganizer;
+
+        const {
+          menuItem,
+          equivalentMenuItems,
+          activeEquivalentMenuItems,
+          isAvailableOnOrganizerActiveMenus,
+        } = await resolveBuyMenuItemRewardAvailability(
+          snapshot.menuItem,
+          organizerId,
+          organization
+        );
+
+        if (menuItem) {
+          loyaltyRewardOrder.snapshot = {
+            ...snapshot,
+            menuItem,
+          };
+        }
+
+        loyaltyRewardOrder.equivalentMenuItems = equivalentMenuItems;
+        loyaltyRewardOrder.activeEquivalentMenuItems = activeEquivalentMenuItems;
+
+        if (!isAvailableOnOrganizerActiveMenus) {
+          warnings.push({
+            warning: organization
+              ? "Reward menu item is not available on this organization's active menus"
+              : "Reward menu item is not available on organizer active menus",
+            warningCode: "menu_item_unavailable",
+          });
+        }
       }
 
       return sendResponse({
