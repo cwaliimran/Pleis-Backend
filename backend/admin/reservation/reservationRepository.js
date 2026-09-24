@@ -1,6 +1,9 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
-const { UserReservations } = require("@UserReservationsModel");
+const {
+  UserReservations,
+  CAPACITY_CONSUMING_STATUSES,
+} = require("@UserReservationsModel");
 const { User } = require("../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");
@@ -932,8 +935,13 @@ const getReservationTypeId = async (reservationType) => {
 };
 
 const getReservationTypeCapacityStats = async (query) => {
+  // Cancelled / rejected / completed / deleted must not inflate reserved seats.
+  const capacityQuery = {
+    ...query,
+    status: { $in: CAPACITY_CONSUMING_STATUSES },
+  };
   const pipeline = [
-    { $match: query },
+    { $match: capacityQuery },
     {
       $group: {
         _id: "$reservationType",
@@ -1137,10 +1145,11 @@ const getReservationsV2Calender = async ({
   start,
   end,
 }) => {
+  // Calendar occupancy view: only capacity-consuming bookings (not cancelled/rejected/deleted/completed).
   const pipeline = [
     {
       $match: {
-        status: { $ne: "deleted" },
+        status: { $in: CAPACITY_CONSUMING_STATUSES },
         ...(companyOrganizer && {
           companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
         }),
@@ -1446,7 +1455,7 @@ const checkReservationAvailabilityForUpdate = async ({
     return { allowed: false, message: "Reservation not found" };
   }
 
-  if (["cancelled", "completed", "noShow"].includes(existing.status)) {
+  if (["cancelled", "completed", "rejected", "deleted"].includes(existing.status)) {
     return { allowed: false, message: `A ${existing.status} reservation cannot be updated` };
   }
 

@@ -67,6 +67,8 @@ const getReviews = async (data) => {
         $match: {
           organization: { $in: organizationObjectIds },  // Match organization from the provided list
           status: 'active',  // Only consider active reviews
+          event: { $exists: false },
+          organization: { $exists: true },
         },
       },
       {

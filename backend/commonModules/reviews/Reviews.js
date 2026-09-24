@@ -17,7 +17,7 @@ const reviewsSchema = new mongoose.Schema(
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Events",
-      required: true,
+      required: false,
     },
     user: { 
       type: mongoose.Schema.Types.ObjectId,

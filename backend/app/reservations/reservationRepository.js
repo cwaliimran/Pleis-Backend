@@ -1,6 +1,6 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
-const { UserReservations } = require("@UserReservationsModel");
+const { UserReservations, CAPACITY_CONSUMING_STATUSES } = require("@UserReservationsModel");
 const { User } = require("@UserModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter } = require("./formaters/reservationFormetter");
@@ -260,7 +260,7 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone, cap
     organization: organizationId,
 
     status: {
-      $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
+      $in: CAPACITY_CONSUMING_STATUSES,
     },
 
     "timingSlots.dateTimeSlots.date": date,
@@ -619,7 +619,7 @@ const checkReservationAvailability = async ({
 
   const filter = {
     organizationId: new mongoose.Types.ObjectId(organization),
-    status: { $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"] },
+    status: { $in: CAPACITY_CONSUMING_STATUSES },
     "timingSlots.dateTimeSlots.date": {
       $gte: new Date(`${sortedDates[0]}T00:00:00.000Z`),
       $lte: new Date(`${sortedDates[sortedDates.length - 1]}T23:59:59.999Z`),
@@ -762,33 +762,34 @@ const createReservation = async (data, session) => {
     totalReservationAmount = amount;
   }
 
-  if (reservationTypeData.requireConfirmationToApprove) {
-    data.status = "needsConfirmation";
-  } else {
-    // Fixed fee (type.amount) OR prepaid min-spend (payload amount) both need capture.
-    const requiresUpfrontPayment =
-      Number(reservationTypeData.amount || 0) > 0 ||
-      Number(totalReservationAmount || 0) > 0;
-    if (requiresUpfrontPayment) {
-      if (
-        BYPASS_RESERVATION_PAYMENT ||
-        ["card", "applePay"].includes(resolvedPaymentMethod)
-      ) {
-        data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
-        data.status = "pendingPayment";
-        if (BYPASS_RESERVATION_PAYMENT && !resolvedPaymentMethod) {
-          data.paymentDetails = {
-            ...(data.paymentDetails || {}),
-            paymentMethod: "card",
-          };
-        }
-      } else {
-        return { success: false, error: "Payment method is required" };
+  // Fixed fee (type.amount) OR prepaid min-spend (payload amount) both need capture.
+  const requiresUpfrontPayment =
+    Number(reservationTypeData.amount || 0) > 0 ||
+    Number(totalReservationAmount || 0) > 0;
+
+  if (requiresUpfrontPayment) {
+    // Payment gating takes precedence over auto-confirm.
+    if (
+      BYPASS_RESERVATION_PAYMENT ||
+      ["card", "applePay"].includes(resolvedPaymentMethod)
+    ) {
+      data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
+      data.status = "pendingPayment";
+      if (BYPASS_RESERVATION_PAYMENT && !resolvedPaymentMethod) {
+        data.paymentDetails = {
+          ...(data.paymentDetails || {}),
+          paymentMethod: "card",
+        };
       }
     } else {
-      data.status = "confirmed";
+      return { success: false, error: "Payment method is required" };
     }
+  } else if (!data.status) {
+    // Free path: service decides from global autoAccept/occupancy/maxGuests.
+    // Do NOT override with type.requireConfirmationToApprove when autoAccept is on.
+    data.status = "needsConfirmation";
   }
+  // else: trust data.status from service (confirmed | needsConfirmation | rejected)
 
   if (!data.timingSlots?.dateTimeSlots?.[0]?.timeSlots?.length) {
     data.bookingDuration = "wholeDay";
@@ -830,6 +831,19 @@ const createReservation = async (data, session) => {
   data.amount = finalReservationAmount;
 
   const hasPaidPreOrder = Boolean(preOrderMenuItems?.items?.length);
+
+  // Free bookings: do not leave paymentStatus as pending when nothing is owed.
+  if (
+    finalReservationAmount === 0 &&
+    data.status !== "pendingPayment" &&
+    !hasPaidPreOrder
+  ) {
+    data.paymentDetails = {
+      ...(data.paymentDetails || {}),
+      paymentStatus: "paid",
+    };
+  }
+
   const needsPayment =
     finalReservationAmount > 0 ||
     data.status === "pendingPayment" ||
@@ -1979,7 +1993,7 @@ const bookedCapacity = async ({ reservationTypeId, date }) => {
     {
       $match: {
         reservationType: new mongoose.Types.ObjectId(reservationTypeId),
-        status: { $nin: ["cancelled", "deleted", "rejected", "completed"] },
+        status: { $in: CAPACITY_CONSUMING_STATUSES },
         "timingSlots.dateTimeSlots.date": {
           $eq: date ? new Date(date) : new Date().toISOString().slice(0, 10),
         },

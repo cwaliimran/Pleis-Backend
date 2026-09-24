@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const ReservationType = require("@ReservationTypeModel");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
+const { CAPACITY_CONSUMING_STATUSES } = require("@UserReservationsModel");
 
 const createReservationType = async (data) => {
   try {
@@ -82,9 +83,7 @@ const getReservationTypesSummary = async ({
                     $eq: ["$organizationId", "$$organizationId"],
                   },
                   {
-                    $not: {
-                      $in: ["$status", ["cancelled", "deleted"]],
-                    },
+                    $in: ["$status", CAPACITY_CONSUMING_STATUSES],
                   },
                 ],
               },

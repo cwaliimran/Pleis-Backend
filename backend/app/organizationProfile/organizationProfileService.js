@@ -230,6 +230,7 @@ const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
       $match: {
         organization: new mongoose.Types.ObjectId(organizationId),
         status: "active",
+        event: { $exists: false },
       },
     },
 
