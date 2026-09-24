@@ -5,6 +5,7 @@ const { sendResponse, validateParams } = require("@utils/responseUtil");
 const { User } = require("@UserModel");
 const { getUserReservationDetailsService } = require("../../app/reservations/reservationService");
 const { getLoyaltyRewardOrderDetailsService } = require("../../app/loyalty/rewardsOrders/rewardsOrdersService");
+const { resolveBuyMenuItemRewardAvailability } = require("../../app/loyalty/rewards/utils/equivalentMenuItems");
 const scanQrController = async (req, res) => {
   try {
     const { timezone } = req.user;
@@ -281,6 +282,39 @@ const scanQrController = async (req, res) => {
           warning: `Reward already ${loyaltyRewardOrder.status}`,
           warningCode: "reward_expired",
         });
+      }
+
+      // buyMenuItemReward: match equivalents and require one on organizer active menus
+      const snapshot = loyaltyRewardOrder.snapshot;
+      if (snapshot?.rewardType === "buyMenuItemReward" && snapshot?.menuItem) {
+        const organizerId =
+          loyaltyRewardOrder.companyOrganizer?._id ||
+          loyaltyRewardOrder.companyOrganizer ||
+          companyOrganizer;
+
+        const {
+          menuItem,
+          equivalentMenuItems,
+          activeEquivalentMenuItems,
+          isAvailableOnOrganizerActiveMenus,
+        } = await resolveBuyMenuItemRewardAvailability(snapshot.menuItem, organizerId);
+
+        if (menuItem) {
+          loyaltyRewardOrder.snapshot = {
+            ...snapshot,
+            menuItem,
+          };
+        }
+
+        loyaltyRewardOrder.equivalentMenuItems = equivalentMenuItems;
+        loyaltyRewardOrder.activeEquivalentMenuItems = activeEquivalentMenuItems;
+
+        if (!isAvailableOnOrganizerActiveMenus) {
+          warnings.push({
+            warning: "Reward menu item is not available on organizer active menus",
+            warningCode: "menu_item_unavailable",
+          });
+        }
       }
 
       return sendResponse({
