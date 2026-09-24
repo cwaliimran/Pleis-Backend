@@ -21,8 +21,13 @@ const buildSiblingIdentityQuery = (item) => ({
 /**
  * Resolve buyMenuItemReward menu item + equivalents (presetType + title + creator + amountQuantity),
  * then check whether any equivalent is active on an active menu owned by the organizer.
+ * When organization is provided, only menus for that organization count.
  */
-const resolveBuyMenuItemRewardAvailability = async (menuItemRef, companyOrganizer) => {
+const resolveBuyMenuItemRewardAvailability = async (
+  menuItemRef,
+  companyOrganizer,
+  organization = null
+) => {
   const menuItemId = getRewardMenuItemId(menuItemRef);
   if (!menuItemId) {
     return {
@@ -54,6 +59,7 @@ const resolveBuyMenuItemRewardAvailability = async (menuItemRef, companyOrganize
     : [requestedItem];
 
   const organizerId = companyOrganizer?._id || companyOrganizer;
+  const organizationId = organization?._id || organization;
   if (!organizerId || !equivalentMenuItems.length) {
     return {
       menuItem: requestedItem,
@@ -72,14 +78,17 @@ const resolveBuyMenuItemRewardAvailability = async (menuItemRef, companyOrganize
     ),
   ];
 
+  const menuQuery = {
+    _id: { $in: menuIds },
+    status: "active",
+    creator: organizerId,
+  };
+  if (organizationId) {
+    menuQuery.organization = { $in: [organizationId] };
+  }
+
   const activeMenus = menuIds.length
-    ? await Menus.find({
-        _id: { $in: menuIds },
-        status: "active",
-        creator: organizerId,
-      })
-        .select("_id")
-        .lean()
+    ? await Menus.find(menuQuery).select("_id").lean()
     : [];
 
   const activeMenuIds = new Set(activeMenus.map((menu) => String(menu._id)));

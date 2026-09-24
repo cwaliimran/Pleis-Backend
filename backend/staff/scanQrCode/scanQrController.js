@@ -11,7 +11,7 @@ const scanQrController = async (req, res) => {
     const { timezone } = req.user;
 
     const { qrData } = req.body;
-    const { publicId, user, companyOrganizer, type = "loyaltyCard", id } = qrData;
+    const { publicId, user, companyOrganizer, organization, type = "loyaltyCard", id } = qrData;
 
     let validateData = {
       rawData: [
@@ -285,6 +285,7 @@ const scanQrController = async (req, res) => {
       }
 
       // buyMenuItemReward: match equivalents and require one on organizer active menus
+      // (scoped to qrData.organization when provided)
       const snapshot = loyaltyRewardOrder.snapshot;
       if (snapshot?.rewardType === "buyMenuItemReward" && snapshot?.menuItem) {
         const organizerId =
@@ -297,7 +298,11 @@ const scanQrController = async (req, res) => {
           equivalentMenuItems,
           activeEquivalentMenuItems,
           isAvailableOnOrganizerActiveMenus,
-        } = await resolveBuyMenuItemRewardAvailability(snapshot.menuItem, organizerId);
+        } = await resolveBuyMenuItemRewardAvailability(
+          snapshot.menuItem,
+          organizerId,
+          organization
+        );
 
         if (menuItem) {
           loyaltyRewardOrder.snapshot = {
@@ -311,7 +316,9 @@ const scanQrController = async (req, res) => {
 
         if (!isAvailableOnOrganizerActiveMenus) {
           warnings.push({
-            warning: "Reward menu item is not available on organizer active menus",
+            warning: organization
+              ? "Reward menu item is not available on this organization's active menus"
+              : "Reward menu item is not available on organizer active menus",
             warningCode: "menu_item_unavailable",
           });
         }
