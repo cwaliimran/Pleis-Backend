@@ -7,6 +7,7 @@ const { checkReservationCapacity } = require("../../admin/reservation/reservatio
 const {
   getReservationPreferencess,
 } = require("../../admin/reservation/reservationPreferences/reservationPreferencesRepository");
+const { evaluateCancellationEligibility } = require("./cancellationPolicy");
 
 const getOccupancyPercentage = (existingReservation, capacityCheck) => {
   if (typeof existingReservation !== "number" || typeof capacityCheck !== "number") {
@@ -169,8 +170,21 @@ const getUserReservationDetailsService = async (id, timezone) => {
       return { reservation: null }; // Return null for reservation
     }
 
+    // Evaluate against raw UTC start times before display formatting.
+    const eligibility = evaluateCancellationEligibility(
+      reservation,
+      reservation.reservationPreferences?.cancellationPolicy,
+    );
+
     // Format the reservation if necessary
     reservation = userReservationsFormatter(reservation, timezone);
+    reservation.canCancel = eligibility.canCancel;
+    reservation.cancellationEligibility = {
+      canCancel: eligibility.canCancel,
+      reason: eligibility.reason,
+      policyEnabled: eligibility.policyEnabled,
+      hoursBeforeReservation: eligibility.hoursBeforeReservation,
+    };
     // reservation.qrCode = await logQRCode(reservation);
 
     // Return the reservation object in the response
@@ -306,7 +320,22 @@ const cancelReservation = async (id, userId) => {
   const reservation = await ReservationRepo.findUserReservationById(id);
 
   if (!reservation) {
-    throw new Error("Reservation not found");
+    const err = new Error("Reservation not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const prefsResult = await getReservationPreferencess({
+    organization: reservation.organizationId,
+  });
+  const cancellationPolicy =
+    prefsResult?.reservationPreferences?.cancellationPolicy || null;
+
+  const eligibility = evaluateCancellationEligibility(reservation, cancellationPolicy);
+  if (!eligibility.canCancel) {
+    const err = new Error(eligibility.reason || "Reservation cannot be cancelled");
+    err.statusCode = 400;
+    throw err;
   }
 
   // ---- Refund if paid ----
