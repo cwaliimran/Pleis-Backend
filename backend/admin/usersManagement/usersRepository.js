@@ -91,13 +91,7 @@ const getUsersWithFilters = async (
     },
     {
       $addFields: {
-        lastLogin: {
-          $cond: [
-            { $gt: [{ $size: "$userlogs" }, 0] },
-            { $arrayElemAt: ["$userlogs.lastLogin", -1] },
-            null,
-          ],
-        },
+        lastLogin: { $max: "$userlogs.lastLogin" },
       },
     },
 

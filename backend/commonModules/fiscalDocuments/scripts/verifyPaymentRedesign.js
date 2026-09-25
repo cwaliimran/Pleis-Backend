@@ -1304,10 +1304,16 @@ async function stepConfirmationPdf() {
   let engine = chromeExecutable();
   if (!engine) {
     try {
-      require.resolve("puppeteer");
-      engine = "puppeteer";
+      require.resolve("puppeteer-core");
+      require.resolve("@sparticuz/chromium");
+      engine = "puppeteer-core+sparticuz";
     } catch {
-      engine = "";
+      try {
+        require.resolve("puppeteer");
+        engine = "puppeteer";
+      } catch {
+        engine = "";
+      }
     }
   }
   if (!engine) {

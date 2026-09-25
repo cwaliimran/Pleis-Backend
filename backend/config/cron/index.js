@@ -36,6 +36,7 @@ const loyaltyStatusDemotionCron = require("./statusDemotion/loyaltyStatusDemotio
 const {
   runTopSpenderMonthlyCron,
 } = require("../../services/globalStreaksAndBadgesService/triggerGlobalStreak");
+const { runLogCleanupCron } = require("./logging/logCleanup.cron");
 
 const startCrons = () => {
   /* ======================================================
@@ -320,7 +321,25 @@ const startCrons = () => {
     }
   });
 
+  /* ======================================================
+     🧹 CRON: Log cleanup / rotation (daily at 03:00)
+     Rotates continuous app/error/pm2 logs, deletes files
+     older than 14 days (access dated files included).
+     ====================================================== */
+  cron.schedule("0 3 * * *", async () => {
+    const lockKey = "cron:log-cleanup";
+    const lock = await acquireLock(lockKey, 120);
 
+    if (!lock) return;
+
+    try {
+      await runLogCleanupCron();
+    } catch (err) {
+      console.error("Log cleanup cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
 
 };
 

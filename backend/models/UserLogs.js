@@ -6,7 +6,6 @@ const userLogSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
     lastLogin: {
       type: Date,
@@ -18,7 +17,6 @@ const userLogSchema = new mongoose.Schema(
     },
     deviceType: {
       type: String,
-
     },
     status: {
       type: String,
@@ -28,6 +26,8 @@ const userLogSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+userLogSchema.index({ user: 1, lastLogin: -1 });
 
 module.exports = mongoose.model("UserLogs", userLogSchema);
 

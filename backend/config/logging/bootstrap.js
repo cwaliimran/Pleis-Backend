@@ -1,30 +1,9 @@
-const fs = require("fs");
-const path = require("path");
+const { ensureLogDirs, runLogCleanup } = require("./logCleanup");
 
-const ROOT = path.resolve(__dirname, "../../../logs");
-const DIRS = ["app", "crash", "access", "pm2"];
-const MAX_DAYS = 14;
-
-function ensureDirs() {
-  if (!fs.existsSync(ROOT)) fs.mkdirSync(ROOT);
-  DIRS.forEach(d => {
-    const p = path.join(ROOT, d);
-    if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
-  });
+// Ensure dirs + age-based cleanup on process boot (rotation left to daily cron)
+ensureLogDirs();
+try {
+  runLogCleanup({ rotate: false });
+} catch (err) {
+  console.error("[log-cleanup] bootstrap cleanup failed:", err.message);
 }
-
-function cleanupOldLogs(dir) {
-  const full = path.join(ROOT, dir);
-  if (!fs.existsSync(full)) return;
-
-  const now = Date.now();
-  fs.readdirSync(full).forEach(file => {
-    const filePath = path.join(full, file);
-    const stat = fs.statSync(filePath);
-    const ageDays = (now - stat.mtimeMs) / (1000 * 60 * 60 * 24);
-    if (ageDays > MAX_DAYS) fs.unlinkSync(filePath);
-  });
-}
-
-ensureDirs();
-DIRS.forEach(cleanupOldLogs);

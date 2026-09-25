@@ -30,10 +30,10 @@ function formatReward(reward, timezone) {
   // Non-browseable rewards (R2/R5) are only claimable via challenges,
   // so Views / Favorites / Conversion aren't meaningful for them
   if (obj.availableAsReward === false || obj.challengeOnly === true) {
-    obj.views = "—";
-    obj.favoritesCount = "—";
-    obj.conversion = "—";
-    obj.redemptionRate = "—";
+    obj.views = "";
+    obj.favoritesCount = "";
+    obj.conversion = "";
+    obj.redemptionRate = "";
   } else {
     obj.conversion = conversion;
     obj.redemptionRate = redemptionRate;

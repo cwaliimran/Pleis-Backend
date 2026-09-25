@@ -281,12 +281,20 @@ const getUserReservations = async ({
 const updateUserReservationStatus = async (id, value, changedBy) => {
   const now = new Date();
 
-  //find find reservation type and get minimum spend if they amount is >0 then it should change status to
   const userReservation = await UserReservations.findById(id);
   if (!userReservation) return null;
+
+  // Approving a prepaid / min-spend hold: collect payment before confirmed.
+  let nextStatus = value;
   let lockUntil = null;
-  if (userReservation.status === "pendingPayment") {
-    //lock for 30 minutes
+  if (
+    value === "confirmed" &&
+    userReservation.status === "needsConfirmation" &&
+    Number(userReservation.amount || 0) > 0
+  ) {
+    nextStatus = "pendingPayment";
+    lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+  } else if (nextStatus === "pendingPayment") {
     lockUntil = new Date(Date.now() + 30 * 60 * 1000);
   }
 
@@ -294,7 +302,7 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
     id,
     {
       $set: {
-        status: value,
+        status: nextStatus,
         ...(lockUntil ? { lockUntil } : {}),
       },
       $push: {
@@ -302,7 +310,7 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
           changedBy: changedBy ? new mongoose.Types.ObjectId(changedBy) : null,
           action: "reservationStatusChanged",
           oldValue: userReservation.status,
-          newValue: value,
+          newValue: nextStatus,
           reason: "Reservation status updated by organizer",
           createdAt: now,
         },
@@ -316,7 +324,7 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
 
   if (!updated) return null;
 
-  if (value === "confirmed") {
+  if (nextStatus === "confirmed") {
     const {
       maybeSendFreeReservationConfirmation,
     } = require("../../helperUtils/plainConfirmationEmailService");
@@ -326,7 +334,7 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
     );
   }
 
-  if (value === "checkedIn") {
+  if (nextStatus === "checkedIn") {
     fireAndForget(
       (async () => {
         const reservation = updated;
@@ -371,14 +379,14 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
   }
 
   //notify user about every reservation status change
-  if (updated.userId && userReservation.status !== value) {
+  if (updated.userId && userReservation.status !== nextStatus) {
     fireAndForget(
       sendReservationNotification({
         reservationId: updated._id,
-        action: resolveReservationStatusAction(value),
-        context: { status: value },
+        action: resolveReservationStatusAction(nextStatus),
+        context: { status: nextStatus },
       }),
-      `RESERVATION_${String(value).toUpperCase()}_NOTIFICATION`,
+      `RESERVATION_${String(nextStatus).toUpperCase()}_NOTIFICATION`,
     );
   }
   return true;
