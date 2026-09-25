@@ -1,8 +1,10 @@
 const fs = require("fs");
 const path = require("path");
+const { emitLogEvent } = require("./logEmitter");
+const { LOG_ROOT } = require("./logPaths");
 
 const isProd = process.env.NODE_ENV === "prod";
-const LOG_DIR = path.resolve(__dirname, "../../../logs/app");
+const LOG_DIR = path.join(LOG_ROOT, "app");
 
 function write(level, message, meta = {}) {
   const entry = {
@@ -15,14 +17,18 @@ function write(level, message, meta = {}) {
   };
 
   const line = JSON.stringify(entry) + "\n";
+  const source = level === "ERROR" || level === "WARN" ? "error" : "app";
 
-  if (level === "ERROR" || level === "WARN") {
-    fs.appendFileSync(path.join(LOG_DIR, "error.log"), line);
-  } else {
-    fs.appendFileSync(path.join(LOG_DIR, "app.log"), line);
-  }
+  try {
+    if (source === "error") {
+      fs.appendFileSync(path.join(LOG_DIR, "error.log"), line);
+    } else {
+      fs.appendFileSync(path.join(LOG_DIR, "app.log"), line);
+    }
+  } catch (_) {}
 
   console.log(line.trim());
+  emitLogEvent(source, entry);
 }
 
 module.exports = {
