@@ -1,10 +1,15 @@
 const Organizations = require("@OrganizationModel");
 const Tags = require("@TagsModel");
+const Venues = require("@VenuesModel");
 
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
 const { User } = require("@UserModel");
 const { getNearbyEventsWithAdvanceFilters } = require("../../events/eventService");
+
+function escapeRegex(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 //
 // EVENTS
@@ -14,8 +19,57 @@ async function searchEvents(ctx) {
   return { data: events, meta };
 }
 
+/**
+ * Active org IDs with an active venue whose title matches keyword.
+ * Indexed on { status, title } — used inside $geoNear.query so keyword
+ * filtering happens before distance sort (avoids per-org $lookup).
+ */
+async function findActiveOrgIdsByVenueTitle(keywordRegex) {
+  if (!keywordRegex) return [];
+
+  const orgIds = await Venues.distinct("organization", {
+    status: "active",
+    organization: { $ne: null },
+    title: keywordRegex,
+  });
+
+  return orgIds.filter(Boolean);
+}
+
+/** Optional venueType filter — light $lookup after geo/keyword filter. */
+function buildVenueTypeStages(venueTypeObjectIds) {
+  if (!venueTypeObjectIds.length) return [];
+
+  return [
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              status: "active",
+              venueType: { $in: venueTypeObjectIds },
+            },
+          },
+          { $limit: 1 },
+          { $project: { _id: 1 } },
+        ],
+        as: "matchedVenues",
+      },
+    },
+    {
+      $match: {
+        $expr: { $gt: [{ $size: "$matchedVenues" }, 0] },
+      },
+    },
+    { $project: { matchedVenues: 0 } },
+  ];
+}
+
 //
-// ORGANIZATIONS (no primaryVenue)
+// ORGANIZATIONS — org name OR active venue title (early $geoNear filter)
 //
 async function searchOrganizations(ctx) {
   const {
@@ -26,7 +80,7 @@ async function searchOrganizations(ctx) {
     longitude,
     sort,
     advanceFilters = {},
-    timezone
+    timezone,
   } = ctx;
   const {
     categories = [],
@@ -55,12 +109,27 @@ async function searchOrganizations(ctx) {
   const tagObjectIds = toObjectIds(genre);
   const venueTypeObjectIds = toObjectIds(venueTypes);
 
+  const kw = typeof keyword === "string" ? keyword.trim() : "";
+  const keywordRegex = kw
+    ? { $regex: escapeRegex(kw), $options: "i" }
+    : null;
 
   //
-  // TEXT SEARCH
+  // TEXT SEARCH: org name OR orgs linked to matching active venues
+  // (venue IDs resolved up front so $geoNear can filter early)
   //
-  if (keyword)
-    filter["basicInfo.name"] = { $regex: keyword, $options: "i" };
+  if (keywordRegex) {
+    const venueMatchedOrgIds = await findActiveOrgIdsByVenueTitle(keywordRegex);
+
+    if (venueMatchedOrgIds.length) {
+      filter.$or = [
+        { "basicInfo.name": keywordRegex },
+        { _id: { $in: venueMatchedOrgIds } },
+      ];
+    } else {
+      filter["basicInfo.name"] = keywordRegex;
+    }
+  }
 
   //
   // CATEGORY FILTER
@@ -74,7 +143,10 @@ async function searchOrganizations(ctx) {
   if (tagObjectIds.length)
     filter["otherInfo.tags"] = { $in: tagObjectIds };
 
-
+  // Only apply maxDistance when the client sets advanceFilters.distanceTo.
+  // Do NOT default to radiusKm — keyword search (org name / venue title) is global;
+  // geoNear still ranks by distance. A 50km cap was hiding valid far matches
+  // and those empty payloads were then L1/Redis cached.
   const distanceToMeters = distanceTo * 1000;
   const distanceFromMeters = distanceFrom * 1000;
 
@@ -100,38 +172,7 @@ async function searchOrganizations(ctx) {
       ]
       : [{ $match: filter }];
 
-
-      const venueTypeStages =
-  venueTypeObjectIds.length
-    ? [
-        {
-          $lookup: {
-            from: "venues",
-            let: { orgId: "$_id" },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $eq: ["$organization", "$$orgId"]
-                  },
-                  status: "active",
-                  venueType: { $in: venueTypeObjectIds }
-                }
-              },
-              { $project: { _id: 1 } } // ultra light
-            ],
-            as: "matchedVenues"
-          }
-        },
-        {
-          $match: {
-            $expr: {
-              $gt: [{ $size: "$matchedVenues" }, 0]
-            }
-          }
-        }
-      ]
-    : [];
+  const venueTypeStages = buildVenueTypeStages(venueTypeObjectIds);
 
   //
   // MAIN PIPELINE

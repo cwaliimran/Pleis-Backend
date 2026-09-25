@@ -246,7 +246,8 @@ organizationSchema.index({ "location": '2dsphere' });
 organizationSchema.index({ status: 1 });
 organizationSchema.index({ "otherInfo.categories": 1 });
 organizationSchema.index({ "otherInfo.tags": 1 });
-
+// Global search: active orgs by name
+organizationSchema.index({ status: 1, "basicInfo.name": 1 });
 
 const Organizations = mongoose.model("Organizations", organizationSchema);
 

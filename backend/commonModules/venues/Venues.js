@@ -66,7 +66,9 @@ venuesSchema.methods.formatResponse = function (venueData) {
 };
 
 venuesSchema.index({ organization: 1 });
-
+// Global search: active venues by title → org
+venuesSchema.index({ status: 1, title: 1 });
+venuesSchema.index({ status: 1, organization: 1, title: 1 });
 
 const Venues = mongoose.model("Venues", venuesSchema);
 
