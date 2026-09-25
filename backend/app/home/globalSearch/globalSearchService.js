@@ -617,7 +617,11 @@ async function fetchFilterKeyPayload({
   skip,
 }) {
   const { userId, timezone, advanceFilters } = ctx;
-  const category = advanceFilters?.categories;
+  // Empty [] is truthy — normalize so forYou/nearby don't treat it as a filter
+  const rawCategories = advanceFilters?.categories;
+  const category = Array.isArray(rawCategories)
+    ? (rawCategories.filter(Boolean).length ? rawCategories : null)
+    : rawCategories || null;
 
   switch (filterKey) {
     case "forYouOrganizations": {
