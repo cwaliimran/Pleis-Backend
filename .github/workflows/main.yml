@@ -1,4 +1,4 @@
-name: Deploy Node.js API to Azure Web App - Pleis
+name: Build and Deploy Node.js API to Azure - Pleis
 
 on:
   push:
@@ -8,17 +8,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build --if-present
+
       - name: Deploy to Azure Web App (API — Pleis)
         uses: azure/webapps-deploy@v3
-        env:
-          SCM_DO_BUILD_DURING_DEPLOYMENT: true
         with:
           app-name: 'Pleis'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D6B5A721CC1F4065BA303A78D3C5B578 }}
@@ -27,8 +37,6 @@ jobs:
       # Temporarily disabled — re-enable when worker deploy is needed again
       # - name: Deploy to Azure Web App (Worker — Pleis-worker)
       #   uses: azure/webapps-deploy@v3
-      #   env:
-      #     SCM_DO_BUILD_DURING_DEPLOYMENT: true
       #   with:
       #     app-name: 'Pleis-worker'
       #     publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_PLEIS_WORKER }}
