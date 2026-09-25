@@ -1,5 +1,5 @@
-# Logs
-logs
+# Logs (root runtime log output only — do not ignore code dirs named "logs")
+/logs
 *.log
 npm-debug.log*
 yarn-debug.log*
