@@ -24,20 +24,37 @@ const createReservation = async (data) => {
 };
 
 const updateReservationStatus = async (id, status) => {
-  const existing = await UserReservations.findById(id).select("status userId").lean();
-  const updated = await ReservationRepo.findByIdAndUpdate(id, {
-    status: status,
-  });
+  const existing = await UserReservations.findById(id)
+    .select("status userId amount")
+    .lean();
+  if (!existing) return null;
+
+  // Approving a prepaid / min-spend hold: collect payment before confirmed.
+  let nextStatus = status;
+  const update = { status: nextStatus };
+  if (
+    status === "confirmed" &&
+    existing.status === "needsConfirmation" &&
+    Number(existing.amount || 0) > 0
+  ) {
+    nextStatus = "pendingPayment";
+    update.status = nextStatus;
+    update.lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+  } else if (nextStatus === "pendingPayment") {
+    update.lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+  }
+
+  const updated = await ReservationRepo.findByIdAndUpdate(id, update);
   if (!updated) return null;
 
-  if (status === "confirmed") {
+  if (nextStatus === "confirmed") {
     fireAndForget(
       maybeSendFreeReservationConfirmation(updated._id),
       "PLAIN_FREE_RESERVATION_CONFIRMATION",
     );
   }
 
-  if (status === "checkedIn") {
+  if (nextStatus === "checkedIn") {
     // Handle checked-in logic if needed
     fireAndForget(
       (async () => {
@@ -93,14 +110,14 @@ const updateReservationStatus = async (id, status) => {
 
   }
 
-  if (updated.userId && existing?.status !== status) {
+  if (updated.userId && existing?.status !== nextStatus) {
     fireAndForget(
       sendReservationNotification({
         reservationId: updated._id,
-        action: resolveReservationStatusAction(status),
-        context: { status },
+        action: resolveReservationStatusAction(nextStatus),
+        context: { status: nextStatus },
       }),
-      `RESERVATION_${String(status).toUpperCase()}_NOTIFICATION`,
+      `RESERVATION_${String(nextStatus).toUpperCase()}_NOTIFICATION`,
     );
   }
 

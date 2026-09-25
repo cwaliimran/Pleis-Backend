@@ -82,6 +82,7 @@ router.use("/badge-categories", require("../badgeCategories/badgeCategoriesRoute
 router.use("/reviews", require("../reviews/reviewsRoutes"));
 router.use("/support", require("../support/supportRoutes"));
 router.use("/ip-threats", require("../security/ipThreatRoutes"));
+router.use("/system-logs", require("../systemLogs/systemLogsRoutes"));
 router.use("/feed-config", require("../feedConfig/feedConfigRoutes"));
 router.use("/preset-menu", require("../presetMenu/index"));
 router.use("/fiscal-documents", require("../../commonModules/fiscalDocuments/api/routes"));

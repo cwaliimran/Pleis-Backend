@@ -762,13 +762,16 @@ const createReservation = async (data, session) => {
     totalReservationAmount = amount;
   }
 
-  // Fixed fee (type.amount) OR prepaid min-spend (payload amount) both need capture.
+  // Prepaid min-spend (payload amount) needs capture — but only after venue
+  // confirmation when the service already chose needsConfirmation / rejected.
   const requiresUpfrontPayment =
     Number(reservationTypeData.amount || 0) > 0 ||
     Number(totalReservationAmount || 0) > 0;
+  const deferPaymentForConfirmation =
+    data.status === "needsConfirmation" || data.status === "rejected";
 
-  if (requiresUpfrontPayment) {
-    // Payment gating takes precedence over auto-confirm.
+  if (requiresUpfrontPayment && !deferPaymentForConfirmation) {
+    // Auto-accepted paid path: collect payment before confirming.
     if (
       BYPASS_RESERVATION_PAYMENT ||
       ["card", "applePay"].includes(resolvedPaymentMethod)

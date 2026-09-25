@@ -10,6 +10,24 @@ const { LoyaltyReferredRecord, LoyaltyReferredRecords } = require("@LoyaltyRefer
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("../../../models/Notifications");
 const { fireAndForget } = require("../../../helperUtils/responseUtil");
+const { cache, invalidate, buildKey } = require("@redisCache");
+
+const CLUB_MEMBER_CACHE_NS = "clubMember:isActive";
+// 1 week — join/leave invalidate explicitly. Prefer a TTL over null so orphaned
+// keys (missed invalidate / direct DB edits) eventually expire; L1 also requires a positive ttl.
+const CLUB_MEMBER_CACHE_TTL_SEC = 7 * 24 * 60 * 60;
+const CLUB_MEMBER_MEMORY_TTL_SEC = 7 * 24 * 60 * 60;
+
+const clubMemberCacheKey = (userId, companyOrganizer) =>
+  buildKey(CLUB_MEMBER_CACHE_NS, {
+    userId: String(userId),
+    companyOrganizer: String(companyOrganizer),
+  });
+
+const invalidateClubMemberCache = async (userId, companyOrganizer) => {
+  if (!userId || !companyOrganizer) return;
+  await invalidate(clubMemberCacheKey(userId, companyOrganizer));
+};
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
 // ==========================================================
@@ -456,6 +474,7 @@ const joinClub = async (userId, companyOrganizer, referrerId) => {
     if (existingMember.status === "left") {
       existingMember.status = "active";
       await existingMember.save();
+      await invalidateClubMemberCache(userId, companyOrganizer);
       return ensureClubMemberWallet(userId, companyOrganizer);
     }
     return existingMember;
@@ -465,19 +484,45 @@ const joinClub = async (userId, companyOrganizer, referrerId) => {
   if (referrerId) {
     await createUserReferradrecord(referrerId, userId, companyOrganizer);
   }
-  return ensureClubMemberWallet(userId, companyOrganizer);
+  const member = await ensureClubMemberWallet(userId, companyOrganizer);
+  await invalidateClubMemberCache(userId, companyOrganizer);
+  return member;
 };
 
 const leaveClub = async (userId, companyOrganizer) => {
-  return ClubMembers.findOneAndUpdate(
+  const updated = await ClubMembers.findOneAndUpdate(
     { user: userId, companyOrganizer },
     { status: "left" },
     { new: true }
   );
+  await invalidateClubMemberCache(userId, companyOrganizer);
+  return updated;
 };
 
 const isClubMember = async (userId, companyOrganizer) => {
-  return !!(await ClubMembers.findOne({ user: userId, companyOrganizer, status: "active" }));
+  if (!userId || !companyOrganizer) return false;
+
+  // Object wrapper so cached `false` is not treated as a miss by redisCache
+  const result = await cache({
+    namespace: CLUB_MEMBER_CACHE_NS,
+    params: {
+      userId: String(userId),
+      companyOrganizer: String(companyOrganizer),
+    },
+    ttl: CLUB_MEMBER_CACHE_TTL_SEC,
+    memoryTtl: CLUB_MEMBER_MEMORY_TTL_SEC,
+    fetchFn: async () => ({
+      isMember: !!(await ClubMembers.findOne({
+        user: userId,
+        companyOrganizer,
+        status: "active",
+      })
+        .select("_id")
+        .lean()),
+    }),
+  });
+
+  return !!result?.isMember;
 };
 
 const countClubMembers = async (query = {}) => {
@@ -854,6 +899,7 @@ module.exports = {
   getWallet,
   getWalletsBulk,
   isClubMember,
+  invalidateClubMemberCache,
   countClubMembers,
   findClubMemberById,
   getUserJoinedClubs,

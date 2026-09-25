@@ -1,4 +1,8 @@
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const { emitLogEvent } = require("./logEmitter");
+const { LOG_ROOT } = require("./logPaths");
 
 const recentCrashes = new Map();
 const DEDUPE_WINDOW_MS = 10 * 60 * 1000;
@@ -42,6 +46,17 @@ function logCrash({ type, error }) {
   };
 
   console.error(JSON.stringify(payload));
+
+  try {
+    const file = path.join(
+      LOG_ROOT,
+      "crash",
+      "crash-" + new Date().toISOString().slice(0, 10) + ".log"
+    );
+    fs.appendFileSync(file, JSON.stringify(payload) + "\n");
+  } catch (_) {}
+
+  emitLogEvent("crash", payload);
 
   if (shouldAlert(fp)) {
     // sendSlack(payload)

@@ -47,7 +47,7 @@
     "load:postman-walk": "NODE_ENV=prodtest node k6/system/postman-walk.js",
     "pm2:azure:prod": "APP_ROLE=api NODE_ENV=prod node backend/server.js",
     "pm2:azure:prod:worker": "APP_ROLE=worker NODE_ENV=prod node backend/server.js",
-    "pm2:azure:dev": "APP_ROLE=api NODE_ENV=dev node backend/server.js", 
+    "pm2:azure:dev": "APP_ROLE=api NODE_ENV=dev node backend/server.js",
     "pm2:azure:dev:worker": "APP_ROLE=worker NODE_ENV=dev node backend/server.js"
   },
   "_moduleAliases": {
@@ -165,6 +165,7 @@
   "dependencies": {
     "@azure/storage-blob": "^12.28.0",
     "@socket.io/redis-adapter": "^8.3.0",
+    "@sparticuz/chromium": "^153.0.0",
     "axios": "^1.13.2",
     "bad-words": "^4.0.0",
     "bcryptjs": "^2.4.3",
@@ -197,6 +198,7 @@
     "node-cache": "^5.1.2",
     "node-cron": "^4.2.1",
     "openai": "^5.23.1",
+    "puppeteer-core": "^25.12.0",
     "qrcode": "^1.5.4",
     "sharp": "^0.33.5",
     "socket.io": "^4.8.0",

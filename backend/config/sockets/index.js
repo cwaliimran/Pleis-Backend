@@ -1,6 +1,7 @@
 const { attachRedisAdapter } = require("./socketRedisAdapter");
 const { orderSocketHandler } = require("./orders/orderSocketHandler");
 const { menuItemSocketHandler } = require("./menuItems/menuItemSocketHandler");
+const { adminLogsSocketHandler } = require("./logs/adminLogsSocketHandler");
 
 function initializeSockets(io) {
   attachRedisAdapter(io);
@@ -14,6 +15,8 @@ function initializeSockets(io) {
   menuItemSocketHandler(io.of("/staff/menu"));
   menuItemSocketHandler(io.of("/admin/menu"));
   menuItemSocketHandler(io.of("/organizer/menu"));
+
+  adminLogsSocketHandler(io.of("/admin/logs"));
 
   console.log("🚀 Order sockets initialized");
 }
