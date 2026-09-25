@@ -23,7 +23,7 @@ const eventSchema = new mongoose.Schema(
           default: "",
         },
         /** 120×120 WebP map pin from first image — generated when media.name changes */
-        marker: {
+        logoMarker: {
           type: String,
           default: "",
         },

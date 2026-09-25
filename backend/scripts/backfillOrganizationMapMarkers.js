@@ -1,22 +1,21 @@
 #!/usr/bin/env node
 /**
- * Backfill 120×120 WebP map markers for existing events.
+ * Backfill 120×120 WebP map markers for existing organizations.
  *
- * Uses basicInfo.media.name (first image only) → basicInfo.media.logoMarker
+ * Uses basicInfo.media.logo → basicInfo.media.logoMarker
  *
  * Usage:
- *   NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js
- *   NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js --limit=20
- *   NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js --dry-run
- *   NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js --force   # regenerate even if marker exists
- *   NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js --concurrency=3
+ *   NODE_ENV=prodtest node backend/scripts/backfillOrganizationMapMarkers.js
+ *   NODE_ENV=prodtest node backend/scripts/backfillOrganizationMapMarkers.js --limit=20
+ *   NODE_ENV=prodtest node backend/scripts/backfillOrganizationMapMarkers.js --dry-run
+ *   NODE_ENV=prodtest node backend/scripts/backfillOrganizationMapMarkers.js --force   # regenerate even if marker exists
+ *   NODE_ENV=prodtest node backend/scripts/backfillOrganizationMapMarkers.js --concurrency=3
  *
  * Env:
  *   LIMIT, FORCE=1, DRY_RUN=1, CONCURRENCY (defaults below)
  */
 
 "use strict";
-
 
 const path = require("path");
 const moduleAlias = require("module-alias");
@@ -51,9 +50,8 @@ for (const [alias, target] of Object.entries(aliases)) {
 require("module-alias/register");
 
 const mongoose = require("mongoose");
-const { Events } = require("../commonModules/events/Event");
+const Organizations = require("../commonModules/organizations/Organization");
 const {
-  firstImageFilename,
   toBlobName,
   createMapMarkerFromSource,
   deleteBlobQuiet,
@@ -101,71 +99,66 @@ async function mapPool(items, concurrency, worker) {
   return results;
 }
 
-async function processEvent(ev, { dryRun, force }) {
-  const title = ev.basicInfo?.title || "(no title)";
-  const media = ev.basicInfo?.media || {};
-  const mediaType = media.type || "image";
-  const id = String(ev._id);
+async function processOrganization(org, { dryRun, force }) {
+  const name = org.basicInfo?.name || "(no name)";
+  const media = org.basicInfo?.media || {};
+  const id = String(org._id);
 
-  if (mediaType === "video") {
-    return { id, title, status: "skip-video" };
-  }
-
-  const first = firstImageFilename(media.name);
-  if (!first) {
-    return { id, title, status: "skip-no-image" };
+  const logo = toBlobName(media.logo);
+  if (!logo) {
+    return { id, name, status: "skip-no-logo" };
   }
 
   if (!force && media.logoMarker && String(media.logoMarker).trim()) {
-    return { id, title, status: "skip-has-marker", marker: media.logoMarker };
+    return { id, name, status: "skip-has-marker", marker: media.logoMarker };
   }
 
   if (dryRun) {
     return {
       id,
-      title,
+      name,
       status: "dry-run",
-      source: first,
+      source: logo,
       wouldReplace: media.logoMarker || null,
     };
   }
 
   try {
-    const logoMarker = await createMapMarkerFromSource(first);
+    const logoMarker = await createMapMarkerFromSource(logo);
     if (!logoMarker) {
-      return { id, title, status: "fail-create", source: first };
+      return { id, name, status: "fail-create", source: logo };
     }
 
     if (media.logoMarker && toBlobName(media.logoMarker) !== logoMarker) {
       await deleteBlobQuiet(media.logoMarker);
     }
 
-    await Events.updateOne(
-      { _id: ev._id },
+    await Organizations.updateOne(
+      { _id: org._id },
       { $set: { "basicInfo.media.logoMarker": logoMarker } }
     );
 
     return {
       id,
-      title,
+      name,
       status: "ok",
-      source: first,
+      source: logo,
       marker: logoMarker,
     };
   } catch (err) {
     return {
       id,
-      title,
+      name,
       status: "error",
       error: err.message,
-      source: first,
+      source: logo,
     };
   }
 }
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  console.log("backfillEventMapMarkers", { NODE_ENV, ...opts });
+  console.log("backfillOrganizationMapMarkers", { NODE_ENV, ...opts });
 
   // Quick Azure env check
   for (const k of [
@@ -181,12 +174,7 @@ async function main() {
 
   const filter = {
     status: { $ne: "deleted" },
-    "basicInfo.media.name": { $exists: true, $nin: [null, ""] },
-    $or: [
-      { "basicInfo.media.type": "image" },
-      { "basicInfo.media.type": { $exists: false } },
-      { "basicInfo.media.type": null },
-    ],
+    "basicInfo.media.logo": { $exists: true, $nin: [null, ""] },
   };
   if (!opts.force) {
     filter.$and = [
@@ -200,26 +188,31 @@ async function main() {
     ];
   }
 
-  let query = Events.find(filter)
-    .select("_id basicInfo.title basicInfo.media")
+  let query = Organizations.find(filter)
+    .select("_id basicInfo.name basicInfo.media")
     .sort({ updatedAt: -1 })
     .lean();
 
   if (opts.limit > 0) query = query.limit(opts.limit);
 
-  const events = await query;
-  console.log(`Found ${events.length} event(s) to process`);
+  const orgs = await query;
+  console.log(`Found ${orgs.length} organization(s) to process`);
 
-  const results = await mapPool(events, opts.concurrency, (ev) =>
-    processEvent(ev, opts)
+  const results = await mapPool(orgs, opts.concurrency, (org) =>
+    processOrganization(org, opts)
   );
 
   const counts = {};
   for (const r of results) {
     counts[r.status] = (counts[r.status] || 0) + 1;
-    if (r.status === "ok" || r.status === "dry-run" || r.status === "error" || r.status === "fail-create") {
+    if (
+      r.status === "ok" ||
+      r.status === "dry-run" ||
+      r.status === "error" ||
+      r.status === "fail-create"
+    ) {
       console.log(
-        `${r.status.padEnd(14)} ${r.id}  ${r.title?.slice(0, 40)}  ${r.marker || r.source || r.error || ""}`
+        `${r.status.padEnd(14)} ${r.id}  ${r.name?.slice(0, 40)}  ${r.marker || r.source || r.error || ""}`
       );
     }
   }

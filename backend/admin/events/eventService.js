@@ -26,17 +26,17 @@ async function applyEventMediaMarker(data, prevMedia = null) {
   const media = data.basicInfo.media;
   const mediaType = media.type || "image";
   const prevName = prevMedia?.name || "";
-  const prevMarker = prevMedia?.marker || "";
+  const prevLogoMarker = prevMedia?.logoMarker || "";
 
   if (mediaType === "video") {
-    if (prevMarker) {
-      media.marker = await syncMapMarker({
+    if (prevLogoMarker) {
+      media.logoMarker = await syncMapMarker({
         newSource: "",
         prevSource: prevName,
-        prevMarker,
+        prevMarker: prevLogoMarker,
       });
     } else {
-      media.marker = "";
+      media.logoMarker = "";
     }
     return data;
   }
@@ -45,15 +45,15 @@ async function applyEventMediaMarker(data, prevMedia = null) {
 
   const first = firstImageFilename(media.name) || "";
   const prevFirst = firstImageFilename(prevName) || "";
-  if (toBlobName(first) === toBlobName(prevFirst) && prevMarker) {
-    media.marker = toBlobName(prevMarker) || prevMarker;
+  if (toBlobName(first) === toBlobName(prevFirst) && prevLogoMarker) {
+    media.logoMarker = toBlobName(prevLogoMarker) || prevLogoMarker;
     return data;
   }
 
-  media.marker = await syncMapMarker({
+  media.logoMarker = await syncMapMarker({
     newSource: first,
     prevSource: prevFirst,
-    prevMarker,
+    prevMarker: prevLogoMarker,
   });
   return data;
 }

@@ -584,13 +584,25 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   }
 
   // ------------------------------------
-  // KEYWORD
+  // KEYWORD — title always; description only for longer queries (avoids heavy scans)
   // ------------------------------------
-  const keywordFilter = keyword?.trim()
+  const kw = typeof keyword === "string" ? keyword.trim() : "";
+  const escapeRegex = (s) =>
+    String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const keywordFilter = kw
     ? {
       $or: [
-        { "basicInfo.title": { $regex: keyword, $options: "i" } },
-        { "basicInfo.description": { $regex: keyword, $options: "i" } },
+        { "basicInfo.title": { $regex: escapeRegex(kw), $options: "i" } },
+        ...(kw.length >= 4
+          ? [
+              {
+                "basicInfo.description": {
+                  $regex: escapeRegex(kw),
+                  $options: "i",
+                },
+              },
+            ]
+          : []),
       ],
     }
     : {};
