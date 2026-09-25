@@ -1,7 +1,7 @@
 const { attachRedisAdapter } = require("./socketRedisAdapter");
 const { orderSocketHandler } = require("./orders/orderSocketHandler");
 const { menuItemSocketHandler } = require("./menuItems/menuItemSocketHandler");
-const { adminLogsSocketHandler } = require("./logs/adminLogsSocketHandler");
+const { adminLogsSocketHandler } = require("./adminLogs/adminLogsSocketHandler");
 
 function initializeSockets(io) {
   attachRedisAdapter(io);
