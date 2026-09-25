@@ -148,3 +148,6 @@ scripts/combine-files.js
 .env.prodtest
 /k6/results
 /k6/system/reports
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
