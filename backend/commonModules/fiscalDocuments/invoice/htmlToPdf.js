@@ -44,6 +44,68 @@ function runChromePdf(chromePath, htmlPath, pdfPath) {
   });
 }
 
+function tryRequire(name) {
+  try {
+    return require(name);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prefer puppeteer-core + @sparticuz/chromium (Azure App Service / Linux),
+ * then explicit/system Chrome, then full puppeteer if present.
+ */
+async function resolveLaunch() {
+  const puppeteerCore = tryRequire("puppeteer-core");
+  const chromium = tryRequire("@sparticuz/chromium");
+
+  if (puppeteerCore && chromium) {
+    try {
+      return {
+        puppeteer: puppeteerCore,
+        options: {
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+        },
+        engine: "sparticuz-chromium",
+      };
+    } catch {
+      // Binary may be Linux-only; fall through to system Chrome on macOS/dev.
+    }
+  }
+
+  const chrome = chromeExecutable();
+  if (puppeteerCore && chrome) {
+    return {
+      puppeteer: puppeteerCore,
+      options: {
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+        executablePath: chrome,
+      },
+      engine: "puppeteer-core+system-chrome",
+    };
+  }
+
+  const puppeteer = tryRequire("puppeteer");
+  if (puppeteer) {
+    return {
+      puppeteer,
+      options: {
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        executablePath: chrome || undefined,
+      },
+      engine: "puppeteer",
+    };
+  }
+
+  return null;
+}
+
 async function htmlToPdfBuffer(html) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pleis-invoice-"));
   const htmlPath = path.join(dir, "invoice.html");
@@ -51,27 +113,18 @@ async function htmlToPdfBuffer(html) {
   fs.writeFileSync(htmlPath, html, "utf8");
 
   try {
-    let puppeteer;
-    try {
-      puppeteer = require("puppeteer");
-    } catch {
-      puppeteer = null;
-    }
-
-    if (puppeteer) {
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        executablePath: chromeExecutable() || undefined,
-      });
+    const launch = await resolveLaunch();
+    if (launch) {
+      const browser = await launch.puppeteer.launch(launch.options);
       try {
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: "load" });
-        return await page.pdf({
+        const pdf = await page.pdf({
           format: "A4",
           printBackground: true,
           margin: { top: "12mm", right: "12mm", bottom: "14mm", left: "12mm" },
         });
+        return Buffer.from(pdf);
       } finally {
         await browser.close();
       }
@@ -88,4 +141,4 @@ async function htmlToPdfBuffer(html) {
   }
 }
 
-module.exports = { htmlToPdfBuffer, chromeExecutable };
+module.exports = { htmlToPdfBuffer, chromeExecutable, resolveLaunch };

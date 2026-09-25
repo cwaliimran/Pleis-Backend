@@ -83,8 +83,8 @@ function formatPlaceMarker(doc, favSet) {
 function formatEventMarker(doc, favSet) {
   const media = doc?.basicInfo?.media || {};
   const markerName =
-    typeof media.marker === "string" && media.marker.trim()
-      ? media.marker.trim()
+    typeof media.logoMarker === "string" && media.logoMarker.trim()
+      ? media.logoMarker.trim()
       : null;
   // Events store image(s) in media.name — prefer generated marker, else first image
   let firstImage = null;
@@ -300,7 +300,7 @@ async function fetchLeanEvents({
         _id: 1,
         "basicInfo.title": 1,
         "basicInfo.media.name": 1,
-        "basicInfo.media.marker": 1,
+        "basicInfo.media.logoMarker": 1,
         "basicInfo.media.type": 1,
         "basicInfo.venueLocation": 1,
         "basicInfo.organization": 1,

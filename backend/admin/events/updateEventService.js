@@ -32,7 +32,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
     const prevMedia = doc.basicInfo?.media
       ? {
           name: doc.basicInfo.media.name,
-          marker: doc.basicInfo.media.marker,
+          logoMarker: doc.basicInfo.media.logoMarker,
           type: doc.basicInfo.media.type,
         }
       : null;
@@ -60,19 +60,19 @@ const updateEventService = async (eventId, payload, mode = "single") => {
       const media = doc.basicInfo.media || {};
       const mediaType = media.type || "image";
       if (mediaType === "video") {
-        media.marker = await syncMapMarker({
+        media.logoMarker = await syncMapMarker({
           newSource: "",
           prevSource: prevMedia?.name || "",
-          prevMarker: prevMedia?.marker || "",
+          prevMarker: prevMedia?.logoMarker || "",
         });
       } else if (data.basicInfo.media.name !== undefined) {
         const first = firstImageFilename(media.name) || "";
         const prevFirst = firstImageFilename(prevMedia?.name) || "";
-        if (toBlobName(first) !== toBlobName(prevFirst) || !media.marker) {
-          media.marker = await syncMapMarker({
+        if (toBlobName(first) !== toBlobName(prevFirst) || !media.logoMarker) {
+          media.logoMarker = await syncMapMarker({
             newSource: first,
             prevSource: prevFirst,
-            prevMarker: prevMedia?.marker || "",
+            prevMarker: prevMedia?.logoMarker || "",
           });
         }
       }

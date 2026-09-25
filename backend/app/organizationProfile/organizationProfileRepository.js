@@ -381,11 +381,10 @@ async function resolveEffectiveVenueTypeIds({ category, ctx } = {}) {
     .filter(Boolean)
     .map((id) => new mongoose.Types.ObjectId(id));
 
-  const fromParam = category
-    ? (Array.isArray(category) ? category : [category])
-        .filter(Boolean)
-        .map((id) => new mongoose.Types.ObjectId(id))
-    : [];
+  // Empty [] is truthy in JS — treat as "no category filter"
+  const fromParam = (Array.isArray(category) ? category : category ? [category] : [])
+    .filter(Boolean)
+    .map((id) => new mongoose.Types.ObjectId(id));
 
   const mainCats = filterCategories.length ? filterCategories : fromParam;
   if (!mainCats.length) return [];
@@ -472,10 +471,9 @@ const getNearbyOrganizations = async ({
   );
   const cappedRadiusKm = clampNearbyRadiusKm(radiusKm);
 
-  let sortDirection = 1
-  if (ctx?.sort === "desc") {
-    sortDirection = -1;
-  }
+  // Non-geo fallback only. Near You geo rank is always nearest-first (matches home).
+  // Controller default sort=desc must NOT invert distance (that caused see-all gaps).
+  const createdAtSortDirection = ctx?.sort === "asc" ? 1 : -1;
 
   /* =====================================================
      CATEGORY → VENUE TYPES (main carousel)
@@ -555,11 +553,8 @@ const getNearbyOrganizations = async ({
       },
       distanceScoreAddFields(),
       {
-        // Closest first by default (score desc). ctx.sort=desc → farthest first.
-        $sort:
-          sortDirection === -1
-            ? { distanceScore: 1, distance: -1 }
-            : { distanceScore: -1, distance: 1 },
+        // Always nearest-first (+ stable tiebreak) — same as home Near You (no ctx).
+        $sort: { distanceScore: -1, distance: 1, _id: 1 },
       }
     );
 
@@ -571,7 +566,8 @@ const getNearbyOrganizations = async ({
       },
       {
         $sort: {
-          createdAt: sortDirection
+          createdAt: createdAtSortDirection,
+          _id: 1,
         }
       }
     );
@@ -1151,6 +1147,7 @@ const getForYouOrganizationsForHomeRepo = async ({
     advanceFilters.distanceTo || radiusKm
   );
 
+  // Home calls without ctx → finalScore desc. Default body sort=desc must match.
   const sortDirection =
     ctx?.sort === "asc" ? 1 : -1;
 
@@ -1192,8 +1189,14 @@ const getForYouOrganizationsForHomeRepo = async ({
     ctx,
   });
 
+  // Same .length guard as trending/nearby — empty [] must not wipe results
+  const categoryIds = (Array.isArray(category) ? category : category ? [category] : [])
+    .filter(Boolean);
+
   if (
-    (category || (ctx && filterCategories.length) || filterVenueTypes.length) &&
+    (categoryIds.length ||
+      filterCategories.length ||
+      filterVenueTypes.length) &&
     !effectiveVenueTypeIds.length
   ) {
     return { organizations: [], totalCount: 0 };
@@ -1600,7 +1603,8 @@ const getForYouOrganizationsForHomeRepo = async ({
   pipeline.push(
     {
       $sort: {
-        finalScore: sortDirection
+        finalScore: sortDirection,
+        _id: 1,
       }
     },
     {
@@ -1908,7 +1912,7 @@ const getTrendingOrganizationsForHomeRepo = async ({
      ===================================================== */
 
   pipeline.push(
-    { $sort: { trendingScore: -1 } },
+    { $sort: { trendingScore: -1, _id: 1 } },
     { $skip: skip },
     { $limit: limit }
   );
@@ -2231,7 +2235,7 @@ const getNewlyListedOrganizationsRepo = async ({
      =============================== */
 
   pipeline.push(
-    { $sort: { finalScore: -1 } },
+    { $sort: { finalScore: -1, _id: 1 } },
     { $skip: skip },
     { $limit: limit }
   );

@@ -10,6 +10,7 @@ const { getChallengeNotificationTitle } = require("../../../helperUtils/challeng
 const { createTransactionService } = require(
   "../../userWalletService/transactions/services/unifiedTransactionsService"
 );
+const { isClubMember } = require("../clubMembers/clubMembersRepository");
 const TicketingsModel = require("@TicketingsModel"); // adjust path if needed
 const MenuItems = require("@MenuItemsModel");
 const Reward = require("@RewardModel");
@@ -142,6 +143,11 @@ const updateChallengeProgressByTaskTypeService = async ({
   value = 1,
   req = null,
 }) => {
+  // Challenge progress requires active club membership (same gate as earning points)
+  const isMember = await isClubMember(userId, companyOrganizer);
+  if (!isMember) {
+    return { success: false, message: "user_not_club_member" };
+  }
 
   const challenge =
     await findBestActiveChallengeByTaskType({
@@ -269,6 +275,12 @@ const resolveChallengeByTaskTypeService = async ({
   items = [],
   req = null,
 }) => {
+  // Challenge progress requires active club membership (same gate as earning points)
+  const isMember = await isClubMember(userId, companyOrganizer);
+  if (!isMember) {
+    return { success: false, message: "user_not_club_member" };
+  }
+
   if (taskType === "buyMenuItem") {
     return resolveBuyMenuItemChallengeService({
       userId,
