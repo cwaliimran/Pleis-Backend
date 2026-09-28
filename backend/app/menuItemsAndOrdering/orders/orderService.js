@@ -504,6 +504,7 @@ const placeOrder = async ({
       : paymentTiming || "payLater";
 
     assertPaymentMethodAllowed(setting, paymentMethod, resolvedPaymentTiming);
+    // Tips are not covered by the reservation voucher (org setting comment).
     totalPrice += Number(tip || 0);
     let orderData = {
       user: userId,
@@ -536,6 +537,7 @@ const placeOrder = async ({
      * 1) Auto-accept? → Confirmed, else Pending (staff Confirm/Reject) — always board-visible
      * 2) Only when auto-accepted AND Pay now AND in-app amount due:
      *    payment happens before Confirmed → hideUntilPaid until gateway succeeds
+     * 3) Voucher / promo / free fully settles amount → Paid immediately (no payment screen)
      */
     const autoAccepted =
       setting?.automaticOrderAcceptance === true && !isOrderNeedingConfirmation;
@@ -556,18 +558,25 @@ const placeOrder = async ({
         // Doc §7.1: cash + Pay now + auto-accept → Paid up front.
         // Do NOT apply when the order is payLater (cash-only venues often
         // still have paymentMethod.payNow=true in settings).
+        // Fully voucher-/promo-/€0-settled orders are Paid (no gateway).
         if (
-          paymentMethod === "cash" &&
-          resolvedPaymentTiming === "payNow" &&
-          amountDue
+          !amountDue ||
+          (paymentMethod === "cash" &&
+            resolvedPaymentTiming === "payNow" &&
+            amountDue)
         ) {
           orderData.paymentStatus = "paid";
           orderData.paidAt = new Date();
         }
       }
     } else {
-      // Staff must accept — Pending + Unpaid stays on the board (Confirm / Reject)
+      // Staff must accept — Pending stays on the board (Confirm / Reject).
+      // Still mark Paid when nothing remains to collect (voucher covered order).
       orderStatus = "pending";
+      if (!amountDue) {
+        orderData.paymentStatus = "paid";
+        orderData.paidAt = new Date();
+      }
     }
 
     orderData.status = orderStatus;

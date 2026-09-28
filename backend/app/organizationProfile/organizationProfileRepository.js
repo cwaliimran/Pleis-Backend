@@ -28,8 +28,9 @@ const findOrganizationById = async (userId, organizationId) => {
     Favorites.exists({ user: userId, targetType: "organization", targetId: organizationId }),
     Venues.findOne({
       organization: organizationId,
-      isPrimary: true
-    }).select("title floorPlan venueType"),
+      isPrimary: true,
+      status: "active",
+    }).select("title floorPlan venueType location"),
 
   ]);
 
