@@ -13,12 +13,18 @@ const {
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
 const roleMiddleware = require("../../middlewares/roleMiddleware");
-const { getReservationsV2Calender } = require("../../admin/reservation/reservationController");
+const {
+  getReservationsV2Calender,
+} = require("../../admin/reservation/reservationController");
 const {
   getReservationPreferencess,
 } = require("../../admin/reservation/reservationPreferences/reservationPreferencesController");
-const { getReservationTypes } = require("../../admin/reservation/reservationType/reservationTypeController");
-const { getOccasion } = require("../../admin/reservation/occasion/occasionController");
+const {
+  getReservationTypes,
+} = require("../../admin/reservation/reservationType/reservationTypeController");
+const {
+  getOccasion,
+} = require("../../admin/reservation/occasion/occasionController");
 
 const router = express.Router();
 
@@ -29,13 +35,22 @@ const apiRateLimiter = createRateLimiter("Reservations");
 const apiRateLimiterDetails = createRateLimiter("Reservations/:id");
 
 // Create a new Reservation — registered app users only (not guest)
-router.post("/transfer", auth, roleMiddleware(["user"]), transferReservation);
-router.post("/", auth, roleMiddleware(["user"]), createReservation);
+router.post(
+  "/transfer",
+  auth,
+  roleMiddleware(["user", "admin", "staff", "organizer", "manager"]),
+  transferReservation,
+);
+router.post("/", auth, roleMiddleware(["user", "admin", "staff", "organizer", "manager"]), createReservation);
 
 // Get all Reservations with pagination
 router.get("/", auth, getReservations);
 
-router.get("/reservation-preferences", apiRateLimiter, getReservationPreferencess);
+router.get(
+  "/reservation-preferences",
+  apiRateLimiter,
+  getReservationPreferencess,
+);
 router.get("/reservation-types", apiRateLimiter, getReservationTypes);
 router.get("/occasion", apiRateLimiter, getOccasion);
 router.get("/v2/calender", apiRateLimiter, getReservationsV2Calender);
