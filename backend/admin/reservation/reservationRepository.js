@@ -987,10 +987,15 @@ const getReservationsV2 = async ({
   organizationsId,
   date,
   skip,
+  timezone,
   reservationType,
   startTime,
   endTime,
 }) => {
+  const now = getCurrentDateInTimezone({ timezone });
+  // Virtual filter: reservations received in the last 24 hours (any DB status).
+  const isNewStatus = typeof status === "string" && status.toLowerCase() === "new";
+  const isNeedsConfirmation = status === "needsConfirmation";
 
   const summaryQuery = {
     ...(companyOrganizer && {
@@ -1001,7 +1006,10 @@ const getReservationsV2 = async ({
     }),
   };
   const query = {
-    ...(status && { status }),
+    ...(status && !isNewStatus && { status }),
+    ...(isNewStatus && {
+      createdAt: { $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+    }),
     ...(companyOrganizer && {
       companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     }),
@@ -1029,12 +1037,13 @@ const getReservationsV2 = async ({
         : { endTime: { $gt: start } },
     };
   } else if (date) {
-    const start = new Date(date);
-    start.setUTCHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setUTCDate(start.getUTCDate() + 1);
-
+    const { start, end } = getStartAndEndOfDay(date, timezone);
     dateTimeElemMatch.date = { $gte: start, $lt: end };
+  } else if (isNeedsConfirmation) {
+    // Date omitted: only upcoming / in-progress slots from now onward (user tz).
+    dateTimeElemMatch.timeSlots = {
+      $elemMatch: { endTime: { $gt: now } },
+    };
   }
 
   if (Object.keys(dateTimeElemMatch).length) {
@@ -1144,6 +1153,7 @@ const getReservationsV2Calender = async ({
   organization,
   start,
   end,
+  timezone,
 }) => {
   // Calendar occupancy view: only capacity-consuming bookings (not cancelled/rejected/deleted/completed).
   const pipeline = [
@@ -1170,6 +1180,7 @@ const getReservationsV2Calender = async ({
           $dateToString: {
             format: "%Y-%m-%d",
             date: "$timingSlots.dateTimeSlots.date",
+            ...(timezone && { timezone }),
           },
         },
         totalReservations: { $sum: 1 },
@@ -1312,41 +1323,58 @@ const consumeReservationVoucher = async ({
 }) => {
   const amount = Number(orderAmount) || 0;
   const voucher = reservation?.voucher;
+  const total = Number(voucher?.discountAmount) || 0;
+  const used = Number(voucher?.usedAmount) || 0;
+  const remaining = Math.max(total - used, 0);
 
+  // Free / non-voucher reservations may still be linked to an order.
   if (!reservation || amount <= 0 || voucher?.status !== "pending") {
     return {
       voucherAmount: 0,
       orderAmountDue: Math.max(amount, 0),
-      remainingBalance: Math.max(
-        Number(voucher?.discountAmount || 0) - Number(voucher?.usedAmount || 0),
-        0,
-      ),
+      remainingBalance: remaining,
       reservationId: reservation?._id || null,
       isFirstVoucherUse: false,
     };
   }
 
-  const total = Number(voucher.discountAmount) || 0;
-  const used = Number(voucher.usedAmount) || 0;
-  const remaining = Math.max(total - used, 0);
+  if (remaining <= 0) {
+    const err = new Error("Reservation voucher has no remaining balance");
+    err.statusCode = 409;
+    throw err;
+  }
 
   const voucherAmount = Math.min(amount, remaining);
   const newUsed = used + voucherAmount;
   const newRemaining = Math.max(total - newUsed, 0);
 
+  // Match missing/null usedAmount as 0 — finalizer historically only set
+  // discountAmount + status, so optimistic lock on exact 0 missed those rows
+  // and threw "Voucher balance changed" (client then often retried without voucher).
+  const usedAmountFilter =
+    used === 0
+      ? {
+          $or: [
+            { "voucher.usedAmount": 0 },
+            { "voucher.usedAmount": null },
+            { "voucher.usedAmount": { $exists: false } },
+          ],
+        }
+      : { "voucher.usedAmount": used };
+
   const updated = await UserReservations.findOneAndUpdate(
     {
       _id: reservation._id,
       "voucher.status": "pending",
-      "voucher.usedAmount": used,
+      ...usedAmountFilter,
     },
     {
-      $inc: { "voucher.usedAmount": voucherAmount },
       $set: {
+        "voucher.usedAmount": newUsed,
         "voucher.status": newRemaining === 0 ? "applied" : "pending",
       },
     },
-    { session },
+    { session, new: true },
   );
 
   if (!updated) {

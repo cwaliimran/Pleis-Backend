@@ -1,0 +1,14 @@
+{
+  "watch": ["backend"],
+  "ext": "js,json",
+  "ignore": [
+    "logs/**",
+    "**/logs/**",
+    "node_modules/**",
+    ".git/**",
+    "coverage/**",
+    "tmp/**",
+    "**/*.log"
+  ],
+  "delay": 500
+}
