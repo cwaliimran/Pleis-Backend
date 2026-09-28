@@ -71,7 +71,11 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
             "paymentDetails.paymentStatus": "paid",
             "paymentDetails.transactionId": result.transactionId,
             paidAt: new Date(),
-            "voucher.discountAmount": userReservation?.priceBreakDown?.reservationAmount || 0,
+            "voucher.discountAmount":
+              userReservation?.priceBreakDown?.reservationAmount ||
+              userReservation?.amount ||
+              0,
+            "voucher.usedAmount": 0,
             "voucher.status": "pending",
           },
           $push: {

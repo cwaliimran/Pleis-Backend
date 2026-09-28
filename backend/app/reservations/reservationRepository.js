@@ -1986,9 +1986,21 @@ const getTodayReservationVoucher = ({ user, filter }) => {
     },
     "voucher.status": "pending",
     "voucher.discountAmount": { $gt: 0 },
+    // Remaining balance = discountAmount - usedAmount (treat missing used as 0)
+    $expr: {
+      $gt: [
+        {
+          $subtract: [
+            "$voucher.discountAmount",
+            { $ifNull: ["$voucher.usedAmount", 0] },
+          ],
+        },
+        0,
+      ],
+    },
   })
-    .select("voucher timingSlots")
-    .lean();
+  .select("voucher timingSlots")
+  .lean();
 };
 
 const bookedCapacity = async ({ reservationTypeId, date }) => {
