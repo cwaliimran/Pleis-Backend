@@ -882,9 +882,16 @@ const getReservationsV2 = async ({
   };
 };
 
-const getWeekRange = (date) => {
-  const start = moment.utc(date).startOf("isoWeek").toDate();
-  const end = moment.utc(date).endOf("isoWeek").toDate();
+const getWeekRange = (date, timezone) => {
+  // ISO week bounds in the user's timezone, returned as UTC instants
+  // so they match timezone-local midnights stored on dateTimeSlots.date.
+  const start = moment.tz(date, timezone).startOf("isoWeek").utc().toDate();
+  const end = moment
+    .tz(date, timezone)
+    .startOf("isoWeek")
+    .add(1, "week")
+    .utc()
+    .toDate();
   return { start, end };
 };
 const getReservationsV2Calender = async ({
@@ -893,7 +900,7 @@ const getReservationsV2Calender = async ({
   organization,
   date,
 }) => {
-  const { start, end } = getWeekRange(date);
+  const { start, end } = getWeekRange(date, timezone);
   let { reservations, meta } = await ReservationRepo.getReservationsV2Calender({
     timezone,
     companyOrganizer,
