@@ -2,11 +2,13 @@ const challengeRepo = require("./challengesRepository");
 const { generateMeta } = require("@utils/responseUtil");
 const { getActiveEndDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 const formatChallenge = require("../../../commonModules/loyalty/challenges/formatters/formatChallenge");
-const { formatChallengeDetails } = require("./formatters/formatChallengeImage");
 const { checkClaimLimitForLoyaltyChallenges, getActiveChallengeOrdersForDashboard } = require("../challengesOrders/challengeOrdersRepository");
 const { formatChallengesByTierKey } = require("./formatters/formatChallenge");
 const clubMemberRepo = require("../clubMembers/clubMembersRepository");
 const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet");
+const {
+  attachEquivalentMenuItemsToChallenges,
+} = require("../rewards/utils/equivalentMenuItems");
 
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel")
 const Challenge = require("@ChallengeModel");
@@ -14,7 +16,7 @@ const { addEngagementEvent } = require("@appEngagement/engagementEventsRepositor
 
 
 const getChallengeDetails = async (id, userId) => {
-const challenge = await challengeRepo.findChallengeById(id);
+  const challenge = await challengeRepo.findChallengeById(id);
   addEngagementEvent({
     entityType: "challenges",
     entityId: id,
@@ -22,7 +24,10 @@ const challenge = await challengeRepo.findChallengeById(id);
     userId: userId,
   });
 
-return formatChallengeDetails(challenge);
+  if (!challenge) return null;
+
+  const [withEquivalents] = await attachEquivalentMenuItemsToChallenges([challenge]);
+  return formatChallenge(withEquivalents);
 };
 
 const getEligibleChallengesForLoyaltyPage = async ({
@@ -64,6 +69,9 @@ const getEligibleChallengesForLoyaltyPage = async ({
     .populate("reward.rewardMenuItem")
     .populate("reward.specialTicket.ticket")
     .lean();
+
+  // Expand taskMenuItem with equivalents (same rule as resolveBuyMenuItemChallengeService)
+  activeChallenges = await attachEquivalentMenuItemsToChallenges(activeChallenges);
    
   // 4️⃣ Apply tier formatting (CRITICAL)
   activeChallenges = formatChallengesByTierKey(activeChallenges, tierKey);
@@ -155,6 +163,9 @@ const getChallengesWithPaginationService = async ({
     return { items: [], meta: generateMeta(page, limit, total) };
   }
 
+  const challengesWithEquivalents =
+    await attachEquivalentMenuItemsToChallenges(challenges);
+
   /* ------------------------------
      3️⃣ Wallets (cached / batched)
   ------------------------------ */
@@ -201,7 +212,7 @@ const getChallengesWithPaginationService = async ({
   ------------------------------ */
   const items = [];
 
-  for (const ch of challenges) {
+  for (const ch of challengesWithEquivalents) {
     const wallet = walletMap.get(String(ch.companyOrganizer?._id));
     if (!wallet) continue;
 

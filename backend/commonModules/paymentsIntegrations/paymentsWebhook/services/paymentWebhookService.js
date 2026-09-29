@@ -2,6 +2,7 @@ const webhookRepository = require("../repositories/webhookRepository");
 const { Types, default: mongoose } = require("mongoose");
 
 const { ticketingOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
+const { ticketingTransferFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingTransferFinalizerService");
 const { reservationOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
 const { menuOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 const { subscriptionPaymentFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/subscriptionPaymentFinalizerService");
