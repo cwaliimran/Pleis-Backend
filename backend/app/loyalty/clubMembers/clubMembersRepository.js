@@ -101,6 +101,7 @@ const ensureClubMemberWallet = async (
     options
   );
 
+  await invalidateClubMemberCache(userId, companyOrganizer);
   return member;
 };
 
@@ -502,7 +503,18 @@ const leaveClub = async (userId, companyOrganizer) => {
 const isClubMember = async (userId, companyOrganizer) => {
   if (!userId || !companyOrganizer) return false;
 
-  // Object wrapper so cached `false` is not treated as a miss by redisCache
+  const fetchIsMember = async () =>
+    !!(await ClubMembers.findOne({
+      user: userId,
+      companyOrganizer,
+      status: "active",
+    })
+      .select("_id")
+      .lean());
+
+  // Positive hits only are long-lived. Returning null for non-members uses
+  // redisCache's short negative-cache TTL (~60s) so join→claim heals quickly.
+  // Legacy keys stored `{ isMember: false }` for 1 week and blocked real members.
   const result = await cache({
     namespace: CLUB_MEMBER_CACHE_NS,
     params: {
@@ -511,16 +523,16 @@ const isClubMember = async (userId, companyOrganizer) => {
     },
     ttl: CLUB_MEMBER_CACHE_TTL_SEC,
     memoryTtl: CLUB_MEMBER_MEMORY_TTL_SEC,
-    fetchFn: async () => ({
-      isMember: !!(await ClubMembers.findOne({
-        user: userId,
-        companyOrganizer,
-        status: "active",
-      })
-        .select("_id")
-        .lean()),
-    }),
+    fetchFn: async () => {
+      const isMember = await fetchIsMember();
+      return isMember ? { isMember: true } : null;
+    },
   });
+
+  if (result && result.isMember === false) {
+    await invalidateClubMemberCache(userId, companyOrganizer);
+    return fetchIsMember();
+  }
 
   return !!result?.isMember;
 };

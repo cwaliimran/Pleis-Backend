@@ -57,13 +57,14 @@ const handleLoyaltyEarningConsequences = ({
       );
   }
 
-  const items = collectPurchasedMenuItems(menuOrder);
+  const menuOrderPaid = !menuOrder || menuOrder.paymentStatus === "paid";
+  const items = menuOrderPaid ? collectPurchasedMenuItems(menuOrder) : [];
 
   // Run challenge side-effects sequentially — parallel completions write the same
   // club wallet and abort each other's Mongo transactions (TransientTransactionError).
   void (async () => {
     try {
-      if (items.length) {
+      if (items.length && menuOrderPaid) {
         await awardMenuItemPromotionsForOrder({
           userId,
           companyOrganizer,

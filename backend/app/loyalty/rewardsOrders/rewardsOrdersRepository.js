@@ -456,7 +456,22 @@ const getOrderDetails = async (orderId) => {
   ];
 
   const result = await RewardsOrders.aggregate(pipeline);
-  return result[0] || null;
+  const order = result[0] || null;
+  if (!order) return null;
+
+  // buyMenuItemReward: resolve snapshot.menuItem.presetType → { _id, name }
+  const presetTypeId = order.snapshot?.menuItem?.presetType;
+  if (presetTypeId && !presetTypeId.name) {
+    const PresetType = require("@PresetTypeModel");
+    const presetType = await PresetType.findById(presetTypeId)
+      .select("name")
+      .lean();
+    if (presetType) {
+      order.snapshot.menuItem.presetType = presetType;
+    }
+  }
+
+  return order;
 };
 
 /* 

@@ -57,6 +57,9 @@ const {
 } = require("../../../helperUtils/plainConfirmationEmailService");
 const { maybeEnqueueOrderingConfirmation } = require("../../../commonModules/fiscalDocuments/fiscalTiming");
 const {
+  menuOrderFinalizerService,
+} = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
+const {
   isAwaitingInAppPayment,
 } = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
 const {
@@ -555,16 +558,9 @@ const placeOrder = async ({
         orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
       } else {
         orderStatus = "confirmed";
-        // Doc §7.1: cash + Pay now + auto-accept → Paid up front.
-        // Do NOT apply when the order is payLater (cash-only venues often
-        // still have paymentMethod.payNow=true in settings).
-        // Fully voucher-/promo-/€0-settled orders are Paid (no gateway).
-        if (
-          !amountDue ||
-          (paymentMethod === "cash" &&
-            resolvedPaymentTiming === "payNow" &&
-            amountDue)
-        ) {
+        // Cash (payNow or payLater) stays unpaid until staff marks paid.
+        // Only fully voucher-/promo-/€0-settled orders are Paid immediately.
+        if (!amountDue) {
           orderData.paymentStatus = "paid";
           orderData.paidAt = new Date();
         }
@@ -647,8 +643,13 @@ const placeOrder = async ({
         "PLAIN_FREE_MENU_ORDER_CONFIRMATION",
       );
     } else if (order.paymentStatus === "paid") {
-      // Cash auto Pay now — confirmation at place (same as mark-paid path)
-      maybeEnqueueOrderingConfirmation(order);
+      fireAndForget(
+        menuOrderFinalizerService({
+          menuOrderId: order._id,
+          result: { status: "paid", transactionId: order.transactionId || null },
+        }),
+        "MENU_ORDER_LOYALTY_ON_PAID",
+      );
     }
 
     const postOrderFlow = resolvePostOrderFlow({
@@ -662,6 +663,27 @@ const placeOrder = async ({
     formattedOrder.postOrderFlow = postOrderFlow;
     formattedOrder.nextActions = resolveStaffNextActions(order);
     formattedOrder.guestNextStep = resolveGuestNextStep(order);
+
+    // Auto-accept + Pay now: order is already confirmed at place — ask guest to pay.
+    if (formattedOrder.guestNextStep?.payInWallet === true) {
+      sendUserNotifications({
+        recipientIds: [userId],
+        titleKey: "menu_order_confirmed_pay_title",
+        bodyKey: "menu_order_confirmed_pay_body",
+        bodyValues: { orderNumber: order.orderNumber },
+        data: {
+          type: NotificationTypes.MENU_ORDER_CONFIRMED,
+          orderId: order._id,
+          objectType: "menuorders",
+        },
+        image:
+          order.items[0]?.menuItemSnapShot?.image ||
+          order.combos[0]?.items[0]?.menuItemSnapShot?.image ||
+          null,
+        sender: order.organization,
+        objectId: order._id,
+      });
+    }
 
     return { order: formattedOrder };
   } catch (err) {
