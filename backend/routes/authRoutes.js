@@ -58,9 +58,9 @@ router.post("/check-userName-exists", checkUserNameRateLimiter, checkUserNameExi
 router.post("/register", signupRateLimiter, register);
 router.post("/login", loginRateLimiter, login);
 // Never expose login-test on production
-if (process.env.NODE_ENV !== "prod") {
+// if (process.env.NODE_ENV !== "prod") {
   router.post("/login-test", loginRateLimiterTest, loginTest);
-}
+// }
 router.post("/forgot-password", generateOtpRateLimiter, (req, res, next) => {
   req.body.type = "email";
   req.body.purpose = "forgot_password";

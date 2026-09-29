@@ -33,6 +33,7 @@ const NotificationTypes = {
   MENU_ORDER_CANCELLED: "menuOrderCancelled",
   MENU_ORDER_SENT: "menuOrderSent",
   MENU_ORDER_COMPLETED: "menuOrderCompleted",
+  MENU_ORDER_PAID: "menuOrderPaid",
   TICKET_CANCELLED: "ticketCancelled",
   EVENT_CANCELLED: "eventCancelled",
   EVENT_RESCHEDULED: "eventRescheduled",

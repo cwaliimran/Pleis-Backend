@@ -14,6 +14,9 @@ const {
   resolveStaffNextActions,
   resolveGuestNextStep,
 } = require("../../../commonModules/menuItemsAndOrders/orderLifecycle");
+const {
+  menuOrderFinalizerService,
+} = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -43,6 +46,7 @@ const updateOrders = async (staffId, id, data) => {
   }
 
   const updateTypes = [];
+  let markPaidViaFinalizer = false;
 
   /* ===============================
      1️⃣ UPDATE ORDER STATUS (OPTIONAL)
@@ -94,10 +98,16 @@ const updateOrders = async (staffId, id, data) => {
     } catch (e) {
       return { error: e.message || "invalid_payment_transition" };
     }
-    order.paymentStatus = data.paymentStatus;
-
-    if (data.paymentStatus === "paid" && !order.paidAt) {
-      order.paidAt = new Date();
+    if (data.paymentStatus === "paid") {
+      markPaidViaFinalizer = (order.totalPrice || 0) > 0;
+      if (!markPaidViaFinalizer) {
+        order.paymentStatus = data.paymentStatus;
+        if (!order.paidAt) {
+          order.paidAt = new Date();
+        }
+      }
+    } else {
+      order.paymentStatus = data.paymentStatus;
     }
     updateTypes.push("payment");
   }
@@ -156,10 +166,31 @@ const updateOrders = async (staffId, id, data) => {
   }
 
 
+  if (markPaidViaFinalizer) {
+    await menuOrderFinalizerService({
+      menuOrderId: order._id,
+      result: {
+        status: "paid",
+        transactionId: order.transactionId || null,
+      },
+    });
+    const refreshed = await OrdersRepo.findOrdersById(id);
+    if (refreshed) {
+      order.paymentStatus = refreshed.paymentStatus;
+      order.paidAt = refreshed.paidAt;
+      order.transactionId = refreshed.transactionId;
+      order.hideUntilPaid = refreshed.hideUntilPaid;
+      if (refreshed.status === "confirmed" && order.status === "pending") {
+        order.status = refreshed.status;
+      }
+    }
+  }
+
   await order.save();
 
-  // Payment confirmation when paid (amount>0 gated in helper); not at delivery
-  maybeEnqueueOrderingConfirmation(order);
+  if (order.paymentStatus === "paid" && !markPaidViaFinalizer) {
+    maybeEnqueueOrderingConfirmation(order);
+  }
 
   if (data.paymentStatus === "paid") {
     fireAndForget(
@@ -170,28 +201,70 @@ const updateOrders = async (staffId, id, data) => {
 
   emitOrderUpdate(order, updateTypes.length ? updateTypes : ["order"]);
 
+  const statusChanged = updateTypes.includes("status");
+  const paymentChanged = updateTypes.includes("payment");
+  const paidViaFinalizer = markPaidViaFinalizer && order.paymentStatus === "paid";
+  const guestNextStep = resolveGuestNextStep(order);
+  const confirmedPayInWallet =
+    statusChanged &&
+    order.status === "confirmed" &&
+    guestNextStep?.payInWallet === true;
 
-  sendUserNotifications({
-    recipientIds: [order.user.toString()],
-    titleKey: "order_updated_title",
-    bodyKey: "order_updated_status_body",
-    bodyValues: {
-      orderNumber: order.orderNumber,
-      status: order.status,
-    },
-    data: {
-      type: NotificationTypes.ORDER_UPDATE,
-      objectType: "menuorders",
-    },
-    image: order.items?.[0]?.menuItemSnapShot?.image || null,
-    sender: order.organization,
-    objectId: order._id,
-  });
+  if (confirmedPayInWallet && !paidViaFinalizer) {
+    sendUserNotifications({
+      recipientIds: [order.user.toString()],
+      titleKey: "menu_order_confirmed_pay_title",
+      bodyKey: "menu_order_confirmed_pay_body",
+      bodyValues: { orderNumber: order.orderNumber },
+      data: {
+        type: NotificationTypes.MENU_ORDER_CONFIRMED,
+        orderId: order._id,
+        objectType: "menuorders",
+      },
+      image: order.items?.[0]?.menuItemSnapShot?.image || null,
+      sender: order.organization,
+      objectId: order._id,
+    });
+  } else if (paymentChanged && order.paymentStatus === "paid" && !paidViaFinalizer) {
+    sendUserNotifications({
+      recipientIds: [order.user.toString()],
+      titleKey: "order_paid_title",
+      bodyKey: "order_paid_body",
+      bodyValues: { orderNumber: order.orderNumber },
+      data: {
+        type: NotificationTypes.MENU_ORDER_PAID,
+        objectType: "menuorders",
+      },
+      image: order.items?.[0]?.menuItemSnapShot?.image || null,
+      sender: order.organization,
+      objectId: order._id,
+    });
+  } else if (statusChanged || updateTypes.includes("delivery")) {
+    // Skip generic update when finalizer already sent MENU_ORDER_PAID.
+    if (!paidViaFinalizer) {
+      sendUserNotifications({
+        recipientIds: [order.user.toString()],
+        titleKey: "order_updated_title",
+        bodyKey: "order_updated_status_body",
+        bodyValues: {
+          orderNumber: order.orderNumber,
+          status: order.status,
+        },
+        data: {
+          type: NotificationTypes.ORDER_UPDATE,
+          objectType: "menuorders",
+        },
+        image: order.items?.[0]?.menuItemSnapShot?.image || null,
+        sender: order.organization,
+        objectId: order._id,
+      });
+    }
+  }
 
   const plain = typeof order.toObject === "function" ? order.toObject() : order;
   if (plain.status === "completed" || plain.status === "sent") plain.status = "delivered";
   plain.nextActions = resolveStaffNextActions(order);
-  plain.guestNextStep = resolveGuestNextStep(order);
+  plain.guestNextStep = guestNextStep;
   return plain;
 };
 

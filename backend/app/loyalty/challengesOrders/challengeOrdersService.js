@@ -15,6 +15,9 @@ const TicketingsModel = require("@TicketingsModel"); // adjust path if needed
 const MenuItems = require("@MenuItemsModel");
 const Reward = require("@RewardModel");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
+const {
+  findEquivalentMenuItemIds,
+} = require("../rewards/utils/equivalentMenuItems");
 
 const mongoose = require("mongoose");
 const { createTicketingBookingService } = require("../../bookings/ticketings/ticketingBookingService");
@@ -328,29 +331,9 @@ console.log("resolveBuyMenuItemChallengeService===>", JSON.stringify(items, null
   }
 
   for (const [menuItemId, incomingQty] of qtyMap.entries()) {
-
-    const purchasedItem = await MenuItems.findById(menuItemId)
-      .select("presetType title creator amountQuantity  ")
-      .lean();
-
-    if (!purchasedItem) continue;
-
-    const equivalentMenuItemIds = [purchasedItem._id];
-
-    // Menu items that share presetType + title + creator + amountQuantity count toward the same challenge
-    if (purchasedItem.presetType && purchasedItem.title) {
-      const equivalentItems = await MenuItems.find({
-        _id: { $ne: purchasedItem._id },
-        presetType: purchasedItem.presetType,
-        title: purchasedItem.title,
-        creator: purchasedItem.creator,
-        amountQuantity: purchasedItem.amountQuantity
-      })
-        .select("_id")
-        .lean();
-
-      equivalentMenuItemIds.push(...equivalentItems.map((item) => item._id));
-    }
+    // Same identity rule as challenge fetch: presetType + title + creator + amountQuantity
+    const equivalentMenuItemIds = await findEquivalentMenuItemIds(menuItemId);
+    if (!equivalentMenuItemIds.length) continue;
 
     const challenges = await Challenge.find({
       companyOrganizer,
