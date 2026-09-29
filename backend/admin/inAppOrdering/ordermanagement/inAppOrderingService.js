@@ -5,14 +5,9 @@ const mongoose = require("mongoose");
 const Menus = require("@MenusModel");
 const { emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
-const { calculatePointsRepo } = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const {
-  createTransactionService,
-} = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
-const {
-  handleLoyaltyEarningConsequences,
-} = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/handleLoyaltyEarningConsequences");
-const webhookRepository = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/webhookRepository");
+  menuOrderFinalizerService,
+} = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 const { getOrgCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
 const { fireAndForget } = require("../../../helperUtils/responseUtil");
 const { maybeEnqueueOrderingConfirmation } = require("../../../commonModules/fiscalDocuments/fiscalTiming");
@@ -166,6 +161,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   let statusChanged = false;
   let paymentChanged = false;
   let deliveryChanged = false;
+  let markPaidViaFinalizer = false;
   const updateTypes = [];
 
   /* ===============================
@@ -221,74 +217,19 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
       return { error: e.message || "invalid_payment_transition" };
     }
 
-    order.paymentStatus = data.paymentStatus;
     paymentChanged = true;
     updateTypes.push("payment");
 
-    if (data.paymentStatus === "paid" && !order.paidAt) {
-      order.paidAt = new Date();
-    }
-
-    /* ==========================
-           🎯 Loyalty Points — only when newly marked paid
-        ========================== */
-    const totalPrice = order.totalPrice || 0;
-
-    if (data.paymentStatus === "paid" && totalPrice > 0) {
-      const saveTransaction = await webhookRepository.saveIfNotProcessed({
-        provider: "cash",
-        orderNumber: order._id,
-        orderType: "menuorders",
-        user: order.user,
-        companyOrganizer: order.organization.creator,
-        organization: order.organization._id,
-        paymentStatus: "paid",
-        paymentMethod: order.paymentMethod,
-        amount: order.totalPrice,
-        payload: order,
-      });
-      const pointsCalculation = await calculatePointsRepo(order.user, order.organization.creator, totalPrice);
-
-      let companyPoints = {
-        base: pointsCalculation.organizer.earnedPoints,
-        multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
-        total: pointsCalculation.organizer.earnedPoints,
-        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-      };
-      let globalPoints = {
-        base: pointsCalculation.global.earnedPoints,
-        multiplier: pointsCalculation.global.globalMultiplier || 1,
-        total: pointsCalculation.global.earnedPoints,
-        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-      };
-
-      const trx = await createTransactionService(
-        {
-          user: order.user,
-          companyOrganizer: order.organization.creator,
-          organization: order.organization._id,
-          companyPoints,
-          globalPoints,
-          allowNegative: false,
-          type: "earn",
-          description: "Menu order payment",
-          entityId: order._id,
-          domainType: "menuorders",
-        },
-        null,
-      );
-
-      if (!trx.success) {
-        throw new Error(trx.message || "failed_loyalty_update");
+    if (data.paymentStatus === "paid") {
+      markPaidViaFinalizer = (order.totalPrice || 0) > 0;
+      if (!markPaidViaFinalizer) {
+        order.paymentStatus = data.paymentStatus;
+        if (!order.paidAt) {
+          order.paidAt = new Date();
+        }
       }
-
-      handleLoyaltyEarningConsequences({
-        userId: order.user,
-        companyOrganizer: order.organization.creator,
-        companyPoints: companyPoints,
-        globalPoints: globalPoints,
-        menuOrder: order,
-      });
+    } else {
+      order.paymentStatus = data.paymentStatus;
     }
   }
 
@@ -368,10 +309,33 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
     updateTypes.push("paymentMethod");
   }
 
+  if (markPaidViaFinalizer) {
+    await menuOrderFinalizerService({
+      menuOrderId: order._id,
+      result: {
+        status: "paid",
+        transactionId: order.transactionId || null,
+      },
+    });
+    const refreshed = await OrdersRepo.findOrdersById(orderId);
+    if (refreshed) {
+      order.paymentStatus = refreshed.paymentStatus;
+      order.paidAt = refreshed.paidAt;
+      order.transactionId = refreshed.transactionId;
+      order.hideUntilPaid = refreshed.hideUntilPaid;
+      if (refreshed.status === "confirmed" && order.status === "pending") {
+        order.status = refreshed.status;
+      }
+    }
+  }
+
   await order.save();
 
-  // Payment confirmation when paid (amount>0 gated in helper); not at delivery
-  maybeEnqueueOrderingConfirmation(order);
+  if (paymentChanged && order.paymentStatus === "paid" && !markPaidViaFinalizer) {
+    maybeEnqueueOrderingConfirmation(order);
+  } else if (!markPaidViaFinalizer && order.paymentStatus === "paid") {
+    maybeEnqueueOrderingConfirmation(order);
+  }
 
   if (paymentChanged && order.paymentStatus === "paid") {
     fireAndForget(
@@ -386,7 +350,35 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
      NOTIFICATIONS
   =============================== */
 
-  if ((statusChanged || deliveryChanged) && !(paymentChanged && order.paymentStatus === "paid")) {
+  const paidViaFinalizer = markPaidViaFinalizer && order.paymentStatus === "paid";
+  const guestNextStep = resolveGuestNextStep(order);
+  const confirmedPayInWallet =
+    statusChanged &&
+    order.status === "confirmed" &&
+    guestNextStep?.payInWallet === true;
+
+  if (confirmedPayInWallet && !paidViaFinalizer) {
+    sendUserNotifications({
+      recipientIds: [order.user.toString()],
+      titleKey: "menu_order_confirmed_pay_title",
+      bodyKey: "menu_order_confirmed_pay_body",
+      bodyValues: { orderNumber: order.orderNumber },
+      data: {
+        type: NotificationTypes.MENU_ORDER_CONFIRMED,
+        orderId: order._id,
+        objectType: "menuorders",
+      },
+      image:
+        order.items?.[0]?.menuItemSnapShot?.image ||
+        order.combos?.[0]?.items?.[0]?.menuItemSnapShot?.image ||
+        null,
+      sender: order.organization,
+      objectId: order._id,
+    });
+  } else if (
+    (statusChanged || deliveryChanged) &&
+    !(paymentChanged && order.paymentStatus === "paid")
+  ) {
     sendUserNotifications({
       recipientIds: [order.user.toString()],
       titleKey: "order_updated_title",
@@ -408,14 +400,15 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
     });
   }
 
-  if (paymentChanged && order.paymentStatus === "paid") {
+  // Finalizer already sends MENU_ORDER_PAID when mark-paid goes through it.
+  if (paymentChanged && order.paymentStatus === "paid" && !paidViaFinalizer) {
     sendUserNotifications({
       recipientIds: [order.user.toString()],
       titleKey: "order_paid_title",
       bodyKey: "order_paid_body",
       bodyValues: { orderNumber: order.orderNumber },
       data: {
-        type: NotificationTypes.ORDER_UPDATE,
+        type: NotificationTypes.MENU_ORDER_PAID,
         objectType: "menuorders",
       },
       sender: order.organization,
@@ -426,7 +419,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   const plain = typeof order.toObject === "function" ? order.toObject() : order;
   if (plain.status === "completed" || plain.status === "sent") plain.status = "delivered";
   plain.nextActions = resolveStaffNextActions(order);
-  plain.guestNextStep = resolveGuestNextStep(order);
+  plain.guestNextStep = guestNextStep;
   return plain;
 };
 

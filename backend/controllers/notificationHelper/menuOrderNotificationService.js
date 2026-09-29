@@ -16,6 +16,20 @@ const MENU_NOTIFICATION_MAP = {
     bodyValues: (order) => ({ orderNumber: order.orderNumber }),
   },
 
+  MENU_ORDER_CONFIRMED_PAY: {
+    type: NotificationTypes.MENU_ORDER_CONFIRMED,
+    titleKey: "menu_order_confirmed_pay_title",
+    bodyKey: "menu_order_confirmed_pay_body",
+    bodyValues: (order) => ({ orderNumber: order.orderNumber }),
+  },
+
+  MENU_ORDER_PAID: {
+    type: NotificationTypes.MENU_ORDER_PAID,
+    titleKey: "menu_order_paid_title",
+    bodyKey: "menu_order_paid_body",
+    bodyValues: (order) => ({ orderNumber: order.orderNumber }),
+  },
+
   MENU_ORDER_CANCELLED: {
     type: NotificationTypes.MENU_ORDER_CANCELLED,
     titleKey: "menu_order_cancelled_title",

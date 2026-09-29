@@ -17,7 +17,9 @@ const { TicketingOrders } = require("@TicketingOrdersModel");
 const { getPromotionsForDashboard } = require("../promotions/promotionsRepository");
 const { getUserWallet } = require("../../userWalletService/global/walletManagement/userWalletService");
 const { normalizeRewardClaimMeta } = require("../rewards/formatters/normalizeRewardClaimMeta");
-
+const {
+  attachEquivalentMenuItemsToChallenges,
+} = require("../rewards/utils/equivalentMenuItems");
 
 
 const getDashboard = async ({ timezone, userId }) => {
@@ -102,6 +104,8 @@ const getLoyaltyDashboardChallenges = async ({
       clubIds,
       timezone,
     });
+
+  challenges = await attachEquivalentMenuItemsToChallenges(challenges);
 
   // 5️⃣ Claim limit filtering
   const claimResults =

@@ -27,6 +27,7 @@ const {
 const {
   maybeEnqueueOrderingConfirmation,
 } = require("../../../fiscalDocuments/fiscalTiming");
+const { hasMenuOrderBaseEarn } = require("./menuOrderLoyalty");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -36,6 +37,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   let companyOrganizer = null;
   let companyPoints = null;
   let globalPoints = null;
+  let loyaltyOnlyFulfillment = false;
 
   try {
     session.startTransaction();
@@ -60,34 +62,38 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       throw new Error("menu_order_not_found");
     }
 
-    /* ==========================
-       ⛔ Idempotency Guard
-    ========================== */
-    if (menuOrder.paymentStatus === "paid") {
-      await session.commitTransaction();
-      return;
-    }
-
     companyOrganizer = menuOrder.organization?.creator;
 
     /* ==========================
        ✅ PAYMENT SUCCESS
     ========================== */
     if (result.status === "paid") {
-      menuOrder.status = "confirmed";
-      menuOrder.paymentStatus = "paid";
-      menuOrder.paidAt = new Date();
-      menuOrder.transactionId = result.transactionId || null;
-      menuOrder.hideUntilPaid = false;
+      const alreadyPaid = menuOrder.paymentStatus === "paid";
+      const alreadyEarned = await hasMenuOrderBaseEarn(menuOrderId, session);
 
-      await menuOrder.save({ session });
-      await syncMonriTransactionStatus(menuOrderId, "paid", {
-        ...(result.transactionId && { monriTransactionId: String(result.transactionId) }),
-      }).catch((err) => console.error("[monri-sync] menu paid:", err.message));
+      if (alreadyPaid && alreadyEarned) {
+        await session.commitTransaction();
+        return;
+      }
+
+      loyaltyOnlyFulfillment = alreadyPaid && !alreadyEarned;
+
+      if (!alreadyPaid) {
+        menuOrder.status = "confirmed";
+        menuOrder.paymentStatus = "paid";
+        menuOrder.paidAt = new Date();
+        menuOrder.transactionId = result.transactionId || null;
+        menuOrder.hideUntilPaid = false;
+
+        await menuOrder.save({ session });
+        await syncMonriTransactionStatus(menuOrderId, "paid", {
+          ...(result.transactionId && { monriTransactionId: String(result.transactionId) }),
+        }).catch((err) => console.error("[monri-sync] menu paid:", err.message));
+      }
 
       const totalPrice = menuOrder.totalPrice || 0;
 
-      if (totalPrice > 0) {
+      if (!alreadyEarned && totalPrice > 0) {
         try {
           const pointsCalculation = await calculatePointsRepo(menuOrder.user, companyOrganizer, totalPrice);
 
@@ -161,8 +167,10 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
      * 📡 Sockets first so UI updates even if FCM/email later fails.
      * ORDER_UPDATE is immediate; NEW_ORDER follows with formatted user payload.
      */
-    emitMenuOrderPaymentSockets(menuOrder, result.status, { includeNewOrder: false });
-    if (result.status === "paid") {
+    if (!loyaltyOnlyFulfillment) {
+      emitMenuOrderPaymentSockets(menuOrder, result.status, { includeNewOrder: false });
+    }
+    if (result.status === "paid" && !loyaltyOnlyFulfillment) {
       findAppUserByIdWithProjectionService(menuOrder.user, {
         profileIcon: 1,
         firstName: 1,
@@ -183,7 +191,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
         .catch((err) => console.error("Order emit failed:", err));
     }
 
-    if (result.status === "paid") {
+    if (result.status === "paid" && !loyaltyOnlyFulfillment) {
       maybeEnqueueOrderingConfirmation(menuOrder);
       fireAndForget(
         recordPaidCaptureLedger({
@@ -226,17 +234,17 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       }
     }
 
-    if (result.status === "paid") {
+    if (result.status === "paid" && !loyaltyOnlyFulfillment) {
       fireAndForget(
         sendMenuOrderNotification({
           orderId: menuOrder._id,
-          action: "MENU_ORDER_CONFIRMED",
+          action: "MENU_ORDER_PAID",
         }),
-        "MENU_ORDER_CONFIRMED_NOTIFICATION",
+        "MENU_ORDER_PAID_NOTIFICATION",
       );
     }
 
-    if (result.status === "failed") {
+    if (result.status === "failed" && !loyaltyOnlyFulfillment) {
       fireAndForget(
         sendMenuOrderNotification({
           orderId: menuOrder._id,

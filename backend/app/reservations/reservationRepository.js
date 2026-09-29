@@ -1287,6 +1287,7 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
     // Project necessary fields, including user, event, and organization details
     {
       $project: {
+        bookingId: 1,
         userId: 1,
         partySize: 1,
         amount: 1,
