@@ -310,6 +310,16 @@ const getMenuItems = async ({
         pipeline: [{ $project: { _id: 1, name: 1, code: 1, status: 1 } }],
       },
     },
+    {
+      $lookup: {
+        from: "presettypes",
+        localField: "presetType",
+        foreignField: "_id",
+        pipeline: [{ $project: { _id: 1, name: 1 } }],
+        as: "presetType",
+      },
+    },
+    { $unwind: { path: "$presetType", preserveNullAndEmptyArrays: true } },
 
     // ✅ FILTER AFTER LOOKUP
     ...(menu

@@ -706,6 +706,7 @@ const updateOrder = async ({
   promoCode,
   deliveryOption,
   tip,
+  reservationId,
 }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -962,9 +963,10 @@ const updateOrder = async ({
 
     const existingTip = Number(existingOrder.priceBreakdown?.tip || 0);
     const itemsAndCombosTotal = totalPrice;
-    const voucherDiscount = Number(
+    let voucherDiscount = Number(
       existingOrder.priceBreakdown?.voucherDiscount || 0,
     );
+    let reservationRef = existingOrder.reservation || null;
     const promoChanged =
       (existingPromoCode || null) !== (finalPromoCode || null);
     const willConsumeUsage = Boolean(finalPromoCode) && promoChanged;
@@ -1021,7 +1023,27 @@ const updateOrder = async ({
       }
     }
 
-    if (voucherDiscount > 0) {
+    // Apply / redeem reservation voucher (items only — tips are not covered).
+    // Wallet OrderDetail patches reservationId before card/Apple Pay charge.
+    if (reservationId && voucherDiscount <= 0) {
+      const reservation = await validateReservationForOrder({
+        reservationId,
+        userId,
+        timezone,
+        session,
+      });
+      if (!reservation) {
+        throw new Error("Reservation not found or not valid for this user");
+      }
+      const voucherResult = await consumeReservationVoucher({
+        reservation,
+        orderAmount: totalPrice,
+        session,
+      });
+      voucherDiscount = voucherResult.voucherAmount;
+      totalPrice = voucherResult.orderAmountDue;
+      reservationRef = reservationId;
+    } else if (voucherDiscount > 0) {
       totalPrice -= Math.min(voucherDiscount, totalPrice);
     }
 
@@ -1066,6 +1088,16 @@ const updateOrder = async ({
       ...(deliveryOption !== undefined && {
         deliveryOption,
       }),
+
+      ...(reservationRef
+        ? { reservation: reservationRef }
+        : {}),
+
+      // Fully covered by voucher after this update — nothing left to charge.
+      ...(Number(totalPrice) <= 0 &&
+      existingOrder.paymentStatus === "pending"
+        ? { paymentStatus: "paid", paidAt: new Date() }
+        : {}),
 
       // Reset payment lock after update
       lockUntil: new Date(Date.now() + 10 * 60 * 1000),

@@ -6,7 +6,8 @@ const organizationRepo = require("../organizations/organizationRepository");
 const { Highlights } = require("@HighlightsModel");
 const { formatPublicHighlightResponse } = require("./formatters/formatPublicHighlightResponse");
 
-const { cache, invalidate } = require("@redisCache");
+const { invalidate } = require("@redisCache");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
 const ACTIVE_HIGHLIGHTS_CACHE_KEY = "highlights:active";
 const createHighlight = async ({ data }) => {
   return await highlightRepo.createHighlight(data);
@@ -111,6 +112,7 @@ const getPublicHighlights = async ({ page, limit, keyword, userLocation }) => {
 const updateHighlight = async (id, data) => {
 
   await invalidate(ACTIVE_HIGHLIGHTS_CACHE_KEY);
+  await invalidateDiscoveryCaches();
   const highlight = await highlightRepo.findHighlightDocById(id);
   if (!highlight) return null;
   const {

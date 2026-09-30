@@ -209,7 +209,7 @@ const getAllDayparts = async () => {
   return cache({
     namespace: ALL_DaypartS_CACHE_KEY,
     params: {},
-    ttl: null,
+    ttl: 86400, // 1 day
     fetchFn: () => Daypart.find(),
   });
 };

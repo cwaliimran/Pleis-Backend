@@ -12,6 +12,7 @@ const {
   getOrgCompanyOrganizer,
 } = require("../organizations/organizationRepository");
 const Venues = require("../../commonModules/venues/Venues");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
 
 const createEvent = async (data, ticketingData) => {
   const session = await Events.startSession();
@@ -69,6 +70,7 @@ const createEvent = async (data, ticketingData) => {
     //   image: event.basicInfo.media.type === 'image' ? event.basicInfo.media.name : null,
 
     // });
+    await invalidateDiscoveryCaches();
     return event;
   } catch (err) {
     await session.abortTransaction();
@@ -406,12 +408,16 @@ const findEventById = async (id) => {
 
 // Delete
 const deleteEventById = async (event) => {
-  return await event.deleteOne();
+  const result = await event.deleteOne();
+  await invalidateDiscoveryCaches();
+  return result;
 };
 
 // Optional: keep this only for non-nested shallow updates
 const findByIdAndUpdate = async (id, data) => {
-  return Events.findByIdAndUpdate(id, { $set: data }, { new: true });
+  const updated = await Events.findByIdAndUpdate(id, { $set: data }, { new: true });
+  await invalidateDiscoveryCaches();
+  return updated;
 };
 
 // Aggregate pipeline

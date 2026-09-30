@@ -228,7 +228,7 @@ const getUserInterestsIdsForRecommendation = async (userId) => {
   const cacheKey = buildUserInterestsCacheKey(userId);
   const pending = cache({
     namespace: cacheKey,
-    ttl: null,
+    ttl: 3600, // 1 hour (also invalidated when interests are updated)
     fetchFn: async () => {
       const interests = await UserInterests.findOne({ user: userId })
         .select("categories venueTypes tags")
