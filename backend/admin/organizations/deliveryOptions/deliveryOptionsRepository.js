@@ -45,7 +45,7 @@ const getDeliveryOptionsByOrganization = async (organizationId) => {
   return cache({
     namespace: getOrgCacheKey(organizationId),
     params: {},
-    ttl: null,
+    ttl: 3600, // 1 hour (also invalidated on write; safety if invalidate is missed)
     fetchFn: () => fetchDeliveryOptionsFromDb(organizationId),
   });
 };

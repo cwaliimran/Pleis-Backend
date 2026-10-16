@@ -255,7 +255,8 @@ const UserReservationsSchema = new mongoose.Schema(
       },
       discountAmount: { type: Number, default: 0 },
       usedAmount: { type: Number, default: 0 },
-      // Legacy; reservation_confirmation now enqueues at payment (not voucher spend)
+      // Legacy field; reservation_confirmation + PLS voucher now issue at payment
+      // (reservation finalizer / webhook). Ordering with voucher issues ordering_confirmation.
       fiscalDocumentEnqueuedAt: { type: Date, default: null },
     },
 

@@ -6,17 +6,15 @@ const Tiers = require("./Tiers");
 const tierRepo = require("./tiersRepository");
 const mongoose = require("mongoose");
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_TIERS_CACHE_KEY = "tiers:active";
 const buildTiersCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
   limit = 10,
-  keyword = "",
   status = "",
-  date = "",
-
 }) => {
-  return `${ACTIVE_TIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}`;
+  return `${ACTIVE_TIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}`;
 };
 const createTier = async (data) => {
   let tier = await tierRepo.createTier(data);
@@ -32,16 +30,10 @@ const getTiers = async ({ page, limit, keyword, status, date }) => {
     scope: "admin",
     skip,
     limit,
-    keyword,
-    status,
-    date
+    status: status || "",
   });
 
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400,
-
-    fetchFn: async () => {
+  const fetchFn = async () => {
       /* --------------------------
          Build base query
       ---------------------------*/
@@ -104,7 +96,16 @@ const getTiers = async ({ page, limit, keyword, status, date }) => {
       tiers = tiers.map(item => tiersFormatter(item));
 
       return { tiers, meta };
-    },
+  };
+
+  if (!isPlainListCacheable({ keyword, date })) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 

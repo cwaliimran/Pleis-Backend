@@ -7,6 +7,7 @@ const { formatVenue } = require("./formatter/formatVenue");
 const Venues = require("@VenuesModel");
 const venueRepo = require("./venuesRepository");
 const { cache, invalidate } = require("@redisCache");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
 
 const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
@@ -275,6 +276,7 @@ const updateVenue = async (id, data) => {
     );
 
     await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+    await invalidateDiscoveryCaches();
   }
 
   //get updated venue with venueDetails

@@ -8,6 +8,7 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const { formatOrganization, formatNotificationImage } = require("./formatter/formatOrganization");
 const { default: mongoose } = require("mongoose");
 const { invalidate } = require("@redisCache");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
 const { getActiveEventsCountForOrganizations } = require("../events/eventRepository");
 const {
   applyInAppOrderingSettingsV2,
@@ -229,6 +230,7 @@ const updateOrganization = async ({ id, data, timezone }) => {
     companyDetails
   } = data;
   await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+  await invalidateDiscoveryCaches();
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -409,6 +411,7 @@ const updateOrganization = async ({ id, data, timezone }) => {
 
 const updateOrganizationV2 = async ({ id, inAppOrderingSettings, timezone }) => {
   await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+  await invalidateDiscoveryCaches();
 
   const organization = await Organizations.findById(id);
   if (!organization) return null;

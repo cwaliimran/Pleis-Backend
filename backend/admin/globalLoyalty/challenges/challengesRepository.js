@@ -6,6 +6,7 @@ const {
   GlobalReferUsersChallenge,
 } = require("../../../commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge");
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY = "globalLoyaltyChallenges:active";
 const buildGlobalLoyaltyChallengesCacheKey = ({
   scope = "public", // public | admin
@@ -118,24 +119,10 @@ const getChallengesWithFilters = async (
     scope: "admin",
     skip,
     limit,
-    sortBy,
-    sortOrder,
   });
+  if (status) cacheKey = `${cacheKey}:status=${status}`;
 
-  const filters = [];
-  if (keyword) filters.push(`keyword=${keyword}`);
-  if (status) filters.push(`status=${status}`);
-  if (date) filters.push(`date=${date}`);
-
-  if (filters.length > 0) {
-    cacheKey = `${cacheKey}:${filters.join(":")}`;
-  }
-
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400,
-
-    fetchFn: async () => {
+  const fetchFn = async () => {
       const sortDirection = sortOrder === "asc" ? 1 : -1;
 
       let sort = { createdAt: -1, _id: -1 };
@@ -178,7 +165,23 @@ const getChallengesWithFilters = async (
         .limit(limit)
         .lean()
         .exec();
-    },
+  };
+
+  if (
+    !isPlainListCacheable({
+      keyword,
+      date,
+      sortBy: sortBy !== "createdAt" ? sortBy : "",
+      sortOrder: sortOrder !== "desc" ? sortOrder : "",
+    })
+  ) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 

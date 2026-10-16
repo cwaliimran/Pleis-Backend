@@ -5,18 +5,15 @@ const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
 const { formatCategories } = require("./formatters/categoryFormatter");
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_BADGE_CATEGORIES_CACHE_KEY = "badgeCategories:active";
 const buildBadgeCategoriesCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
   limit = 10,
-  keyword = "",
   status = "",
-  date = "",
-  sortBy = "",
-  sortOrder = ""
 }) => {
-  return `${ACTIVE_BADGE_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
+  return `${ACTIVE_BADGE_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}`;
 };
 const createBadgeCategories = async (data) => {
   try {
@@ -36,17 +33,9 @@ const getBadgeCategoriess = async ({ timezone,page, limit, keyword, status, user
     scope: "admin",
     skip,
     limit,
-    keyword,
-    status,
-    date,
-    sortBy,
-    sortOrder
+    status: status || "",
   });
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
- 
-    fetchFn: async () => {
+  const fetchFn = async () => {
   const pipeline = [];
 
   // Apply filters
@@ -114,7 +103,16 @@ if (keyword) {
   meta.BadgeCategoriessCount = { total, active, inactive };
 const formattedBadgeCategoriess = formatCategories(BadgeCategoriess, timezone);
   return {BadgeCategoriess : formattedBadgeCategoriess, meta}
-},
+  };
+
+  if (!isPlainListCacheable({ keyword, date, sortBy, sortOrder, userId })) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 

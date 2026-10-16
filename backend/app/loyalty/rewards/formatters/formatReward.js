@@ -30,9 +30,11 @@ function formatReward(reward, timezone) {
         };
     };
 
-    // Safely handle menuItem image (check if menuItem and image exist)
+    // Safely handle menuItem image(s) — always normalize to array for buyMenuItemReward
     if (obj?.menuItem) {
-        obj.menuItem = formatMenuItemImage(obj.menuItem);
+        obj.menuItem = Array.isArray(obj.menuItem)
+            ? obj.menuItem.map(formatMenuItemImage)
+            : [formatMenuItemImage(obj.menuItem)];
     }
 
     if (Array.isArray(obj.equivalentMenuItems)) {
