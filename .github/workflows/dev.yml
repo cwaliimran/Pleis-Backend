@@ -1,14 +1,16 @@
 name: Build and Deploy Node.js API to Azure - Pleis-backend-dev
 
 on:
-  push:
-    branches:
-      - dev
+  # Disabled — do not deploy to Pleis-backend-dev
+  # push:
+  #   branches:
+  #     - dev
 
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
+    if: false # Disabled — do not run / deploy
     runs-on: ubuntu-latest
 
     steps:
@@ -27,16 +29,16 @@ jobs:
       - name: Build application
         run: npm run build --if-present
 
-      - name: Deploy to Azure Web App (API — Pleis-backend-dev)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'Pleis-backend-dev'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8DE223AF70D74AE6A51EEF16D991C7F0 }}
-          package: .
+      # - name: Deploy to Azure Web App (API — Pleis-backend-dev)
+      #   uses: azure/webapps-deploy@v3
+      #   with:
+      #     app-name: 'Pleis-backend-dev'
+      #     publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8DE223AF70D74AE6A51EEF16D991C7F0 }}
+      #     package: .
 
-      - name: Deploy to Azure Web App (Worker — Pleis-backend-dev-worker)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'Pleis-backend-dev-worker'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_PLEIS_BACKEND_DEV_WORKER }}
-          package: .
+      # - name: Deploy to Azure Web App (Worker — Pleis-backend-dev-worker)
+      #   uses: azure/webapps-deploy@v3
+      #   with:
+      #     app-name: 'Pleis-backend-dev-worker'
+      #     publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_PLEIS_BACKEND_DEV_WORKER }}
+      #     package: .
