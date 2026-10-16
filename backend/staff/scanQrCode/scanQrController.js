@@ -5,7 +5,8 @@ const { sendResponse, validateParams } = require("@utils/responseUtil");
 const { User } = require("@UserModel");
 const { getUserReservationDetailsService } = require("../../app/reservations/reservationService");
 const { getLoyaltyRewardOrderDetailsService } = require("../../app/loyalty/rewardsOrders/rewardsOrdersService");
-const { resolveBuyMenuItemRewardAvailability } = require("../../app/loyalty/rewards/utils/equivalentMenuItems");
+const { resolveBuyMenuItemRewardAvailability, attachPresetTypeNames, asMenuItemArray } = require("../../app/loyalty/rewards/utils/equivalentMenuItems");
+const { formatLoyaltyRewardOrders } = require("../../app/loyalty/rewardsOrders/formatter/formatLoyaltyRewardOrders");
 const scanQrController = async (req, res) => {
   try {
     const { timezone } = req.user;
@@ -285,7 +286,7 @@ const scanQrController = async (req, res) => {
       }
 
       // buyMenuItemReward: match equivalents and require one on organizer active menus
-      // (scoped to qrData.organization when provided)
+      // (scoped to qrData.organization when provided). menuItem is always a list.
       const snapshot = loyaltyRewardOrder.snapshot;
       if (snapshot?.rewardType === "buyMenuItemReward" && snapshot?.menuItem) {
         const organizerId =
@@ -304,15 +305,30 @@ const scanQrController = async (req, res) => {
           organization
         );
 
-        if (menuItem) {
-          loyaltyRewardOrder.snapshot = {
+        // Re-resolve returns lean menu docs with bare filenames — reformat
+        // image URLs (and equivalents) the same way as order details.
+        const reformatted = formatLoyaltyRewardOrders({
+          ...loyaltyRewardOrder,
+          snapshot: {
             ...snapshot,
-            menuItem,
-          };
-        }
+            menuItem: menuItem || [],
+          },
+          equivalentMenuItems,
+          activeEquivalentMenuItems,
+        });
 
-        loyaltyRewardOrder.equivalentMenuItems = equivalentMenuItems;
-        loyaltyRewardOrder.activeEquivalentMenuItems = activeEquivalentMenuItems;
+        Object.assign(loyaltyRewardOrder, reformatted);
+
+        // Ensure presetType is { _id, name, type } like /admin/menu/items
+        await attachPresetTypeNames([
+          ...asMenuItemArray(loyaltyRewardOrder.snapshot?.menuItem),
+          ...(Array.isArray(loyaltyRewardOrder.equivalentMenuItems)
+            ? loyaltyRewardOrder.equivalentMenuItems
+            : []),
+          ...(Array.isArray(loyaltyRewardOrder.activeEquivalentMenuItems)
+            ? loyaltyRewardOrder.activeEquivalentMenuItems
+            : []),
+        ]);
 
         if (!isAvailableOnOrganizerActiveMenus) {
           warnings.push({

@@ -20,6 +20,10 @@ const {
   getPromotionScheduleReasons,
   getActivePromotionMatchQuery,
 } = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
+const {
+  attachPresetTypeNames,
+  asMenuItemArray,
+} = require("../rewards/utils/equivalentMenuItems");
 
 
 // Count
@@ -159,6 +163,10 @@ const getPromotionsForDashboard = async ({
     .skip(skip)
     .limit(limit)
     .lean();
+
+  await attachPresetTypeNames(
+    promotions.flatMap((promo) => asMenuItemArray(promo.menuItem))
+  );
 
   /* ===============================
      4️⃣ Eligibility normalization

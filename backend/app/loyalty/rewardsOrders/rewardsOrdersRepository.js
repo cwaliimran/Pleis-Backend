@@ -116,6 +116,23 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
       }
 
     } else {
+      // Hydrate menuItem list into snapshot so orders/scan always show configured items
+      let snapshot = { ...reward };
+      if (reward.rewardType === "buyMenuItemReward" && reward.menuItem) {
+        const {
+          asMenuItemArray,
+          getMenuItemIds,
+        } = require("../rewards/utils/equivalentMenuItems");
+        const MenuItems = require("@MenuItemsModel");
+        const ids = getMenuItemIds(asMenuItemArray(reward.menuItem));
+        snapshot.menuItem = ids.length
+          ? await MenuItems.find({ _id: { $in: ids } })
+              .select("title image presetType creator amountQuantity status menu")
+              .session(session)
+              .lean()
+          : [];
+      }
+
       // Create order
       [orderDoc] = await RewardsOrders.create(
         [
@@ -123,7 +140,7 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
             user: userId,
             sourceId: reward._id,
             sourceType: "rewards",
-            snapshot: reward,
+            snapshot,
             pointsUsed: reward.minPointsRequiredToClaim || 0,
             companyOrganizer: reward.companyOrganizer,
           },
@@ -459,16 +476,20 @@ const getOrderDetails = async (orderId) => {
   const order = result[0] || null;
   if (!order) return null;
 
-  // buyMenuItemReward: resolve snapshot.menuItem.presetType → { _id, name }
-  const presetTypeId = order.snapshot?.menuItem?.presetType;
-  if (presetTypeId && !presetTypeId.name) {
-    const PresetType = require("@PresetTypeModel");
-    const presetType = await PresetType.findById(presetTypeId)
-      .select("name")
-      .lean();
-    if (presetType) {
-      order.snapshot.menuItem.presetType = presetType;
-    }
+  // buyMenuItemReward: resolve snapshot.menuItem[].presetType → { _id, name, type }
+  // Normalize legacy single-object snapshots to an array so clients always get a list.
+  if (order.snapshot?.menuItem != null) {
+    const {
+      asMenuItemArray,
+      attachPresetTypeNames,
+    } = require("../rewards/utils/equivalentMenuItems");
+
+    const menuItems = asMenuItemArray(order.snapshot.menuItem).map((item) =>
+      item && typeof item === "object" ? { ...item } : item
+    );
+
+    await attachPresetTypeNames(menuItems);
+    order.snapshot.menuItem = menuItems;
   }
 
   return order;

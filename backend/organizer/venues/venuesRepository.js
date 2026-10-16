@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const Organizations = require("@OrganizationModel");
 const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../../admin/organizations/organizationService");
 const { cache, invalidate } = require("@redisCache");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
 const {
   invalidateVenueCaches,
 } = require("../../admin/venues/venuesRepository");
@@ -44,6 +45,7 @@ const createVenue = async (data) => {
     // 🚀 Outside transaction (non-DB side effects only)
     if (data.organization) {
       await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+      await invalidateDiscoveryCaches();
     }
     await invalidateVenueCaches();
 

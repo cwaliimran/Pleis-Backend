@@ -609,6 +609,23 @@ async function issueOrderingConfirmation(menuOrderId) {
     order.transactionId,
   );
 
+  // Voucher is prepaid payment, not a discount — confirm the full settled amount.
+  const voucherPaid = Number(order.priceBreakdown?.voucherDiscount || 0);
+  const amountDue = Number(
+    order.priceBreakdown?.finalTotal ?? order.totalPrice ?? 0,
+  );
+  const confirmationAmount =
+    (Number.isFinite(amountDue) ? amountDue : 0) +
+    (Number.isFinite(voucherPaid) ? voucherPaid : 0);
+  if (!(confirmationAmount > 0)) return null;
+
+  let paymentMethod = order.paymentMethod;
+  if (voucherPaid > 0 && !(amountDue > 0)) {
+    paymentMethod = "voucher";
+  } else if (voucherPaid > 0 && amountDue > 0) {
+    paymentMethod = `voucher+${order.paymentMethod || "card"}`;
+  }
+
   const confirmation = await issuePaymentConfirmation({
     module: "ORDERING",
     orderId: order._id,
@@ -620,10 +637,10 @@ async function issueOrderingConfirmation(menuOrderId) {
     customerName,
     customerEmail,
     paidAt: order.paidAt || new Date(),
-    paymentMethod: order.paymentMethod,
+    paymentMethod,
     cardLast4: card.cardLast4,
     cardBrand: card.cardBrand,
-    amount: order.priceBreakdown?.finalTotal ?? order.totalPrice,
+    amount: confirmationAmount,
     currency: "EUR",
     items: mapOrderItems(order, locale),
     organizerLegalName: seller.companyName,

@@ -19,6 +19,22 @@ function formatReward(reward, timezone) {
     obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
   }
 
+  // buyMenuItemReward: menuItem is always a list
+  if (obj?.menuItem != null) {
+    const formatMi = (item) => {
+      if (!item || typeof item !== "object") return item;
+      // Skip bare ObjectIds / unpopulated refs
+      if (item.image == null && item.title == null) return item;
+      return {
+        ...item,
+        image: item.image ? getFullImageUrl(item.image) : item.image,
+      };
+    };
+    obj.menuItem = Array.isArray(obj.menuItem)
+      ? obj.menuItem.map(formatMi)
+      : [formatMi(obj.menuItem)];
+  }
+
   // Conversion = Redeemed / Claims
   const conversion = obj.claimed
     ? Number((((obj.redeemed || 0) / obj.claimed) * 100).toFixed(2))

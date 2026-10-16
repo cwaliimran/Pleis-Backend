@@ -8,6 +8,7 @@ const Organizations = require("../../commonModules/organizations/Organization");
 const { Events } = require("../../commonModules/events/Event");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { cache } = require("@redisCache");
+const { isPlainMapCacheable } = require("@cachePolicy");
 const { getFullImageUrl } = require("@utils/imageHelper");
 const {
   getVenueTypeObjectIdsForMainCategories,
@@ -338,24 +339,30 @@ async function getLeanPlacesForMap(queryData) {
     userId = null,
   } = queryData;
 
-  const fp = filtersFingerprint(advanceFilters, keyword);
-  const bq = quantizeBounds(bounds);
+  const kw = String(keyword || "").trim().toLowerCase();
+  const run = () =>
+    fetchLeanPlaces({
+      bounds,
+      keyword,
+      advanceFilters,
+      userId: null,
+    });
 
-  // Favorites are user-specific — cache shared geo payload without favs, attach after
-  const markers = await cache({
-    namespace: "maps:places:lean:v4",
-    params: { b: bq, f: fp },
-    ttl: 30,
-    memoryTtl: 15,
-    deferStore: true,
-    fetchFn: () =>
-      fetchLeanPlaces({
-        bounds,
-        keyword,
-        advanceFilters,
-        userId: null,
-      }),
-  });
+  // Keyword / advanceFilters → skip Redis; bounds-only viewport may cache.
+  let markers;
+  if (!isPlainMapCacheable({ keyword: kw, advanceFilters })) {
+    markers = await run();
+  } else {
+    const bq = quantizeBounds(bounds);
+    markers = await cache({
+      namespace: "maps:places:lean:v4",
+      params: { b: bq },
+      ttl: 30,
+      memoryTtl: 15,
+      deferStore: true,
+      fetchFn: run,
+    });
+  }
 
   if (!userId || !markers.length) {
     return markers;
@@ -384,24 +391,30 @@ async function getLeanEventsForMap(queryData) {
     timezone = "UTC",
   } = queryData;
 
-  const fp = filtersFingerprint(advanceFilters, keyword);
-  const bq = quantizeBounds(bounds);
+  const kw = String(keyword || "").trim().toLowerCase();
+  const run = () =>
+    fetchLeanEvents({
+      bounds,
+      keyword,
+      advanceFilters,
+      userId: null,
+      timezone,
+    });
 
-  const markers = await cache({
-    namespace: "maps:events:lean:v4",
-    params: { b: bq, f: fp, tz: timezone || "UTC" },
-    ttl: 30,
-    memoryTtl: 15,
-    deferStore: true,
-    fetchFn: () =>
-      fetchLeanEvents({
-        bounds,
-        keyword,
-        advanceFilters,
-        userId: null,
-        timezone,
-      }),
-  });
+  let markers;
+  if (!isPlainMapCacheable({ keyword: kw, advanceFilters })) {
+    markers = await run();
+  } else {
+    const bq = quantizeBounds(bounds);
+    markers = await cache({
+      namespace: "maps:events:lean:v4",
+      params: { b: bq, tz: timezone || "UTC" },
+      ttl: 30,
+      memoryTtl: 15,
+      deferStore: true,
+      fetchFn: run,
+    });
+  }
 
   if (!userId || !markers.length) {
     return markers;

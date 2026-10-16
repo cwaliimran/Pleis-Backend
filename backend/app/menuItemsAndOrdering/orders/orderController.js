@@ -108,8 +108,19 @@ const placeOrder = async (req, res) => {
 };
 
 const updateOrderDetails = async (req, res) => {
-  const { items, combos, notes, paymentMethod, pickupType, tableNumber, deliveryOption, promoCode, tip, userId } =
-    req.body;
+  const {
+    items,
+    combos,
+    notes,
+    paymentMethod,
+    pickupType,
+    tableNumber,
+    deliveryOption,
+    promoCode,
+    tip,
+    reservationId,
+    userId,
+  } = req.body;
 
   const { id: orderId } = req.params;
 
@@ -117,6 +128,7 @@ const updateOrderDetails = async (req, res) => {
     const validateData = {
       rawData: [],
       enumFields: {},
+      objectIdFields: [],
     };
 
     // Validate only if field was provided
@@ -130,6 +142,10 @@ const updateOrderDetails = async (req, res) => {
       validateData.rawData.push("paymentMethod");
 
       validateData.enumFields.paymentMethod = ["applePay", "card", "cash", "payLater"];
+    }
+
+    if (reservationId !== undefined && reservationId !== null && reservationId !== "") {
+      validateData.objectIdFields.push("reservationId");
     }
 
     // tableNumber is required when changing pickupType
@@ -160,6 +176,7 @@ const updateOrderDetails = async (req, res) => {
       deliveryOption,
       promoCode,
       tip,
+      reservationId,
     });
 
     return sendResponse({

@@ -3,7 +3,7 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const PinnedContent = require("./PinnedContent");
 const pinnedContentRepo = require("./pinnedContentRepository");
 const mongoose = require("mongoose");
-const { cache, invalidate } = require("@redisCache");
+const { invalidatePinnedCaches } = require("@cacheNamespaces");
 
 const createPinnedContent = async ({ filterType, filter, contentType, status }) => {
   return await pinnedContentRepo.createPinnedContent({ filterType, filter, contentType, status });
@@ -85,8 +85,7 @@ const reorderPinnedContent = async (movedId, previousOrder, newOrder) => {
     await PinnedContent.findByIdAndUpdate(movedId, { order: newOrder }, { session });
     await session.commitTransaction();
     session.endSession();
-    await invalidate("pinnedContent");
-    await invalidate("home:pinned-content");
+    await invalidatePinnedCaches();
     return true;
   } catch (err) {
     await session.abortTransaction();

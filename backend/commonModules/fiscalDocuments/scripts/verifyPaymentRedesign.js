@@ -308,16 +308,35 @@ function stepSourceGates() {
     fiscalTimingSrc.includes("maybeEnqueueOrderingConfirmation") &&
       !fiscalTimingSrc.includes("ORDERING_DELIVERED_STATUS") &&
       fiscalTimingSrc.includes("maybeEnqueueReservationConfirmation") &&
-      !fiscalTimingSrc.includes("maybeEnqueueReservationVoucherFiscal"),
-    "ordering/reservation confirmations enqueue at payment (no completed gate / no voucher fiscal)",
+      !fiscalTimingSrc.includes("maybeEnqueueReservationVoucherFiscal") &&
+      fiscalTimingSrc.includes("voucherDiscount"),
+    "ordering/reservation confirmations enqueue at payment (voucher spend counts as payment)",
   );
   assert(
     menuFinalizer.includes("maybeEnqueueOrderingConfirmation"),
     "menu finalizer enqueues ordering_confirmation at payment",
   );
   assert(
-    resFinalizer.includes("maybeEnqueueReservationConfirmation"),
-    "reservation finalizer enqueues reservation_confirmation at payment",
+    resFinalizer.includes("maybeEnqueueReservationConfirmation") &&
+      resFinalizer.includes("generateVoucherCode"),
+    "reservation finalizer enqueues reservation_confirmation and issues PLS voucher at payment",
+  );
+  const orderServiceSrc = readSrc(
+    "backend/app/menuItemsAndOrdering/orders/orderService.js",
+  );
+  assert(
+    orderServiceSrc.includes("voucherPaid") &&
+      orderServiceSrc.includes("maybeEnqueueOrderingConfirmation"),
+    "placeOrder treats reservation voucher as payment and enqueues ordering_confirmation",
+  );
+  assert(
+    readSrc(
+      "backend/commonModules/fiscalDocuments/jobs/documentService.js",
+    ).includes('paymentMethod = "voucher"') ||
+      readSrc(
+        "backend/commonModules/fiscalDocuments/jobs/documentService.js",
+      ).includes("voucherPaid"),
+    "ordering confirmation amount/paymentMethod include voucher settlement",
   );
   assert(
     !ticketFinalizer.includes("Your tickets are confirmed") &&
