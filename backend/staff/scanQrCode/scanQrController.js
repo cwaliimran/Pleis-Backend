@@ -5,7 +5,7 @@ const { sendResponse, validateParams } = require("@utils/responseUtil");
 const { User } = require("@UserModel");
 const { getUserReservationDetailsService } = require("../../app/reservations/reservationService");
 const { getLoyaltyRewardOrderDetailsService } = require("../../app/loyalty/rewardsOrders/rewardsOrdersService");
-const { resolveBuyMenuItemRewardAvailability } = require("../../app/loyalty/rewards/utils/equivalentMenuItems");
+const { resolveBuyMenuItemRewardAvailability, attachPresetTypeNames, asMenuItemArray } = require("../../app/loyalty/rewards/utils/equivalentMenuItems");
 const { formatLoyaltyRewardOrders } = require("../../app/loyalty/rewardsOrders/formatter/formatLoyaltyRewardOrders");
 const scanQrController = async (req, res) => {
   try {
@@ -318,6 +318,17 @@ const scanQrController = async (req, res) => {
         });
 
         Object.assign(loyaltyRewardOrder, reformatted);
+
+        // Ensure presetType is { _id, name, type } like /admin/menu/items
+        await attachPresetTypeNames([
+          ...asMenuItemArray(loyaltyRewardOrder.snapshot?.menuItem),
+          ...(Array.isArray(loyaltyRewardOrder.equivalentMenuItems)
+            ? loyaltyRewardOrder.equivalentMenuItems
+            : []),
+          ...(Array.isArray(loyaltyRewardOrder.activeEquivalentMenuItems)
+            ? loyaltyRewardOrder.activeEquivalentMenuItems
+            : []),
+        ]);
 
         if (!isAvailableOnOrganizerActiveMenus) {
           warnings.push({

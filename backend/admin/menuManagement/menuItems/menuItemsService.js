@@ -315,7 +315,24 @@ const getMenuItems = async ({
         from: "presettypes",
         localField: "presetType",
         foreignField: "_id",
-        pipeline: [{ $project: { _id: 1, name: 1 } }],
+        pipeline: [
+          {
+            $lookup: {
+              from: "menuitemsubcategorytypes",
+              localField: "type",
+              foreignField: "_id",
+              as: "type",
+              pipeline: [{ $project: { _id: 1, name: 1, code: 1, } }],
+            },
+          },
+          {
+            $unwind: {
+              path: "$type",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          { $project: { _id: 1, name: 1, type: 1 } },
+        ],
         as: "presetType",
       },
     },

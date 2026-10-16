@@ -1,6 +1,8 @@
 const MenuItems = require("@MenuItemsModel");
 const Menus = require("@MenusModel");
 const PresetType = require("@PresetTypeModel");
+// Ensure populate("type") works even when admin preset routes weren't loaded (e.g. staff scan).
+require("@MenuItemSubCategoryTypeModel");
 const {
   asMenuItemArray,
   getMenuItemIds,
@@ -27,7 +29,10 @@ const buildSiblingIdentityQuery = (item) => ({
   amountQuantity: item.amountQuantity ?? 0,
 });
 
-/** Attach `{ _id, name }` on presetType for response payloads. */
+/**
+ * Attach presetType as `{ _id, name, type }` (same shape as /admin/menu/items).
+ * Mutates menu item objects in place.
+ */
 const attachPresetTypeNames = async (items = []) => {
   const list = items.filter(Boolean);
   if (!list.length) return;
@@ -43,7 +48,8 @@ const attachPresetTypeNames = async (items = []) => {
   if (!ids.length) return;
 
   const docs = await PresetType.find({ _id: { $in: ids } })
-    .select("name")
+    .select("_id name type")
+    .populate({ path: "type", select: "_id name code" })
     .lean();
   const byId = new Map(docs.map((doc) => [String(doc._id), doc]));
 
@@ -53,6 +59,23 @@ const attachPresetTypeNames = async (items = []) => {
       item.presetType = byId.get(String(id));
     }
   }
+};
+
+/** Collect menu-item docs from challenges (task + reward) for presetType hydration. */
+const collectChallengeMenuItems = (challenges = []) => {
+  const items = [];
+  for (const challenge of challenges) {
+    if (Array.isArray(challenge?.taskMenuItem)) {
+      items.push(...challenge.taskMenuItem);
+    }
+    const rewardMenuItem = challenge?.reward?.rewardMenuItem;
+    if (Array.isArray(rewardMenuItem)) {
+      items.push(...rewardMenuItem);
+    } else if (rewardMenuItem && typeof rewardMenuItem === "object") {
+      items.push(rewardMenuItem);
+    }
+  }
+  return items;
 };
 
 const emptyAvailability = () => ({
@@ -199,7 +222,10 @@ const attachEquivalentMenuItemsToChallenges = async (challenges = []) => {
       challenge.taskMenuItem.length
   );
 
-  if (!buyChallenges.length) return challenges;
+  if (!buyChallenges.length) {
+    await attachPresetTypeNames(collectChallengeMenuItems(challenges));
+    return challenges;
+  }
 
   const linkedIds = [
     ...new Set(
@@ -242,7 +268,7 @@ const attachEquivalentMenuItemsToChallenges = async (challenges = []) => {
     }
   }
 
-  return challenges.map((challenge) => {
+  const expanded = challenges.map((challenge) => {
     if (
       challenge?.taskType !== "buyMenuItem" ||
       !Array.isArray(challenge.taskMenuItem) ||
@@ -275,6 +301,9 @@ const attachEquivalentMenuItemsToChallenges = async (challenges = []) => {
       taskMenuItem: [...expandedById.values()],
     };
   });
+
+  await attachPresetTypeNames(collectChallengeMenuItems(expanded));
+  return expanded;
 };
 
 /**
@@ -310,6 +339,7 @@ module.exports = {
   getMenuItemIdentityKey,
   getRewardMenuItemId,
   buildSiblingIdentityQuery,
+  attachPresetTypeNames,
   resolveBuyMenuItemRewardAvailability,
   attachEquivalentMenuItemsToChallenges,
   findEquivalentMenuItemIds,

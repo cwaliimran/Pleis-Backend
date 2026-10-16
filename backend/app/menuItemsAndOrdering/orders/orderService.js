@@ -635,9 +635,11 @@ const placeOrder = async ({
       });
     }
 
-    // €0 / free orders never go through payment confirmation fiscal email —
-    // send a plain order confirmation at placement.
-    if (!(Number(order.totalPrice) > 0)) {
+    // Truly free / €0 orders (no voucher) — plain email, no payment-confirmation PDF.
+    // Reservation voucher is a payment method: settle like a normal paid order.
+    const voucherPaid =
+      Number(order.priceBreakdown?.voucherDiscount || 0) > 0;
+    if (!(Number(order.totalPrice) > 0) && !voucherPaid) {
       fireAndForget(
         maybeSendFreeMenuOrderConfirmation(order._id),
         "PLAIN_FREE_MENU_ORDER_CONFIRMATION",
@@ -650,6 +652,10 @@ const placeOrder = async ({
         }),
         "MENU_ORDER_LOYALTY_ON_PAID",
       );
+      // Finalizer skips PC enqueue on already-paid (loyalty-only) path; voucher
+      // orders are marked paid at placeOrder, so enqueue confirmation here.
+      // Idempotent via BullMQ jobId.
+      maybeEnqueueOrderingConfirmation(order);
     }
 
     const postOrderFlow = resolvePostOrderFlow({
@@ -1155,6 +1161,25 @@ const updateOrder = async ({
     // =========================================================
 
     emitOrderUpdate(updatedOrder, ["order"]);
+
+    // Voucher fully settled a previously pending order — same PC path as placeOrder.
+    const becamePaidViaVoucher =
+      existingOrder.paymentStatus === "pending" &&
+      updatedOrder.paymentStatus === "paid" &&
+      Number(updatedOrder.priceBreakdown?.voucherDiscount || 0) > 0;
+    if (becamePaidViaVoucher) {
+      fireAndForget(
+        menuOrderFinalizerService({
+          menuOrderId: updatedOrder._id,
+          result: {
+            status: "paid",
+            transactionId: updatedOrder.transactionId || null,
+          },
+        }),
+        "MENU_ORDER_LOYALTY_ON_VOUCHER_PAID",
+      );
+      maybeEnqueueOrderingConfirmation(updatedOrder);
+    }
 
     return {
       order: formattedOrder,

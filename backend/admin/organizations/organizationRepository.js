@@ -70,7 +70,10 @@ const { getFullImageUrl } = require("@utils/imageHelper");
 
 
 const getAllOrganizationsAdmin = async () => {
-  return await Organizations.find({status: { $eq: "active" }}).select("_id basicInfo.name").lean();
+  return await Organizations.find({ status: { $eq: "active" } })
+    .select("_id basicInfo.name")
+    .sort({ "basicInfo.name": 1 })
+    .lean();
 };
 const createOrganization = async (data) => {
   const NoOrganizationCount = await Organizations.countDocuments({

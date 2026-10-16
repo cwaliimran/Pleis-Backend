@@ -54,7 +54,15 @@ const getWithFilters = async (
         foreignField: "_id",
         as: "menuItem",
         pipeline: [
-          { $project: { title: 1, image: 1, menu: 1 } },
+          {
+            $project: {
+              title: 1,
+              image: 1,
+              menu: 1,
+              amountQuantity: 1,
+              presetType: 1,
+            },
+          },
           {
             $lookup: {
               from: "menus",
@@ -65,6 +73,40 @@ const getWithFilters = async (
             },
           },
           { $unwind: { path: "$menu", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "presettypes",
+              localField: "presetType",
+              foreignField: "_id",
+              as: "presetType",
+              pipeline: [
+                {
+                  $lookup: {
+                    from: "menuitemsubcategorytypes",
+                    localField: "type",
+                    foreignField: "_id",
+                    as: "type",
+                    pipeline: [
+                      { $project: { _id: 1, name: 1, code: 1, status: 1 } },
+                    ],
+                  },
+                },
+                {
+                  $unwind: {
+                    path: "$type",
+                    preserveNullAndEmptyArrays: true,
+                  },
+                },
+                { $project: { _id: 1, name: 1, type: 1 } },
+              ],
+            },
+          },
+          {
+            $unwind: {
+              path: "$presetType",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
         ],
       },
     },

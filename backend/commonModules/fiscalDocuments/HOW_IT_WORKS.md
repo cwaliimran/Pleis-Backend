@@ -138,8 +138,8 @@ Timing (aligned with Billko §1.3 for ordering/reservation; ticketing trigger is
 | Kind | When enqueued |
 | --- | --- |
 | `ticketing_invoices` | First staff check-in of a **paid** ticket on the order (`eventRepository` check-in / bulk-checkin). Free / zero-amount orders skipped. JobId = once per order. **Doc §1.3/§4:** at payment; **product:** still at QR check-in. |
-| `ordering_confirmation` | Menu order `paymentStatus=paid` **and** amount > 0 (menu finalizer, webhook, admin/staff mark paid). Payment confirmation only — no Billko. |
-| `reservation_confirmation` | Reservation `paymentStatus=paid` **and** amount > 0 (reservation finalizer, webhook, test-pay). Payment confirmation only — no Billko; voucher block on PDF for min-spend. Free / €0: plain email only. |
+| `ordering_confirmation` | Menu order `paymentStatus=paid` **and** settled amount > 0 (card/cash due **or** reservation voucher spend). Payment confirmation only — no Billko. Voucher is a payment method, not a discount / not a free order. |
+| `reservation_confirmation` | Reservation `paymentStatus=paid` **and** amount > 0 (reservation finalizer, webhook, test-pay). Payment confirmation only — no Billko; voucher block on PDF for min-spend. Issued **at reservation payment**, not when the voucher is later spent on ordering. Free / €0: plain email only. |
 | `subscription_invoice` | At subscription payment (unchanged). |
 
 ### Plain confirmation emails (non-fiscal, free / €0 only)

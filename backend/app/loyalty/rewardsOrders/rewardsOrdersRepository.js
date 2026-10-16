@@ -476,46 +476,19 @@ const getOrderDetails = async (orderId) => {
   const order = result[0] || null;
   if (!order) return null;
 
-  // buyMenuItemReward: resolve snapshot.menuItem[].presetType → { _id, name }
+  // buyMenuItemReward: resolve snapshot.menuItem[].presetType → { _id, name, type }
   // Normalize legacy single-object snapshots to an array so clients always get a list.
   if (order.snapshot?.menuItem != null) {
     const {
       asMenuItemArray,
+      attachPresetTypeNames,
     } = require("../rewards/utils/equivalentMenuItems");
-    const PresetType = require("@PresetTypeModel");
 
     const menuItems = asMenuItemArray(order.snapshot.menuItem).map((item) =>
       item && typeof item === "object" ? { ...item } : item
     );
 
-    const presetIds = [
-      ...new Set(
-        menuItems
-          .map((item) => {
-            const pt = item?.presetType;
-            if (!pt || pt.name) return null;
-            return String(pt._id || pt);
-          })
-          .filter(Boolean)
-      ),
-    ];
-
-    if (presetIds.length) {
-      const docs = await PresetType.find({ _id: { $in: presetIds } })
-        .select("name")
-        .lean();
-      const byId = new Map(docs.map((doc) => [String(doc._id), doc]));
-
-      for (const item of menuItems) {
-        const pt = item?.presetType;
-        if (!pt || pt.name) continue;
-        const id = String(pt._id || pt);
-        if (byId.has(id)) {
-          item.presetType = byId.get(id);
-        }
-      }
-    }
-
+    await attachPresetTypeNames(menuItems);
     order.snapshot.menuItem = menuItems;
   }
 

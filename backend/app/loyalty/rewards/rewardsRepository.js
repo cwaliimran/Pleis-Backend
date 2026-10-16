@@ -13,6 +13,7 @@ const {
   getRewardMenuItemId,
   buildSiblingIdentityQuery,
   resolveBuyMenuItemRewardAvailability,
+  attachPresetTypeNames,
   asMenuItemArray,
   getMenuItemIds,
 } = require("./utils/equivalentMenuItems");
@@ -74,7 +75,7 @@ const attachEquivalentMenuItemsToRewards = async (rewards = []) => {
     }
   }
 
-  return rewards.map((reward) => {
+  const expanded = rewards.map((reward) => {
     if (
       reward.rewardType !== "buyMenuItemReward" ||
       !asMenuItemArray(reward.menuItem).length
@@ -110,6 +111,15 @@ const attachEquivalentMenuItemsToRewards = async (rewards = []) => {
       equivalentMenuItems: [...equivalentById.values()],
     };
   });
+
+  const menuItemsForPreset = expanded.flatMap((reward) => [
+    ...asMenuItemArray(reward.menuItem),
+    ...(Array.isArray(reward.equivalentMenuItems)
+      ? reward.equivalentMenuItems
+      : []),
+  ]);
+  await attachPresetTypeNames(menuItemsForPreset);
+  return expanded;
 };
 
 const populateRewardRelations = (query) =>
