@@ -54,7 +54,7 @@ const getWithFilters = async (
         foreignField: "_id",
         as: "menuItem",
         pipeline: [
-          { $project: { title: 1, menu: 1 } },
+          { $project: { title: 1, image: 1, menu: 1 } },
           {
             $lookup: {
               from: "menus",
@@ -68,7 +68,7 @@ const getWithFilters = async (
         ],
       },
     },
-    { $unwind: { path: "$menuItem", preserveNullAndEmptyArrays: true } },
+    // Keep menuItem as an array (multi-item buyMenuItemReward, same as challenge.taskMenuItem)
 
     {
       $lookup: {

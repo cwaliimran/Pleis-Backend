@@ -1,6 +1,10 @@
 const MenuItems = require("@MenuItemsModel");
 const Menus = require("@MenusModel");
 const PresetType = require("@PresetTypeModel");
+const {
+  asMenuItemArray,
+  getMenuItemIds,
+} = require("../../../../commonModules/loyalty/rewards/utils/normalizeMenuItems");
 
 const MENU_ITEM_IDENTITY_SELECT =
   "_id title image presetType creator amountQuantity status menu";
@@ -51,52 +55,89 @@ const attachPresetTypeNames = async (items = []) => {
   }
 };
 
+const emptyAvailability = () => ({
+  menuItem: [],
+  equivalentMenuItems: [],
+  activeEquivalentMenuItems: [],
+  isAvailableOnOrganizerActiveMenus: false,
+});
+
 /**
- * Resolve buyMenuItemReward menu item + equivalents (presetType + title + creator + amountQuantity),
+ * Resolve buyMenuItemReward menu item(s) + equivalents (presetType + title + creator + amountQuantity),
  * then check whether any equivalent is active on an active menu owned by the organizer.
  * When organization is provided, only menus for that organization count.
+ *
+ * `menuItemRef` may be a single id/doc or an array (multi-item rewards).
+ * Response `menuItem` is always an array of the configured/requested items.
  */
 const resolveBuyMenuItemRewardAvailability = async (
   menuItemRef,
   companyOrganizer,
   organization = null
 ) => {
-  const menuItemId = getRewardMenuItemId(menuItemRef);
-  if (!menuItemId) {
-    return {
-      menuItem: null,
-      equivalentMenuItems: [],
-      activeEquivalentMenuItems: [],
-      isAvailableOnOrganizerActiveMenus: false,
-    };
+  const refs = asMenuItemArray(menuItemRef);
+  const requestedIds = getMenuItemIds(refs);
+
+  if (!requestedIds.length) {
+    return emptyAvailability();
   }
 
-  const requestedItem = await MenuItems.findById(menuItemId)
+  const requestedItems = await MenuItems.find({ _id: { $in: requestedIds } })
     .select(MENU_ITEM_IDENTITY_SELECT)
     .lean();
 
-  if (!requestedItem) {
-    return {
-      menuItem: null,
-      equivalentMenuItems: [],
-      activeEquivalentMenuItems: [],
-      isAvailableOnOrganizerActiveMenus: false,
-    };
+  if (!requestedItems.length) {
+    return emptyAvailability();
   }
 
-  const identityKey = getMenuItemIdentityKey(requestedItem);
-  const equivalentMenuItems = identityKey
-    ? await MenuItems.find(buildSiblingIdentityQuery(requestedItem))
+  // Preserve configured order when possible
+  const byId = new Map(requestedItems.map((item) => [String(item._id), item]));
+  const orderedRequested = requestedIds
+    .map((id) => byId.get(String(id)))
+    .filter(Boolean);
+
+  const identityKeys = new Set();
+  const equivalentById = new Map();
+
+  for (const item of orderedRequested) {
+    const key = getMenuItemIdentityKey(item);
+    if (key) identityKeys.add(key);
+    equivalentById.set(String(item._id), item);
+  }
+
+  if (identityKeys.size) {
+    const siblingQueries = orderedRequested
+      .filter((item) => getMenuItemIdentityKey(item))
+      .map((item) => buildSiblingIdentityQuery(item));
+
+    // Dedupe identical sibling queries
+    const uniqueQueries = [];
+    const seen = new Set();
+    for (const q of siblingQueries) {
+      const sig = `${q.presetType}::${q.title}::${q.creator}::${q.amountQuantity}`;
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      uniqueQueries.push(q);
+    }
+
+    if (uniqueQueries.length) {
+      const siblings = await MenuItems.find({ $or: uniqueQueries })
         .select(MENU_ITEM_IDENTITY_SELECT)
-        .lean()
-    : [requestedItem];
+        .lean();
+      for (const sibling of siblings) {
+        equivalentById.set(String(sibling._id), sibling);
+      }
+    }
+  }
+
+  const equivalentMenuItems = [...equivalentById.values()];
 
   const organizerId = companyOrganizer?._id || companyOrganizer;
   const organizationId = organization?._id || organization;
   if (!organizerId || !equivalentMenuItems.length) {
-    await attachPresetTypeNames([requestedItem, ...equivalentMenuItems]);
+    await attachPresetTypeNames([...orderedRequested, ...equivalentMenuItems]);
     return {
-      menuItem: requestedItem,
+      menuItem: orderedRequested,
       equivalentMenuItems,
       activeEquivalentMenuItems: [],
       isAvailableOnOrganizerActiveMenus: false,
@@ -131,13 +172,13 @@ const resolveBuyMenuItemRewardAvailability = async (
   );
 
   await attachPresetTypeNames([
-    requestedItem,
+    ...orderedRequested,
     ...equivalentMenuItems,
     ...activeEquivalentMenuItems,
   ]);
 
   return {
-    menuItem: requestedItem,
+    menuItem: orderedRequested,
     equivalentMenuItems,
     activeEquivalentMenuItems,
     isAvailableOnOrganizerActiveMenus: activeEquivalentMenuItems.length > 0,
@@ -273,4 +314,6 @@ module.exports = {
   attachEquivalentMenuItemsToChallenges,
   findEquivalentMenuItemIds,
   MENU_ITEM_IDENTITY_SELECT,
+  asMenuItemArray,
+  getMenuItemIds,
 };

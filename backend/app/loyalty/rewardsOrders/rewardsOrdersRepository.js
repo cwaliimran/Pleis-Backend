@@ -116,6 +116,23 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
       }
 
     } else {
+      // Hydrate menuItem list into snapshot so orders/scan always show configured items
+      let snapshot = { ...reward };
+      if (reward.rewardType === "buyMenuItemReward" && reward.menuItem) {
+        const {
+          asMenuItemArray,
+          getMenuItemIds,
+        } = require("../rewards/utils/equivalentMenuItems");
+        const MenuItems = require("@MenuItemsModel");
+        const ids = getMenuItemIds(asMenuItemArray(reward.menuItem));
+        snapshot.menuItem = ids.length
+          ? await MenuItems.find({ _id: { $in: ids } })
+              .select("title image presetType creator amountQuantity status menu")
+              .session(session)
+              .lean()
+          : [];
+      }
+
       // Create order
       [orderDoc] = await RewardsOrders.create(
         [
@@ -123,7 +140,7 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
             user: userId,
             sourceId: reward._id,
             sourceType: "rewards",
-            snapshot: reward,
+            snapshot,
             pointsUsed: reward.minPointsRequiredToClaim || 0,
             companyOrganizer: reward.companyOrganizer,
           },
@@ -459,16 +476,47 @@ const getOrderDetails = async (orderId) => {
   const order = result[0] || null;
   if (!order) return null;
 
-  // buyMenuItemReward: resolve snapshot.menuItem.presetType → { _id, name }
-  const presetTypeId = order.snapshot?.menuItem?.presetType;
-  if (presetTypeId && !presetTypeId.name) {
+  // buyMenuItemReward: resolve snapshot.menuItem[].presetType → { _id, name }
+  // Normalize legacy single-object snapshots to an array so clients always get a list.
+  if (order.snapshot?.menuItem != null) {
+    const {
+      asMenuItemArray,
+    } = require("../rewards/utils/equivalentMenuItems");
     const PresetType = require("@PresetTypeModel");
-    const presetType = await PresetType.findById(presetTypeId)
-      .select("name")
-      .lean();
-    if (presetType) {
-      order.snapshot.menuItem.presetType = presetType;
+
+    const menuItems = asMenuItemArray(order.snapshot.menuItem).map((item) =>
+      item && typeof item === "object" ? { ...item } : item
+    );
+
+    const presetIds = [
+      ...new Set(
+        menuItems
+          .map((item) => {
+            const pt = item?.presetType;
+            if (!pt || pt.name) return null;
+            return String(pt._id || pt);
+          })
+          .filter(Boolean)
+      ),
+    ];
+
+    if (presetIds.length) {
+      const docs = await PresetType.find({ _id: { $in: presetIds } })
+        .select("name")
+        .lean();
+      const byId = new Map(docs.map((doc) => [String(doc._id), doc]));
+
+      for (const item of menuItems) {
+        const pt = item?.presetType;
+        if (!pt || pt.name) continue;
+        const id = String(pt._id || pt);
+        if (byId.has(id)) {
+          item.presetType = byId.get(id);
+        }
+      }
     }
+
+    order.snapshot.menuItem = menuItems;
   }
 
   return order;
