@@ -3,7 +3,8 @@
 const { getWithFilters, getModelCounts } = require('@dbUtils/queryUtil');
 
 const VenueTypesModel = require("./VenueTypesModel");
-const { cache, invalidate } = require("@redisCache");
+const { cache } = require("@redisCache");
+const { invalidateVenueTypeCaches } = require("@cacheNamespaces");
 const { default: mongoose } = require('mongoose');
 const ACTIVE_VENUE_TYPES_CACHE_KEY = "venueTypes:active";
 const buildVenueTypesCacheKey = ({
@@ -24,7 +25,7 @@ const buildVenueTypesCacheKey = ({
 // Create
 const createVenueType = async (data) => {
   const venuetype = new VenueTypesModel(data);
-  await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+  await invalidateVenueTypeCaches(ACTIVE_VENUE_TYPES_CACHE_KEY);
   return await venuetype.save();
 };
 
@@ -33,7 +34,7 @@ const createVenueType = async (data) => {
 //   if (categoriesFilter.length > 0) {
 //     categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id)); // Convert string IDs to ObjectIds
 //   }
-//   await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+//   await invalidateVenueTypeCaches(ACTIVE_VENUE_TYPES_CACHE_KEY);
 //   const cacheKey = buildVenueTypesCacheKey({
 //     scope: "admin",
 //     skip: page,
@@ -84,25 +85,24 @@ const getVenueTypesWithFilters = async (
     categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id));
   }
 
-  await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+  // Free-text keyword / date / custom sort → unbounded cardinality; always hit Mongo.
+  const isCacheable =
+    !keyword && !date && !sortBy && !sortOrder && !(categoriesFilter && categoriesFilter.length);
 
   const cacheKey = buildVenueTypesCacheKey({
     scope: "admin",
     skip: page,
     limit,
     status,
-    date,
-    keyword,
+    date: "",
+    keyword: "",
     categories,
-    sortBy,
-    sortOrder,
-    categoriesFilter: categoriesFilter.length > 0 ? categoriesFilter.join(",") : ""
+    sortBy: "",
+    sortOrder: "",
+    categoriesFilter: "",
   });
 
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400,
-    fetchFn: async () => {
+  const fetchFn = async () => {
       const sortDirection = sortOrder === "asc" ? 1 : -1;
       const pipeline = [{ $match: query }];
 
@@ -149,7 +149,14 @@ const getVenueTypesWithFilters = async (
       pipeline.push({ $project: { sortField: 0 } });
 
       return VenueTypesModel.aggregate(pipeline).allowDiskUse(true);
-    }
+  };
+
+  if (!isCacheable) return fetchFn();
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 
@@ -170,19 +177,19 @@ const findVenueTypeById = async (id) => {
 // Update and save
 const updateVenueTypeData = async (venuetype, data) => {
   Object.assign(venuetype, data);
-  await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+  await invalidateVenueTypeCaches(ACTIVE_VENUE_TYPES_CACHE_KEY);
   return await venuetype.save();
 };
 
 // Delete
 const deleteVenueTypeById = async (venuetype) => {
-  await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+  await invalidateVenueTypeCaches(ACTIVE_VENUE_TYPES_CACHE_KEY);
   return await venuetype.deleteOne();
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+  await invalidateVenueTypeCaches(ACTIVE_VENUE_TYPES_CACHE_KEY);
   return VenueTypesModel.findByIdAndUpdate(id, data, { new: true });
 };
 

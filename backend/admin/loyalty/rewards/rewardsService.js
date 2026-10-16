@@ -4,6 +4,9 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const BaseReward = require("@RewardModel");
+const {
+  normalizeRewardMenuItemsPayload,
+} = require("../../../commonModules/loyalty/rewards/utils/normalizeMenuItems");
 
 /**
  * R2/R5: normalize visibility flags on create/update.
@@ -11,11 +14,19 @@ const BaseReward = require("@RewardModel");
  * - isPromotionOnly is deprecated and ignored on write
  */
 const normalizeRewardVisibilityFlags = (data = {}) => {
-  const normalized = { ...data };
+  const normalized = normalizeRewardMenuItemsPayload({ ...data });
   delete normalized.isPromotionOnly;
 
   if (normalized.challengeOnly === true) {
     normalized.availableAsReward = false;
+  }
+
+  if (
+    normalized.rewardType === "buyMenuItemReward" &&
+    Array.isArray(normalized.menuItem) &&
+    normalized.menuItem.length === 0
+  ) {
+    throw new Error("menuItem is required for buyMenuItemReward");
   }
 
   return normalized;
@@ -259,7 +270,11 @@ const mostClaimedReward =
 const update = async (id, data) => {
   let item = await repository.findById(id);
   if (!item) return null;
-  Object.assign(item, normalizeRewardVisibilityFlags(data));
+  const normalized = normalizeRewardVisibilityFlags({
+    ...data,
+    rewardType: data.rewardType || item.rewardType,
+  });
+  Object.assign(item, normalized);
   await item.save();
   //fetch updated item and return
   item = await getDetails(id);

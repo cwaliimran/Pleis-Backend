@@ -2,6 +2,7 @@ module.exports = {
   htmlLang: "en",
   card: "Card",
   cash: "Cash",
+  voucherPayment: "Voucher",
   bankTransfer: "Bank transfer",
   tip: "Tip",
   item: "Item",

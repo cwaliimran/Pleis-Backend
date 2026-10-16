@@ -2,6 +2,8 @@ module.exports = {
   "@utils": "backend/helperUtils",
   "@notificationsUtil": "backend/controllers/communicationController.js",
   "@redisCache": "backend/config/redis/redisCache.js",
+  "@cacheNamespaces": "backend/config/redis/cacheNamespaces.js",
+  "@cachePolicy": "backend/config/redis/cachePolicy.js",
   "@socketIo": "backend/config/sockets",
   "@UsersModel": "backend/models/UserModel.js",
   "@dbUtils": "backend/helperUtils/dbUtils",

@@ -4,9 +4,12 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const { Reward } = require("./models");
+const {
+  normalizeRewardMenuItemsPayload,
+} = require("./utils/normalizeMenuItems");
 
 const create = async (data) => {
-  return await repository.create(data);
+  return await repository.create(normalizeRewardMenuItemsPayload(data));
 };
 
 const get = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
@@ -49,7 +52,7 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
 const update = async (id, data) => {
   let item = await repository.findById(id);
   if (!item) return null;
-  Object.assign(item, data);
+  Object.assign(item, normalizeRewardMenuItemsPayload(data));
   await item.save();
   //fetch updated item and return
   item = await getDetails(id);

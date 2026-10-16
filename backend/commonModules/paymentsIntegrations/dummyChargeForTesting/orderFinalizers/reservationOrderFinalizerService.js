@@ -30,6 +30,9 @@ const {
   maybeEnqueueReservationConfirmation,
   maybeEnqueueOrderingConfirmation,
 } = require("../../../fiscalDocuments/fiscalTiming");
+const {
+  generateVoucherCode,
+} = require("../../../fiscalDocuments/confirmation/generator");
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
 
@@ -63,6 +66,25 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     // ==========================
     if (result.status === "paid") {
 
+      // Issue spend voucher + PLS code at payment (not when ordering at the venue).
+      // Reservation payment confirmation is enqueued post-commit with this voucher.
+      const voucherAmount =
+        userReservation?.priceBreakDown?.reservationAmount ||
+        userReservation?.amount ||
+        0;
+      const existingCode = userReservation.voucher?.code;
+      const voucherSet = {
+        "voucher.discountAmount": voucherAmount,
+        "voucher.usedAmount": 0,
+        "voucher.status": "pending",
+      };
+      if (Number(voucherAmount) > 0) {
+        voucherSet["voucher.code"] =
+          existingCode && String(existingCode).startsWith("PLS-")
+            ? existingCode
+            : generateVoucherCode();
+      }
+
       await UserReservations.updateOne(
         { _id: reservationId },
         {
@@ -71,12 +93,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
             "paymentDetails.paymentStatus": "paid",
             "paymentDetails.transactionId": result.transactionId,
             paidAt: new Date(),
-            "voucher.discountAmount":
-              userReservation?.priceBreakDown?.reservationAmount ||
-              userReservation?.amount ||
-              0,
-            "voucher.usedAmount": 0,
-            "voucher.status": "pending",
+            ...voucherSet,
           },
           $push: {
             reservationChanges: {

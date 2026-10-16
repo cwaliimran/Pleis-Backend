@@ -11,6 +11,9 @@
       "@redisCache": [
         "backend/config/redis/redisCache.js"
       ],
+      "@cacheNamespaces": [
+        "backend/config/redis/cacheNamespaces.js"
+      ],
       "@socketIo/*": [
         "backend/config/sockets/*"
       ],

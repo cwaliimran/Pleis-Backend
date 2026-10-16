@@ -64,7 +64,7 @@ async function assertOrganizerBillkoReady(companyOrganizerId) {
   const status = await cache({
     namespace: BILLKO_READY_CACHE_NS,
     params: { id: String(companyOrganizerId) },
-    ttl: null, // never expire
+    ttl: 86400, // 1 day (also invalidated on credential updates)
     fetchFn: () => loadOrganizerBillkoReady(companyOrganizerId),
   });
 

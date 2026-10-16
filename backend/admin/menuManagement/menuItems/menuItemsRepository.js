@@ -333,6 +333,9 @@ const findMenuItemsByMenuId = async (menuId) => {
   return MenuItems.find({
     menu: menuId,
     status: "active",
+  }).populate({
+    path: "presetType",
+    select: "_id name",
   });
 };
 

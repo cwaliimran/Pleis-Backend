@@ -1,10 +1,43 @@
 const { sendResponse } = require("../../helperUtils/responseUtil");
+const { containsBlockedLanguage } = require("./blockedTerms");
 
-let filter;
+/** Set false to re-enable moderation after testing. */
+const TEXT_MODERATION_ENABLED = false;
 
-async function initTextModeration() {
-  const { Filter } = await import("bad-words");
-  filter = new Filter();
+/**
+ * Routes where free-text moderation runs (end-user / public-facing writes).
+ * Admin & organizer CMS (menu, loyalty, reservations, challenges, etc.) is
+ * trusted staff content and is not scanned here.
+ */
+const MODERATED_PREFIXES = ["/api/v1/app"];
+
+const MODERATED_PATHS = [
+  "/api/v1/auth/register",
+  "/api/v1/auth/social-auth",
+  "/api/v1/contact-us",
+];
+
+const EXCLUDED_ROUTES = [
+  "/api/v1/app/payments/cards",
+  "/api/v1/webhooks",
+];
+
+function shouldModerateRequest(req) {
+  const path = req.originalUrl.split("?")[0];
+
+  if (EXCLUDED_ROUTES.some((route) => path.startsWith(route))) {
+    return false;
+  }
+
+  if (path.startsWith("/api/v1/admin") || path.startsWith("/api/v1/organizer")) {
+    return false;
+  }
+
+  if (MODERATED_PREFIXES.some((prefix) => path.startsWith(prefix))) {
+    return true;
+  }
+
+  return MODERATED_PATHS.some((route) => path.startsWith(route));
 }
 
 /**
@@ -35,30 +68,11 @@ function extractStrings(obj, results = []) {
 }
 
 function textModerationMiddleware(req, res, next) {
-
-  /**
-   * 🚫 Skip moderation for excluded routes
-   */
-  const excludedRoutes = [
-    "/api/v1/app/payments/cards",
-    "/api/v1/webhooks"
-  ];
-
-  if (excludedRoutes.some(route => req.originalUrl.startsWith(route))) {
+  if (!TEXT_MODERATION_ENABLED || !shouldModerateRequest(req)) {
     return next();
   }
 
-  /**
-   * Only apply to write operations
-   */
   if (!["POST", "PUT", "PATCH"].includes(req.method)) {
-    return next();
-  }
-
-  /**
-   * Safety guard
-   */
-  if (!filter) {
     return next();
   }
 
@@ -71,7 +85,7 @@ function textModerationMiddleware(req, res, next) {
   for (const text of strings) {
     if (typeof text !== "string") continue;
 
-    if (filter.isProfane(text)) {
+    if (containsBlockedLanguage(text)) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -83,7 +97,11 @@ function textModerationMiddleware(req, res, next) {
   next();
 }
 
+/** @deprecated No async setup required; kept for server bootstrap compatibility */
+async function initTextModeration() {}
+
 module.exports = {
   textModerationMiddleware,
   initTextModeration,
+  shouldModerateRequest,
 };

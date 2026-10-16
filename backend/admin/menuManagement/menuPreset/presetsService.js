@@ -8,6 +8,7 @@ const presetRepo = require("./presetsRepository");
 const mongoose = require("mongoose");
 const { formatItemCategory } = require("../menuItems/formatter/formatMenuItems");
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_MENU_PRESETS_CACHE_KEY = "menuPresets:active";
 const buildMenuPresetsCacheKey = ({
   scope = "admin", // public | admin
@@ -37,30 +38,11 @@ const getPresets = async ({
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  let cacheKey = buildMenuPresetsCacheKey({
-    scope: "admin",
-    skip,
-    limit,
-    sortBy,
-    sortOrder
-  });
-  // Add filters to the cache key dynamically
-  const filters = [];
+  const cacheKey =
+    `${ACTIVE_MENU_PRESETS_CACHE_KEY}:admin:skip=${skip}:limit=${limit}` +
+    (status ? `:status=${status}` : "");
 
-  if (keyword) filters.push(`keyword=${keyword}`);
-  if (status) filters.push(`status=${status}`);
-  if (date) filters.push(`date=${date}`);
-  if (userId) filters.push(`userId=${userId}`);
-
-  // Concatenate filters to the cache key if they are applied
-  if (filters.length > 0) {
-    cacheKey = `${cacheKey}:${filters.join(":")}`;
-  }
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
+  const fetchFn = async () => {
       const pipeline = [
         {
           $match: {
@@ -204,7 +186,16 @@ const getPresets = async ({
         presets: formattedPresets,
         meta,
       };
-    },
+  };
+
+  if (!isPlainListCacheable({ keyword, date, sortBy, sortOrder, userId })) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 
