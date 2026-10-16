@@ -4,17 +4,15 @@ const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_ADMIN_SETTINGS_CACHE_KEY = "adminSettings:active";
 const buildAdminSettingsCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
   limit = 10,
-  date,
   status,
-  keyword,
-  userId
 }) => {
-  return `${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:date=${date}:status=${status}:keyword=${keyword}:userId=${userId}`;
+  return `${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}`;
 };
 const invalidateAdminSettingsScope = async (scope) => {
   await invalidate(`${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:${scope}`);
@@ -51,16 +49,9 @@ const getFaqss = async ({ timezone, page, limit, keyword, status, userId, date, 
     scope: "faqs",
     skip,
     limit,
-    date,
     status,
-    keyword,
-    userId
   });
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
+  const fetchFn = async () => {
       if (date) {
         const start = new Date(date);
         const end = new Date(new Date(date).setDate(start.getDate() + 1));
@@ -112,7 +103,16 @@ const getFaqss = async ({ timezone, page, limit, keyword, status, userId, date, 
       const meta = generateMeta(page, limit, totalFiltered);
       meta.FaqssCount = { total, active, inactive };
       return { Faqss, meta }
-    },
+  };
+
+  if (!isPlainListCacheable({ keyword, date, userId })) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 

@@ -49,7 +49,7 @@ const {
  * - geo: popularEvents, topPicks, trending, newlyListed, tagGroups, pinned
  *   keyed by geohash precision 5 (~neighborhood), TTL 60s — NOT raw lat/lng or userId
  * - user: forYou*, thisWeek, reservations, customCategories, highlights, loyalty, promotions
- *   keyed by userId + tz/r/cat (home:user:v1:bundle), TTL same as geo (60s)
+ *   keyed by userId + geo + tz/r/cat (home:user:v1:bundle), TTL same as geo (60s)
  * - nearYou: EXACT request GPS (not cell center). Cached per user + fine geohash p7 (~150m)
  *   so ranking prefers venues closest to the live location. Score = exp(-km / τ), τ=5.
  *
@@ -243,10 +243,13 @@ const fetchUserHomeSections = async ({
   timezone,
   category,
 }) => {
+  const cell = resolveGeoCell(userLocation, HOME_GEO_HASH_PRECISION);
+
   return cacheHomeUser({
     section: "bundle",
     userId,
     params: {
+      geo: cell.hash,
       tz: timezone || "default",
       r: Number(radiusKm) || 50,
       cat: category ? String(category) : "all",

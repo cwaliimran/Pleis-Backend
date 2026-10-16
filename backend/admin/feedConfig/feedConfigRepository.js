@@ -1,5 +1,6 @@
 const FeedConfig = require("./FeedConfig");
-const { cache, invalidate } = require("@redisCache");
+const { cache } = require("@redisCache");
+const { invalidateFeedConfigCaches } = require("@cacheNamespaces");
 
 const CACHE_KEY = "feed-config";
 
@@ -20,7 +21,7 @@ const findOrCreateFeedConfigDirect = async () => {
 const findOrCreateFeedConfig = async () => {
   return cache({
     namespace: CACHE_KEY,
-    ttl: null,
+    ttl: 86400, // 1 day
     fetchFn: findOrCreateFeedConfigDirect,
   });
 };
@@ -37,7 +38,7 @@ const updateFeedConfig = async (data) => {
     }
   );
 
-  await invalidate(CACHE_KEY);
+  await invalidateFeedConfigCaches();
 
   return updated;
 };

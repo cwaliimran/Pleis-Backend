@@ -18,6 +18,19 @@ function formatReward(reward, timezone) {
         obj.tierLimit.image = getFullImageUrl("noimage.png");
     }
 
+    if (obj?.menuItem != null) {
+        const formatMi = (item) => {
+            if (!item || typeof item !== "object") return item;
+            return {
+                ...item,
+                image: getFullImageUrl(item.image || "noimage.png"),
+            };
+        };
+        obj.menuItem = Array.isArray(obj.menuItem)
+            ? obj.menuItem.map(formatMi)
+            : [formatMi(obj.menuItem)];
+    }
+
     // Adjust obj properties based on rewardType
     switch (obj.rewardType) {
         case "customReward":

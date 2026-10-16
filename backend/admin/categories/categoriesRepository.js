@@ -1,6 +1,15 @@
 // repositories/categoryRepository.js
 const Categories = require("./Categories");
-const { cache, invalidate } = require("@redisCache");
+const { cache } = require("@redisCache");
+const { invalidateCategoryCaches } = require("@cacheNamespaces");
+
+function stableFilterKey(filter = {}) {
+  try {
+    return JSON.stringify(filter ?? {});
+  } catch {
+    return "";
+  }
+}
 
 /**
  * ============================
@@ -21,8 +30,8 @@ const createCategory = async (data) => {
 
   const saved = await category.save();
 
-  // invalidate only public categories cache
-  await invalidate("categories:public");
+  // invalidate public categories + home/search discovery surfaces
+  await invalidateCategoryCaches();
 
   return saved;
 };
@@ -56,7 +65,8 @@ const getCategoriesWithFilters = async (
 const getPublicActiveCategories = async (filter = {}) => {
   return cache({
     namespace: "categories:public",
-    ttl: null,
+    params: { f: stableFilterKey(filter) },
+    ttl: 86400, // 1 day
     fetchFn: () => findPublicActiveCategories(filter),
   });
 };
@@ -98,7 +108,7 @@ const updateCategoryData = async (category, data) => {
 
   const updated = await category.save();
 
-  await invalidate("categories:public");
+  await invalidateCategoryCaches();
 
   return updated;
 };
@@ -111,7 +121,7 @@ const updateCategoryData = async (category, data) => {
 const deleteCategoryById = async (category) => {
   const result = await category.deleteOne();
 
-  await invalidate("categories:public");
+  await invalidateCategoryCaches();
 
   return result;
 };
@@ -124,7 +134,7 @@ const deleteCategoryById = async (category) => {
 const findByIdAndUpdate = async (id, data) => {
   const updated = await Categories.findByIdAndUpdate(id, data, { new: true });
 
-  await invalidate("categories:public");
+  await invalidateCategoryCaches();
 
   return updated;
 };
@@ -137,7 +147,7 @@ const findByIdAndUpdate = async (id, data) => {
 const updateMany = async (filter, data) => {
   const result = await Categories.updateMany(filter, data);
 
-  await invalidate("categories:public");
+  await invalidateCategoryCaches();
 
   return result;
 };
@@ -159,7 +169,7 @@ const normalizeOrders = async () => {
 
   if (ops.length) await Categories.bulkWrite(ops);
 
-  await invalidate("categories:public");
+  await invalidateCategoryCaches();
 
   return true;
 };

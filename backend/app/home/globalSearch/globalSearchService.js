@@ -30,11 +30,12 @@ const {
   cacheSearchUser,
   resolveGeoCell,
   clampNearbyRadiusKm,
-  advanceFiltersFingerprint,
   listFingerprint,
   normalizeKeyword,
   pointFromLatLng,
   HOME_GEO_HASH_PRECISION,
+  isPlainSearchCacheable,
+  isPlainFilterKeyCacheable,
 } = require("./searchCache");
 const { encodeGeohash } = require("../utils/homeGeoCache");
 const { NEARBY_RANK_GEOHASH_PRECISION } = require("../utils/homeFeedLimits");
@@ -409,7 +410,6 @@ const globalSearchService = async (ctx) => {
   // Shared geo queries use cell center so neighbors share one Redis entry
   const geoQueryLocation = cell.centerPoint || userLocation;
   const keywordNorm = normalizeKeyword(ctx.keyword);
-  const afFp = advanceFiltersFingerprint(ctx.advanceFilters);
 
   const searchCtx = {
     ...ctx,
@@ -423,21 +423,27 @@ const globalSearchService = async (ctx) => {
       : ctx.longitude,
   };
 
-  const cachedSections = await cacheSearchGeo({
-    section: "keyword",
-    geoHash: cell.hash,
-    params: {
-      kw: keywordNorm || "_",
-      type: type || "all",
-      page: Number(ctx.page) || 1,
-      limit: Number(ctx.limit) || 10,
-      sort: ctx.sort || "desc",
-      tz: ctx.timezone || "default",
-      r: radiusKm,
-      af: afFp,
-    },
-    fetchFn: () => fetchKeywordSearchSections(searchCtx, type),
+  // Only plain browse (no keyword, no advanceFilters) is Redis-cached.
+  const useCache = isPlainSearchCacheable({
+    keyword: keywordNorm,
+    advanceFilters: ctx.advanceFilters,
   });
+
+  const cachedSections = useCache
+    ? await cacheSearchGeo({
+        section: "keyword",
+        geoHash: cell.hash,
+        params: {
+          type: type || "all",
+          page: Number(ctx.page) || 1,
+          limit: Number(ctx.limit) || 10,
+          sort: ctx.sort || "desc",
+          tz: ctx.timezone || "default",
+          r: radiusKm,
+        },
+        fetchFn: () => fetchKeywordSearchSections(searchCtx, type),
+      })
+    : await fetchKeywordSearchSections(searchCtx, type);
 
   // User-specific — must run after shared geo cache
   const sections = await enrichKeywordSectionsWithFavorites(
@@ -524,37 +530,6 @@ const getFilterKeySearchService = async (ctx) => {
   const page = Number(resolvedCtx.page) || 1;
   const limit = Number(resolvedCtx.limit) || 10;
   const skip = (page - 1) * limit;
-  const afFp = advanceFiltersFingerprint(resolvedCtx.advanceFilters || {});
-  const catFp = listFingerprint(
-    Array.isArray(resolvedCtx.advanceFilters?.categories)
-      ? resolvedCtx.advanceFilters.categories
-      : resolvedCtx.advanceFilters?.categories
-        ? [resolvedCtx.advanceFilters.categories]
-        : []
-  );
-
-  const baseParams = {
-    page,
-    limit,
-    tz: resolvedCtx.timezone || "default",
-    r: radiusKm,
-    cat: catFp || "all",
-    af: afFp,
-    tag:
-      listFingerprint(
-        toValidObjectIds(
-          resolvedCtx.tagId || resolvedCtx.advanceFilters?.tags
-        )
-      ) || "none",
-    cc:
-      listFingerprint(
-        toValidObjectIds(
-          resolvedCtx.customCategoryId ||
-            resolvedCtx.advanceFilters?.customCategoryId
-        )
-      ) || "none",
-    title: String(resolvedCtx.title || "").trim().toLowerCase() || "_",
-  };
 
   const useGeoCenter = GEO_FILTER_KEYS.has(filterKey);
   const run = () =>
@@ -568,35 +543,55 @@ const getFilterKeySearchService = async (ctx) => {
       skip,
     });
 
-  let payload;
-  if (resolved.cacheKind === "geo" || GEO_FILTER_KEYS.has(filterKey)) {
-    payload = await cacheSearchGeo({
-      section: `fk:${filterKey}`,
-      geoHash: cell.hash,
-      params: baseParams,
-      fetchFn: run,
-    });
-  } else if (resolved.cacheKind === "user" || USER_FILTER_KEYS.has(filterKey)) {
-    const fineGeo =
-      filterKey === "nearYouOrganizations" && userLocation
-        ? encodeGeohash(
-            userLocation.coordinates[1],
-            userLocation.coordinates[0],
-            NEARBY_RANK_GEOHASH_PRECISION
-          ) || cell.hash
-        : cell.hash;
+  const useCache = isPlainFilterKeyCacheable({
+    advanceFilters: resolvedCtx.advanceFilters,
+    tagId: resolvedCtx.tagId || resolvedCtx.advanceFilters?.tags,
+    customCategoryId:
+      resolvedCtx.customCategoryId ||
+      resolvedCtx.advanceFilters?.customCategoryId,
+    title: resolvedCtx.title,
+  });
 
-    payload = await cacheSearchUser({
-      section: `fk:${filterKey}`,
-      userId: resolvedCtx.userId,
-      params: {
-        ...baseParams,
-        geo: fineGeo,
-      },
-      fetchFn: run,
-    });
+  let payload;
+  if (!useCache) {
+    payload = await run();
   } else {
-    throw new Error(`Unsupported filterKey: ${filterKey}`);
+    const baseParams = {
+      page,
+      limit,
+      tz: resolvedCtx.timezone || "default",
+      r: radiusKm,
+    };
+
+    if (resolved.cacheKind === "geo" || GEO_FILTER_KEYS.has(filterKey)) {
+      payload = await cacheSearchGeo({
+        section: `fk:${filterKey}`,
+        geoHash: cell.hash,
+        params: baseParams,
+        fetchFn: run,
+      });
+    } else if (resolved.cacheKind === "user" || USER_FILTER_KEYS.has(filterKey)) {
+      const fineGeo =
+        filterKey === "nearYouOrganizations" && userLocation
+          ? encodeGeohash(
+              userLocation.coordinates[1],
+              userLocation.coordinates[0],
+              NEARBY_RANK_GEOHASH_PRECISION
+            ) || cell.hash
+          : cell.hash;
+
+      payload = await cacheSearchUser({
+        section: `fk:${filterKey}`,
+        userId: resolvedCtx.userId,
+        params: {
+          ...baseParams,
+          geo: fineGeo,
+        },
+        fetchFn: run,
+      });
+    } else {
+      throw new Error(`Unsupported filterKey: ${filterKey}`);
+    }
   }
 
   // User-specific — after cache (geo keys are shared across users)
@@ -825,14 +820,17 @@ async function getGlobalFiltersService(userId, timezone, center, radiusKm, categ
   const geoCenter = cell.centerPoint || center;
   const catFp = listFingerprint(categoriesFilter);
 
-  // Catalogs: shared globally (venueTypes vary by categoriesFilter)
-  const catalogs = await cacheSearchGlobal({
-    section: "filters-catalogs",
-    params: { cat: catFp || "all" },
-    fetchFn: () => fetchFilterCatalogs(categoriesFilter),
-  });
+  // Catalogs: only cache the unfiltered set (categoriesFilter is dynamic).
+  const catalogs =
+    catFp
+      ? await fetchFilterCatalogs(categoriesFilter)
+      : await cacheSearchGlobal({
+          section: "filters-catalogs",
+          params: { cat: "all" },
+          fetchFn: () => fetchFilterCatalogs(categoriesFilter),
+        });
 
-  // Trending / popular searches: geo-cell scoped
+  // Trending / popular searches: geo-cell scoped (no keyword facets)
   const popularRaw = await cacheSearchGeo({
     section: "filters-trending",
     geoHash: cell.hash,

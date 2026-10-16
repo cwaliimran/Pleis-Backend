@@ -63,9 +63,15 @@ const issueChallengeRewardOrder = async ({
     }
 
     if (linkedReward.menuItem) {
-      linkedReward.menuItem = await MenuItems.findById(linkedReward.menuItem)
-        .session(session)
-        .lean();
+      const {
+        getMenuItemIds,
+      } = require("../rewards/utils/equivalentMenuItems");
+      const menuItemIds = getMenuItemIds(linkedReward.menuItem);
+      linkedReward.menuItem = menuItemIds.length
+        ? await MenuItems.find({ _id: { $in: menuItemIds } })
+            .session(session)
+            .lean()
+        : [];
     }
 
     snapshot = {
@@ -90,7 +96,8 @@ const issueChallengeRewardOrder = async ({
       image: challenge.image || "",
       description: challenge.description || "",
       rewardType: "buyMenuItemReward",
-      menuItem: menuItems.length === 1 ? menuItems[0] : menuItems,
+      // Always an array (same shape as buyMenuItemReward.menuItem[])
+      menuItem: menuItems,
       companyOrganizer,
       minPointsRequiredToClaim: 0,
       fromChallenge: true,

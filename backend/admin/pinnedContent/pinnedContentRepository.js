@@ -1,5 +1,6 @@
 const PinnedContent = require("./PinnedContent");
-const { cache, invalidate } = require("@redisCache");
+const { cache } = require("@redisCache");
+const { invalidatePinnedCaches } = require("@cacheNamespaces");
 
 // Create
 // Create pinnedContent and automatically assign next order
@@ -17,8 +18,7 @@ const createPinnedContent = async (data) => {
   });
 
   const saved = await pinnedContent.save();
-  await invalidate("pinnedContent");
-  await invalidate("home:pinned-content");
+  await invalidatePinnedCaches();
 
   return saved;
 };
@@ -93,8 +93,7 @@ const findPinnedContentById = async (id) => {
 const updatePinnedContentData = async (pinnedContent, data) => {
   Object.assign(pinnedContent, data);
   const updated = await pinnedContent.save();
-  await invalidate("pinnedContent");
-  await invalidate("home:pinned-content");
+  await invalidatePinnedCaches();
 
   return updated;
 };
@@ -102,8 +101,7 @@ const updatePinnedContentData = async (pinnedContent, data) => {
 // Delete
 const deletePinnedContentById = async (pinnedContent) => {
   const result = await pinnedContent.deleteOne();
-  await invalidate("pinnedContent");
-  await invalidate("home:pinned-content");
+  await invalidatePinnedCaches();
 
   return result;
 };
@@ -111,8 +109,7 @@ const deletePinnedContentById = async (pinnedContent) => {
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
   const updated = await PinnedContent.findByIdAndUpdate(id, data, { new: true }).populate('filter');
-  await invalidate("pinnedContent");
-  await invalidate("home:pinned-content");
+  await invalidatePinnedCaches();
 
   return updated;
 };
@@ -120,8 +117,7 @@ const findByIdAndUpdate = async (id, data) => {
 // Reorder helper — bulk update many
 const updateMany = async (filter, data) => {
   const result = await PinnedContent.updateMany(filter, data);
-  await invalidate("pinnedContent");
-  await invalidate("home:pinned-content");
+  await invalidatePinnedCaches();
 
   return result;
 };
@@ -136,8 +132,7 @@ const normalizeOrders = async () => {
     },
   }));
   if (ops.length) await PinnedContent.bulkWrite(ops);
-  await invalidate("pinnedContent");
-  await invalidate("home:pinned-content");
+  await invalidatePinnedCaches();
 
   return true;
 };
