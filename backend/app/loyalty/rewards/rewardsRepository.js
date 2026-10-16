@@ -13,6 +13,9 @@ const {
   getRewardMenuItemId,
   buildSiblingIdentityQuery,
   resolveBuyMenuItemRewardAvailability,
+  attachPresetTypeNames,
+  asMenuItemArray,
+  getMenuItemIds,
 } = require("./utils/equivalentMenuItems");
 
 const MENU_ITEM_POPULATE = "title image presetType creator amountQuantity";
@@ -20,16 +23,23 @@ const MENU_ITEM_POPULATE = "title image presetType creator amountQuantity";
 /**
  * Menu items that share presetType + title + creator + amountQuantity count as the same
  * buyMenuItemReward product. Attaches equivalentMenuItems on each reward.
+ * `menuItem` is always returned as an array of configured items.
  */
 const attachEquivalentMenuItemsToRewards = async (rewards = []) => {
   const buyMenuItemRewards = rewards.filter(
-    (reward) => reward.rewardType === "buyMenuItemReward" && reward.menuItem
+    (reward) =>
+      reward.rewardType === "buyMenuItemReward" &&
+      asMenuItemArray(reward.menuItem).length
   );
 
   if (!buyMenuItemRewards.length) return rewards;
 
   const requestedIds = [
-    ...new Set(buyMenuItemRewards.map((reward) => String(getRewardMenuItemId(reward.menuItem)))),
+    ...new Set(
+      buyMenuItemRewards.flatMap((reward) =>
+        getMenuItemIds(reward.menuItem).map(String)
+      )
+    ),
   ];
 
   const requestedItems = await MenuItems.find({ _id: { $in: requestedIds } })
@@ -65,27 +75,51 @@ const attachEquivalentMenuItemsToRewards = async (rewards = []) => {
     }
   }
 
-  return rewards.map((reward) => {
-    if (reward.rewardType !== "buyMenuItemReward" || !reward.menuItem) return reward;
+  const expanded = rewards.map((reward) => {
+    if (
+      reward.rewardType !== "buyMenuItemReward" ||
+      !asMenuItemArray(reward.menuItem).length
+    ) {
+      return reward;
+    }
 
-    const menuItemId = String(getRewardMenuItemId(reward.menuItem));
-    const requestedItem =
-      (reward.menuItem && reward.menuItem._id ? reward.menuItem : null) ||
-      requestedById.get(menuItemId);
+    const configuredItems = asMenuItemArray(reward.menuItem)
+      .map((ref) => {
+        const menuItemId = String(getRewardMenuItemId(ref));
+        return (
+          (ref && ref._id ? ref : null) || requestedById.get(menuItemId)
+        );
+      })
+      .filter(Boolean);
 
-    if (!requestedItem) return reward;
+    if (!configuredItems.length) return reward;
 
-    const key = getMenuItemIdentityKey(requestedItem);
-    const equivalentMenuItems = key
-      ? siblingsByKey.get(key) || [requestedItem]
-      : [requestedItem];
+    const equivalentById = new Map();
+    for (const requestedItem of configuredItems) {
+      const key = getMenuItemIdentityKey(requestedItem);
+      const equivalents = key
+        ? siblingsByKey.get(key) || [requestedItem]
+        : [requestedItem];
+      for (const item of equivalents) {
+        equivalentById.set(String(item._id), item);
+      }
+    }
 
     return {
       ...reward,
-      menuItem: requestedItem,
-      equivalentMenuItems,
+      menuItem: configuredItems,
+      equivalentMenuItems: [...equivalentById.values()],
     };
   });
+
+  const menuItemsForPreset = expanded.flatMap((reward) => [
+    ...asMenuItemArray(reward.menuItem),
+    ...(Array.isArray(reward.equivalentMenuItems)
+      ? reward.equivalentMenuItems
+      : []),
+  ]);
+  await attachPresetTypeNames(menuItemsForPreset);
+  return expanded;
 };
 
 const populateRewardRelations = (query) =>
@@ -207,4 +241,5 @@ module.exports = {
   countDashboardRewards,
   getRewardById,
   resolveBuyMenuItemRewardAvailability,
+  attachEquivalentMenuItemsToRewards,
 };

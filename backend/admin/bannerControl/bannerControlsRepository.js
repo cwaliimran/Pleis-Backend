@@ -1,6 +1,6 @@
 
 const { getWithFilters, getModelCounts, createWithAutoOrder } = require('@dbUtils/queryUtil');
-const { cache, invalidate } = require("@redisCache");
+const { invalidateBannerCaches } = require("@cacheNamespaces");
 
 const BannerControls = require("./BannerControls");
 
@@ -9,7 +9,7 @@ const BannerControls = require("./BannerControls");
  */
 const createBannerControls = async (data) => {
   const doc = await createWithAutoOrder({ model: BannerControls, data, orderField: "order" });
-  await invalidate("banners");
+  await invalidateBannerCaches();
   return doc;
 };
 
@@ -56,7 +56,7 @@ const updateBannerControlsData = async (bannerControls, data) => {
 
   const updated = await bannerControls.save();
 
-  await invalidate("banners");
+  await invalidateBannerCaches();
 
   return updated;
 };
@@ -66,7 +66,7 @@ const updateBannerControlsData = async (bannerControls, data) => {
 const deleteBannerControlsById = async (bannerControls) => {
   const result = await bannerControls.deleteOne();
 
-  await invalidate("banners");
+  await invalidateBannerCaches();
 
   return result;
 };
@@ -76,7 +76,7 @@ const deleteBannerControlsById = async (bannerControls) => {
 const findByIdAndUpdate = async (id, data) => {
   const updated = await BannerControls.findByIdAndUpdate(id, data, { new: true }).populate("objectModel");
 
-  await invalidate("banners");
+  await invalidateBannerCaches();
 
   return updated;
 };
@@ -86,7 +86,7 @@ const findByIdAndUpdate = async (id, data) => {
 const updateMany = async (filter, data) => {
   const res = await BannerControls.updateMany(filter, data);
 
-  await invalidate("banners");
+  await invalidateBannerCaches();
 
   return res;
 };
@@ -105,7 +105,7 @@ const normalizeOrders = async () => {
 
   if (ops.length) await BannerControls.bulkWrite(ops);
 
-  await invalidate("banners");
+  await invalidateBannerCaches();
 
   return true;
 };

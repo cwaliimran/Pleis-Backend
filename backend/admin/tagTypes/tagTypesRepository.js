@@ -4,6 +4,7 @@ const Tags = require("@TagsModel");
 const Organizations = require("@OrganizationModel");
 const { getWithFilters, getModelCounts } = require('@dbUtils/queryUtil');
 const { cache, invalidate } = require("@redisCache");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
 const TagTypesModel = require("./TagTypesModel");
 
 const invalidateTagTypeRelatedCaches = async () => {
@@ -13,6 +14,7 @@ const invalidateTagTypeRelatedCaches = async () => {
   await invalidate("tagsTypes:activeTypes");
   // active tags cache depends on tag type status via lookup
   await invalidate("tags:active");
+  await invalidateDiscoveryCaches();
 };
 
 // Create

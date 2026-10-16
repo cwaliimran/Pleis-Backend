@@ -109,6 +109,10 @@ const groupRewardsBySortingType = (rewards) => {
 const claimRewardService = async (userId, rewardId, protectionUserDetails, timezone) => {
   // Logic to claim a reward for a user
   const result = await rewardRepo.claimReward(userId, rewardId, protectionUserDetails, timezone);
+  if (result?.success && result.order) {
+    const { formatLoyaltyRewardOrders } = require("../rewardsOrders/formatter/formatLoyaltyRewardOrders");
+    result.order = formatLoyaltyRewardOrders(result.order);
+  }
   return result;
 };
 

@@ -79,7 +79,16 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       loyaltyOnlyFulfillment = alreadyPaid && !alreadyEarned;
 
       if (!alreadyPaid) {
-        menuOrder.status = "confirmed";
+        // Payment only unlocks payment-gated fulfilment. Never regress later states.
+        // pending / pendingPayment → confirmed (pay-now / hideUntilPaid)
+        // confirmed | ready | sent | delivered | completed | preorder → leave as-is
+        // cancelled | rejected | expired → leave as-is (terminal)
+        if (
+          menuOrder.status === "pending" ||
+          menuOrder.status === "pendingPayment"
+        ) {
+          menuOrder.status = "confirmed";
+        }
         menuOrder.paymentStatus = "paid";
         menuOrder.paidAt = new Date();
         menuOrder.transactionId = result.transactionId || null;
@@ -193,6 +202,10 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
 
     if (result.status === "paid" && !loyaltyOnlyFulfillment) {
       maybeEnqueueOrderingConfirmation(menuOrder);
+      const voucherPaid = Number(menuOrder.priceBreakdown?.voucherDiscount || 0);
+      const ledgerAmount =
+        Number(menuOrder.totalPrice || 0) +
+        (Number.isFinite(voucherPaid) ? voucherPaid : 0);
       fireAndForget(
         recordPaidCaptureLedger({
           orderId: menuOrder._id,
@@ -201,14 +214,24 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           organization: menuOrder.organization?._id || menuOrder.organization,
           companyOrganizer,
           user: menuOrder.user,
-          amount: menuOrder.totalPrice,
+          amount: ledgerAmount,
           tipAmount: menuOrder.priceBreakdown?.tip || 0,
           paymentStatus: "paid",
-          paymentMethod: menuOrder.paymentMethod,
+          paymentMethod:
+            voucherPaid > 0 && !(Number(menuOrder.totalPrice) > 0)
+              ? "voucher"
+              : menuOrder.paymentMethod,
           providerTransactionId: result.transactionId || menuOrder.transactionId,
         }),
         "LEDGER_ORDERING_CAPTURE",
       );
+    } else if (
+      result.status === "paid" &&
+      loyaltyOnlyFulfillment &&
+      Number(menuOrder.priceBreakdown?.voucherDiscount || 0) > 0
+    ) {
+      // Already marked paid at placeOrder (voucher settlement) — still issue PC.
+      maybeEnqueueOrderingConfirmation(menuOrder);
     }
     if (menuOrder.totalPrice && menuOrder.totalPrice > 0) {
       fireAndForget(

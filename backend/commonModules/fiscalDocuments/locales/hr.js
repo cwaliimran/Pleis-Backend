@@ -2,6 +2,7 @@ module.exports = {
   htmlLang: "hr",
   card: "Kartica",
   cash: "Gotovina",
+  voucherPayment: "Vaučer",
   bankTransfer: "Virman",
   tip: "Napojnica",
   item: "Stavka",

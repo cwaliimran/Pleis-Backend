@@ -52,8 +52,9 @@ async function setJson(key, value, ttl = null) {
 
   try {
     const buf = zlib.gzipSync(Buffer.from(JSON.stringify(value)));
-    if (ttl) await redis.set(key, buf, "EX", ttl);
-    else await redis.set(key, buf);
+    // Never write immortal keys — coerce missing/invalid TTL to 60s.
+    const effectiveTtl = ttl == null || ttl <= 0 ? 60 : ttl;
+    await redis.set(key, buf, "EX", effectiveTtl);
   } catch (_) { }
 }
 
@@ -104,8 +105,13 @@ async function releaseLock(key, token) {
  *   (home bundles: Azure RTT store can add ~1s+). Lock held until store completes
  *   in background so waiters still serialize; caller gets data immediately.
  * @param {number} [memoryTtl=0] - optional process-local L1 TTL (seconds); 0 = disabled
+ * @param {number} [ttl=60] - Redis TTL in seconds. null/<=0 is coerced to 60 — never immortal.
  */
-async function cache({ namespace, params = {}, ttl = 60, fetchFn, deferStore = false, memoryTtl = 0 }) { //ttl is in seconds //pass null to never expire
+async function cache({ namespace, params = {}, ttl = 60, fetchFn, deferStore = false, memoryTtl = 0 }) {
+  // Never allow immortal Redis keys — orphans that never refresh are worse than a miss.
+  // Callers that used to pass ttl:null now get a short safety TTL.
+  if (ttl == null || ttl <= 0) ttl = 60;
+
   const key = buildKey(namespace, params);
 
   if (memoryTtl > 0) {
@@ -167,13 +173,9 @@ async function cache({ namespace, params = {}, ttl = 60, fetchFn, deferStore = f
       (Array.isArray(fresh) && fresh.length === 0);
 
     // Empty arrays used to skip store → every home cold re-paid Azure Redis miss +
-    // Mongo (~1s for banners/pinned). Negative-cache empties briefly; never forever
-    // when ttl is null (admin may add rows).
-    const storeTtl = isEmpty
-      ? Math.min(ttl == null ? 60 : ttl, 60)
-      : ttl === null
-        ? null
-        : ttl;
+    // Mongo (~1s for banners/pinned). Negative-cache empties briefly so admins
+    // adding rows are visible within a minute.
+    const storeTtl = isEmpty ? Math.min(ttl, 60) : ttl;
 
     if (isEmpty) {
       console.log(`⚠️ NEG-CACHE empty -> ${key} (ttl=${storeTtl}s)`);
@@ -300,9 +302,69 @@ async function popBufferBatch(key, limit = 500) {
   return items;
 }
 
+/**
+ * Flush every application cache key (L1 + Redis).
+ * Preserves engagement buffers (`buffer:*`) and avoids FLUSHDB so Socket.IO
+ * pub/sub on the same Redis instance is not wiped mid-flight.
+ */
+function isProtectedRedisKey(key) {
+  if (!key || typeof key !== "string") return true;
+  if (key.startsWith("buffer:")) return true;
+  // Socket.IO Redis adapter / pub-sub bookkeeping
+  if (key.startsWith("socket.io")) return true;
+  return false;
+}
+
+async function flushAllCaches() {
+  l1ClearPrefix(); // wipe process-local L1 entirely
+
+  if (!isRedisUp()) {
+    console.log("⚠️ FLUSH ALL SKIPPED (Redis down) — L1 cleared only");
+    return { ok: true, redisUp: false, deleted: 0 };
+  }
+
+  let deleted = 0;
+
+  try {
+    const matched = [];
+    const stream = redis.scanStream({ match: "*", count: 500 });
+
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        stream.on("data", (keys) => {
+          for (const k of keys) {
+            if (!isProtectedRedisKey(k)) matched.push(k);
+          }
+        });
+        stream.on("end", resolve);
+        stream.on("error", reject);
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SCAN timeout")), 15000)
+      ),
+    ]);
+
+    // Batch DELs to avoid huge pipelines
+    const BATCH = 200;
+    for (let i = 0; i < matched.length; i += BATCH) {
+      const chunk = matched.slice(i, i + BATCH);
+      if (!chunk.length) continue;
+      const n = await redis.del(...chunk);
+      deleted += Number(n) || 0;
+    }
+
+    console.log(`🧹 FLUSH ALL CACHES -> deleted=${deleted} (skipped buffers/socket.io)`);
+    return { ok: true, redisUp: true, deleted };
+  } catch (err) {
+    console.log("⚠️ FLUSH ALL FAILED", err?.message || err);
+    return { ok: false, redisUp: true, deleted, error: err?.message || String(err) };
+  }
+}
+
 module.exports = {
   cache,
   invalidate,
+  flushAllCaches,
   buildKey,
   acquireLock,
   releaseLock,

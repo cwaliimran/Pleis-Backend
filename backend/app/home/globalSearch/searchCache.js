@@ -2,12 +2,19 @@
  * Global search / filters Redis key layout (mirrors home geo-cell caching):
  *
  *   search:global:v1:...           — catalogs shared by all users
- *   search:geo:v1:...&geo=<hash>   — location-scoped (keyword search, nearYou, trending filters)
+ *   search:geo:v1:...&geo=<hash>   — location-scoped (browse/filters; NOT free-text keyword)
  *   search:user:v1:...&userId=…    — personalized filterKey sections (forYou*, loyaltyClubs)
  *
+ * Free-text keyword + advanceFilters intentionally bypass Redis.
+ * Only plain pagination browse (empty keyword, empty filters) is cached.
  * Do NOT put raw lat/lng into geo keys. Reuses home geohash precision + TTLs.
  */
 const { cache } = require("@redisCache");
+const {
+  isPlainSearchCacheable,
+  isPlainFilterKeyCacheable,
+  isAdvanceFiltersEmpty,
+} = require("@cachePolicy");
 const {
   resolveGeoCell,
   extractLatLng,
@@ -111,4 +118,7 @@ module.exports = {
   advanceFiltersFingerprint,
   normalizeKeyword,
   pointFromLatLng,
+  isAdvanceFiltersEmpty,
+  isPlainSearchCacheable,
+  isPlainFilterKeyCacheable,
 };
