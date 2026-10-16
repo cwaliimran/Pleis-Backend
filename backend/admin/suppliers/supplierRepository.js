@@ -1,6 +1,7 @@
 // repositories/supplierRepository.js
 const Supplier = require("@SuppliersModel");
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_SUPPLIERS_CACHE_KEY = "suppliers:active";
 const buildSuppliersCacheKey = ({
   scope = "public", // public | admin
@@ -24,27 +25,33 @@ const createSupplier = async (data) => {
 
 // Get all with filters
 const getSuppliersWithFilters = async (query, skip, limit, keyword, status, date, sortBy="createdAt", sortOrder="desc") => {
+  const fetchFn = async () => {
+    return Supplier.find(query)
+      .sort({ [sortBy]: sortOrder === "asc" ? 1 : -1 })
+      .skip(skip)
+      .limit(limit);
+  };
+
+  // Only plain pagination (+ status); keyword/date/custom sort bypass Redis.
+  if (!isPlainListCacheable({ keyword, date, sortBy: sortBy !== "createdAt" ? sortBy : "", sortOrder: sortOrder !== "desc" ? sortOrder : "" })) {
+    return fetchFn();
+  }
+
   const cacheKey = buildSuppliersCacheKey({
     scope: "admin",
     skip,
     limit,
-    keyword,
-    status,
-    date,
-    sortBy,
-    sortOrder,
+    keyword: "",
+    status: status || "",
+    date: "",
+    sortBy: "createdAt",
+    sortOrder: "desc",
   });
 
   return cache({
     namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
-      return Supplier.find(query)
-        .sort({ [sortBy]: sortOrder === "asc" ? 1 : -1 })
-        .skip(skip)
-        .limit(limit);
-    },
+    ttl: 86400,
+    fetchFn,
   });
 };
 

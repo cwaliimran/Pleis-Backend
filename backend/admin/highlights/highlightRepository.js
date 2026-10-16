@@ -3,13 +3,22 @@ const { Highlights } = require("@HighlightsModel");
 const { default: mongoose } = require("mongoose");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const { cache, invalidate } = require("@redisCache");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_HIGHLIGHTS_CACHE_KEY = "highlights:active";
+
+const bustHighlightCaches = async () => {
+  await invalidate(ACTIVE_HIGHLIGHTS_CACHE_KEY);
+  await invalidate("highlights");
+  await invalidateDiscoveryCaches();
+};
 const buildHighlightsCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  queryFp = "",
 }) => {
-  return `${ACTIVE_HIGHLIGHTS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_HIGHLIGHTS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:q=${queryFp}`;
 };
 
 
@@ -18,7 +27,7 @@ const buildHighlightsCacheKey = ({
 // Create
 const createHighlight = async (data) => {
   const highlight = new Highlights(data);
-  await invalidate(ACTIVE_HIGHLIGHTS_CACHE_KEY);
+  await bustHighlightCaches();
   return await highlight.save();
 };
 
@@ -41,12 +50,8 @@ const getHighlightsWithFilters = async (query, keyword, skip, limit, sortBy, sor
   if (filters.length > 0) {
     cacheKey = `${cacheKey}:${filters.join(":")}`;
   }
-  await invalidate(ACTIVE_HIGHLIGHTS_CACHE_KEY);
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
+  // Free-text keyword / date / custom sort → skip Redis (unbounded cardinality)
+  const fetchFn = async () => {
       const now = new Date();
       const pipeline = [
         { $match: query },
@@ -190,22 +195,22 @@ const getHighlightsWithFilters = async (query, keyword, skip, limit, sortBy, sor
       }
 
       return result;
-    }
+  };
+
+  if (!isPlainListCacheable({ keyword, date: query?.createdAt?.$gte, sortBy, sortOrder, userId: query?.creator })) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+    fetchFn,
   });
 };
 
 
 const getPublicHighlightsWithFilters = async (query, keyword, skip, limit) => {
-  const cacheKey = buildHighlightsCacheKey({
-    scope: "public",
-    skip,
-    limit,
-  });
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
+  const fetchPublic = async () => {
       const pipeline = [
         { $match: query },
         { $sort: { createdAt: -1 } },
@@ -327,7 +332,28 @@ const getPublicHighlightsWithFilters = async (query, keyword, skip, limit) => {
       }
 
       return result;
-    }
+  };
+
+  // Keyword search must not create unbounded Redis keys
+  if (keyword) return fetchPublic();
+
+  const cacheKey = buildHighlightsCacheKey({
+    scope: "public",
+    skip,
+    limit,
+    queryFp: (() => {
+      try {
+        return JSON.stringify(query || {});
+      } catch {
+        return "";
+      }
+    })(),
+  });
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+    fetchFn: fetchPublic,
   });
 };
 
@@ -429,13 +455,13 @@ const findHighlightDocById = async (id) => {
 
 // Delete
 const deleteHighlightById = async (highlight) => {
-  await invalidate(ACTIVE_HIGHLIGHTS_CACHE_KEY);
+  await bustHighlightCaches();
   return await highlight.deleteOne();
 };
 
 // Optional: keep this only for non-nested shallow updates
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate("highlights");
+  await bustHighlightCaches();
 
   return Highlights.findByIdAndUpdate(id, { $set: data }, { new: true });
 };

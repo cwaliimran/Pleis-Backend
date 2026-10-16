@@ -84,6 +84,7 @@ router.use("/support", require("../support/supportRoutes"));
 router.use("/ip-threats", require("../security/ipThreatRoutes"));
 router.use("/system-logs", require("../systemLogs/systemLogsRoutes"));
 router.use("/feed-config", require("../feedConfig/feedConfigRoutes"));
+router.use("/cache", require("../cache/cacheRoutes"));
 router.use("/preset-menu", require("../presetMenu/index"));
 router.use("/fiscal-documents", require("../../commonModules/fiscalDocuments/api/routes"));
 // Phase B payout statements (additive — does not alter existing transaction routes)

@@ -3,8 +3,14 @@ const { Events } = require("@EventsModel");
 const Tags = require("@TagsModel");
 const Organizations = require("@OrganizationModel");
 const { cache, invalidate } = require("@redisCache");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
 
 const ACTIVE_TAGS_CACHE_KEY = "tags:active";
+
+const bustTagCaches = async () => {
+  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+  await invalidateDiscoveryCaches();
+};
 
 /**
  * CREATE
@@ -13,7 +19,7 @@ const createTag = async (data) => {
   const tag = new Tags(data);
   const saved = await tag.save();
 
-  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+  await bustTagCaches();
 
   return saved;
 };
@@ -239,7 +245,7 @@ const updateTagData = async (tag, data) => {
 
   const updated = await tag.save();
 
-  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+  await bustTagCaches();
 
   return updated;
 };
@@ -250,7 +256,7 @@ const updateTagData = async (tag, data) => {
 const deleteTagById = async (tag) => {
   const result = await tag.deleteOne();
 
-  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+  await bustTagCaches();
 
   return result;
 };
@@ -261,7 +267,7 @@ const deleteTagById = async (tag) => {
 const findTagByIdAndUpdate = async (id, data) => {
   const updated = await Tags.findByIdAndUpdate(id, data, { new: true });
 
-  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+  await bustTagCaches();
 
   return updated;
 };

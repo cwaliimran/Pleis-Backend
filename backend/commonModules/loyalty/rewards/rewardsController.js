@@ -19,6 +19,9 @@ const create = async (req, res) => {
     objectIdFields.push("event")
   }
   if (req.body.rewardType === "buyMenuItemReward") {
+    if (req.body.menuItems != null && req.body.menuItem == null) {
+      req.body.menuItem = req.body.menuItems;
+    }
     rawData.push("menuItem")
     objectIdFields.push("menuItem")
   }
@@ -104,6 +107,12 @@ const getDetails = async (req, res) => {
 const update = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
+    if (req.body.menuItems != null && req.body.menuItem == null) {
+      req.body.menuItem = req.body.menuItems;
+    }
+    if (req.body.menuItem != null) {
+      if (!validateParams(req, res, { objectIdFields: ["menuItem"] })) return;
+    }
     const updated = await service.update(req.params.id, req.body);
     if (!updated) {
       return sendResponse({ res, statusCode: 404, translationKey: "reward_not_found" });

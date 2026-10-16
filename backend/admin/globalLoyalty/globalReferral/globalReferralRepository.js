@@ -6,6 +6,7 @@ const Event = require("@EventsModel");
 const { ReferredRecord } = require("@ReferredRecordModel");
 const mongoose = require("mongoose");
 const { cache, invalidate } = require("@redisCache");
+const { invalidateHomeCaches } = require("@cacheNamespaces");
 const ACTIVE_GLOBAL_REFERRAL_CACHE_KEY = "globalReferral:active";
 const buildGlobalReferralCacheKey = ({
   scope = "public", // public | admin
@@ -55,13 +56,12 @@ const upsertGlobalReferral = async (data) => {
   );
 
   await invalidate(ACTIVE_GLOBAL_REFERRAL_CACHE_KEY);
+  await invalidateHomeCaches();
 
   return globalReferral;
 };
 
 const getGlobalReferral = async () => {
-    await invalidate(ACTIVE_GLOBAL_REFERRAL_CACHE_KEY);
-
   return cache({
     namespace: ACTIVE_GLOBAL_REFERRAL_CACHE_KEY,
     ttl: 86400,
@@ -116,17 +116,8 @@ const getUserGlobalReferrals = async ({
   skip,
   type
 }) => {
-  const cacheKey = buildGlobalReferralCacheKey({
-    scope: "public",
-    skip,
-    limit,
-  });
-
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400,
-
-    fetchFn: async () => {
+  // Admin listing — do not Redis-cache (filters/type/userId vary; high cardinality)
+  {
       const pipeline = [
         {
           $match: {
@@ -282,8 +273,7 @@ const getUserGlobalReferrals = async ({
       meta.globalReferralCount = { total, active, inactive };
 
       return { globalReferral, meta };
-    },
-  });
+  }
 };
 
 const findGlobalReferrals = async (filter = {}) => {
@@ -296,6 +286,7 @@ const findGlobalReferrals = async (filter = {}) => {
 const resetUserReferralLimits = async (limit) => {
   try {
     await invalidate(ACTIVE_GLOBAL_REFERRAL_CACHE_KEY);
+    await invalidateHomeCaches();
     // Force numeric conversion
     limit = Number(limit);
 

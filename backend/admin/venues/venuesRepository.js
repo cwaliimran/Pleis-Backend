@@ -4,12 +4,15 @@ const mongoose = require("mongoose");
 const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
 const Organizations = require("../../commonModules/organizations/Organization");
 const { cache, invalidate } = require("@redisCache");
+const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
 
 const ACTIVE_VENUES_TYPE_MAP_KEY = "venues:active:typeMap";
 
 const invalidateVenueCaches = async () => {
-  await invalidate(ACTIVE_VENUES_TYPE_MAP_KEY);
-  await invalidate("home:pinned-content");
+  await Promise.all([
+    invalidate(ACTIVE_VENUES_TYPE_MAP_KEY),
+    invalidateDiscoveryCaches(),
+  ]);
 };
 
 // Create venue in a transaction and update organization

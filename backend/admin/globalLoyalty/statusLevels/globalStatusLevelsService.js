@@ -6,18 +6,15 @@ const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
 const statusLevelRepo = require("./globalStatusLevelsRepository");
 const mongoose = require("mongoose");
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY = "globalLLoyaltyStatusLevel:active";
 const buildGlobalLoyaltyStatusLevelCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
   limit = 10,
-  keyword = "",
   status = "",
-  date = "",
-  sortBy = "createdAt",
-  sortOrder = "desc"
 }) => {
-  return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
+  return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}`;
 };
 const createStatusLevel = async (data) => {
   const allowedFields = [
@@ -45,17 +42,9 @@ const getStatusLevels = async ({ page, limit, keyword, status, userId, date, sor
     scope: "admin",
     skip,
     limit,
-    keyword,
-    status,
-    date,
-    sortBy,
-    sortOrder
+    status: status || "",
   });
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
- 
-    fetchFn: async () => {
+  const fetchFn = async () => {
   const pipeline = [
     // Match user access (statusLevel creator)
     {
@@ -128,7 +117,24 @@ const getStatusLevels = async ({ page, limit, keyword, status, userId, date, sor
     statusLevels,
     meta
   };
-},
+  };
+
+  if (
+    !isPlainListCacheable({
+      keyword,
+      date,
+      sortBy: sortBy !== "createdAt" ? sortBy : "",
+      sortOrder: sortOrder !== "desc" ? sortOrder : "",
+      userId,
+    })
+  ) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 

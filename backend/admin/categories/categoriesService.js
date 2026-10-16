@@ -4,7 +4,7 @@ const Categories = require("./Categories");
 const categoryRepo = require("./categoriesRepository");
 const mongoose = require("mongoose");
 const { formatCategories } = require("./formatters/categoryFormatter");
-const { cache, invalidate } = require("@redisCache");
+const { invalidateCategoryCaches } = require("@cacheNamespaces");
 
 const createCategory = async ({ image, title, status }) => {
   return await categoryRepo.createCategory({ image, title, status });
@@ -136,7 +136,7 @@ const reorderCategory = async (movedId, previousOrder,
     await Categories.findByIdAndUpdate(movedId, { order: newOrder }, { session });
     await session.commitTransaction();
     session.endSession();
-    await invalidate("categories");
+    await invalidateCategoryCaches();
     return true;
   } catch (err) {
     await session.abortTransaction();
