@@ -7,6 +7,7 @@ const {
 } = require("../../../commonModules/globalLoyalty/promotions/models/Promotion");
 
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 
 const ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY =
   "globalLoyaltyPromotions:active";
@@ -132,26 +133,9 @@ const getWithFilters = async (
     scope: "admin",
     skip,
     limit,
-    sortBy,
-    sortOrder,
   });
 
-  const filters = [];
-  if (keyword) filters.push(`keyword=${keyword}`);
-  if (query.status?.$ne) filters.push(`status=${query.status.$ne}`);
-  if (query.createdAt?.$gte) filters.push(`createdAt=${query.createdAt.$gte}`);
-  if (sortBy) filters.push(`sortBy=${sortBy}`);
-  if (sortOrder) filters.push(`sortOrder=${sortOrder}`);
-
-  if (filters.length) {
-    cacheKey += `:${filters.join(":")}`;
-  }
-
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400,
-
-    fetchFn: async () => {
+  const fetchFn = async () => {
       const sortDirection = sortOrder === "asc" ? 1 : -1;
 
       let sortStage = { createdAt: -1, _id: -1 };
@@ -223,7 +207,23 @@ const getWithFilters = async (
       );
 
       return GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
-    },
+  };
+
+  if (
+    !isPlainListCacheable({
+      keyword,
+      date: query?.createdAt?.$gte,
+      sortBy: sortBy !== "createdAt" ? sortBy : "",
+      sortOrder: sortOrder !== "desc" ? sortOrder : "",
+    })
+  ) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 

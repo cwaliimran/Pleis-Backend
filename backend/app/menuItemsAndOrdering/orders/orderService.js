@@ -635,9 +635,11 @@ const placeOrder = async ({
       });
     }
 
-    // €0 / free orders never go through payment confirmation fiscal email —
-    // send a plain order confirmation at placement.
-    if (!(Number(order.totalPrice) > 0)) {
+    // Truly free / €0 orders (no voucher) — plain email, no payment-confirmation PDF.
+    // Reservation voucher is a payment method: settle like a normal paid order.
+    const voucherPaid =
+      Number(order.priceBreakdown?.voucherDiscount || 0) > 0;
+    if (!(Number(order.totalPrice) > 0) && !voucherPaid) {
       fireAndForget(
         maybeSendFreeMenuOrderConfirmation(order._id),
         "PLAIN_FREE_MENU_ORDER_CONFIRMATION",
@@ -650,6 +652,10 @@ const placeOrder = async ({
         }),
         "MENU_ORDER_LOYALTY_ON_PAID",
       );
+      // Finalizer skips PC enqueue on already-paid (loyalty-only) path; voucher
+      // orders are marked paid at placeOrder, so enqueue confirmation here.
+      // Idempotent via BullMQ jobId.
+      maybeEnqueueOrderingConfirmation(order);
     }
 
     const postOrderFlow = resolvePostOrderFlow({
@@ -706,6 +712,7 @@ const updateOrder = async ({
   promoCode,
   deliveryOption,
   tip,
+  reservationId,
 }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -962,9 +969,10 @@ const updateOrder = async ({
 
     const existingTip = Number(existingOrder.priceBreakdown?.tip || 0);
     const itemsAndCombosTotal = totalPrice;
-    const voucherDiscount = Number(
+    let voucherDiscount = Number(
       existingOrder.priceBreakdown?.voucherDiscount || 0,
     );
+    let reservationRef = existingOrder.reservation || null;
     const promoChanged =
       (existingPromoCode || null) !== (finalPromoCode || null);
     const willConsumeUsage = Boolean(finalPromoCode) && promoChanged;
@@ -1021,7 +1029,27 @@ const updateOrder = async ({
       }
     }
 
-    if (voucherDiscount > 0) {
+    // Apply / redeem reservation voucher (items only — tips are not covered).
+    // Wallet OrderDetail patches reservationId before card/Apple Pay charge.
+    if (reservationId && voucherDiscount <= 0) {
+      const reservation = await validateReservationForOrder({
+        reservationId,
+        userId,
+        timezone,
+        session,
+      });
+      if (!reservation) {
+        throw new Error("Reservation not found or not valid for this user");
+      }
+      const voucherResult = await consumeReservationVoucher({
+        reservation,
+        orderAmount: totalPrice,
+        session,
+      });
+      voucherDiscount = voucherResult.voucherAmount;
+      totalPrice = voucherResult.orderAmountDue;
+      reservationRef = reservationId;
+    } else if (voucherDiscount > 0) {
       totalPrice -= Math.min(voucherDiscount, totalPrice);
     }
 
@@ -1066,6 +1094,16 @@ const updateOrder = async ({
       ...(deliveryOption !== undefined && {
         deliveryOption,
       }),
+
+      ...(reservationRef
+        ? { reservation: reservationRef }
+        : {}),
+
+      // Fully covered by voucher after this update — nothing left to charge.
+      ...(Number(totalPrice) <= 0 &&
+      existingOrder.paymentStatus === "pending"
+        ? { paymentStatus: "paid", paidAt: new Date() }
+        : {}),
 
       // Reset payment lock after update
       lockUntil: new Date(Date.now() + 10 * 60 * 1000),
@@ -1123,6 +1161,25 @@ const updateOrder = async ({
     // =========================================================
 
     emitOrderUpdate(updatedOrder, ["order"]);
+
+    // Voucher fully settled a previously pending order — same PC path as placeOrder.
+    const becamePaidViaVoucher =
+      existingOrder.paymentStatus === "pending" &&
+      updatedOrder.paymentStatus === "paid" &&
+      Number(updatedOrder.priceBreakdown?.voucherDiscount || 0) > 0;
+    if (becamePaidViaVoucher) {
+      fireAndForget(
+        menuOrderFinalizerService({
+          menuOrderId: updatedOrder._id,
+          result: {
+            status: "paid",
+            transactionId: updatedOrder.transactionId || null,
+          },
+        }),
+        "MENU_ORDER_LOYALTY_ON_VOUCHER_PAID",
+      );
+      maybeEnqueueOrderingConfirmation(updatedOrder);
+    }
 
     return {
       order: formattedOrder,

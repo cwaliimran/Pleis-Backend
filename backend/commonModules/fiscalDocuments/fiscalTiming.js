@@ -7,18 +7,23 @@
  *   Live Billko create only when BILLKO_FISCALIZE_ENABLED=true; payment confirmation
  *   still issues when the flag is off.
  * - Ordering: payment confirmation only, at payment (paid + amount > 0). No Billko.
+ *   Reservation voucher spend counts as payment (not a discount / not a free order).
  * - Reservation: payment confirmation only, at payment (paid + amount > 0). No Billko.
- *   Free / €0: plain email only (not this queue).
+ *   Min-spend voucher is issued at payment; venue ordering does not re-issue reservation PC.
  */
 const { TicketingOrders } = require("../bookings/ticketings/TicketingOrders");
 const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../bullmq/queues");
 
 function orderAmount(order) {
-  const n = Number(
+  const due = Number(
     order?.priceBreakdown?.finalTotal ?? order?.totalPrice ?? 0,
   );
-  return Number.isFinite(n) ? n : 0;
+  // Reservation voucher is a payment method (prepaid), not a discount.
+  const voucherPaid = Number(order?.priceBreakdown?.voucherDiscount || 0);
+  const base = Number.isFinite(due) ? due : 0;
+  const voucher = Number.isFinite(voucherPaid) ? voucherPaid : 0;
+  return base + voucher;
 }
 
 function reservationAmount(reservation) {

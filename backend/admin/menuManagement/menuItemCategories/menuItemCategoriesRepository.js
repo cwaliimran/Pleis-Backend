@@ -1,15 +1,14 @@
 // repositories/categoryRepository.js
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { cache, invalidate } = require("@redisCache");
+const { isPlainListCacheable } = require("@cachePolicy");
 const ACTIVE_MENU_ITEM_CATEGORIES_CACHE_KEY = "menuItemCategories:active";
 const buildMenuItemCategoriesCacheKey = ({
   scope = "admin", // public | admin
   skip = 0,
   limit = 10,
-  sortBy,
-  sortOrder
 }) => {
-  return `${ACTIVE_MENU_ITEM_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}${sortBy ? `:sortBy=${sortBy}` : ""}${sortOrder ? `:sortOrder=${sortOrder}` : ""}`;
+  return `${ACTIVE_MENU_ITEM_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
 };
 
 // Create
@@ -21,29 +20,13 @@ const createCategory = async (data) => {
 
 // Get all with filters
 const getCategoriesWithFilters = async (query, skip, limit, keyword, companyOrganizer, sortBy, sortOrder) => {
-  let cacheKey = buildMenuItemCategoriesCacheKey({
+  const cacheKey = buildMenuItemCategoriesCacheKey({
     scope: "admin",
     skip,
     limit,
-    sortBy,
-    sortOrder
   });
-  const filters = [];
-  if (keyword) filters.push(`keyword=${keyword}`);
-  if (companyOrganizer) filters.push(`companyOrganizer=${companyOrganizer}`);
-  if (query.status && query.status['$ne']) filters.push(`status=${query.status['$ne']}`);
-  if (sortBy) filters.push(`sortBy=${sortBy}`);
 
-  if (query.createdAt && query.createdAt['$gte']) filters.push(`createdAt=${query.createdAt['$gte']}`);
-  if (filters.length > 0) {
-    cacheKey = `${cacheKey}:${filters.join(":")}`;
-  }
-
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
+  const fetchFn = async () => {
       const sortDirection = sortOrder === "asc" ? 1 : -1;
 
       let sortObj = { createdAt: -1, _id: -1 };
@@ -62,7 +45,23 @@ const getCategoriesWithFilters = async (query, skip, limit, keyword, companyOrga
         .lean();
 
       return categories || [];
-    },
+  };
+
+  if (
+    !isPlainListCacheable({
+      keyword,
+      date: query?.createdAt?.$gte,
+      sortBy,
+      sortOrder,
+    }) || companyOrganizer
+  ) {
+    return fetchFn();
+  }
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn,
   });
 };
 
