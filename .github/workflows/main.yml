@@ -57,20 +57,13 @@ jobs:
           echo "Staging did not become healthy within 15 minutes"
           exit 1
 
-      - name: Azure Login
-        uses: azure/login@v2
+      # Runs only if staging is healthy. Publish profiles can't swap slots, so deploy directly.
+      - name: Deploy to Azure Web App (API — Pleis / production)
+        uses: azure/webapps-deploy@v3
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Swap stagging → production
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            az webapp deployment slot swap \
-              --resource-group pleis \
-              --name Pleis \
-              --slot stagging \
-              --target-slot production
+          app-name: 'Pleis'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D6B5A721CC1F4065BA303A78D3C5B578 }}
+          package: .
 
       # Temporarily disabled — re-enable when worker deploy is needed again
       # - name: Deploy to Azure Web App (Worker — Pleis-worker)
