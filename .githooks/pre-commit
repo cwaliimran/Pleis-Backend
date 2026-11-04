@@ -1,0 +1,7 @@
+#!/bin/sh
+# Blocks commits containing malware patterns. Fails closed if the scan cannot run.
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit BLOCKED: node is not on PATH, so the security scan cannot run." >&2
+  exit 1
+fi
+exec node scripts/security/scanRepo.js --staged

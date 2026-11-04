@@ -1,0 +1,19 @@
+#!/bin/sh
+# Blocks pushing any commit whose files contain malware patterns, including
+# commits pulled from a compromised remote. Fails closed if the scan cannot run.
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-push BLOCKED: node is not on PATH, so the security scan cannot run." >&2
+  exit 1
+fi
+
+status=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;; # branch deletion: nothing to scan
+  esac
+  echo "security scan: $local_ref"
+  node scripts/security/scanRepo.js --ref "$local_sha" || status=1
+done
+
+exit "$status"

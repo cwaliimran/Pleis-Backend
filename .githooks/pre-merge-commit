@@ -1,0 +1,7 @@
+#!/bin/sh
+# Merges and pulls skip pre-commit, so scan the merge result here as well.
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-merge-commit BLOCKED: node is not on PATH, so the security scan cannot run." >&2
+  exit 1
+fi
+exec node scripts/security/scanRepo.js --staged
