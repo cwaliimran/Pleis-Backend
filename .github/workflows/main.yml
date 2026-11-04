@@ -21,6 +21,10 @@ jobs:
           node-version: '22.x'
           cache: 'npm'
 
+      # Must stay before npm ci: nothing installs or deploys if this fails.
+      - name: Scan for malicious code
+        run: node scripts/security/scanRepo.js --all
+
       - name: Install dependencies
         run: npm ci
 

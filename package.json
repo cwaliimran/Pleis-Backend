@@ -26,6 +26,8 @@
     "pm2:save": "pm2 save",
     "pm2:startup": "pm2 startup",
     "update:alias": "node aliasConfig/update-aliases.js",
+    "security:scan": "node scripts/security/scanRepo.js --all",
+    "security:hooks": "git config core.hooksPath .githooks",
     "smoke:modules": "NODE_ENV=prodtest node backend/smokeLoadModules.js",
     "backfill:event-markers": "NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js",
     "backfill:event-markers:dry": "NODE_ENV=prodtest node backend/scripts/backfillEventMapMarkers.js --dry-run",
