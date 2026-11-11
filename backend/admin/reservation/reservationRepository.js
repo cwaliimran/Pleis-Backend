@@ -972,6 +972,7 @@ const getReservationTypeCapacityStats = async (query) => {
           $ifNull: ["$reservationTypeDetails.name", "Unknown"],
         },
         maxCapacity: { $ifNull: ["$reservationTypeDetails.maxCapacity", 0] },
+        ageRestricted: { $ifNull: ["$reservationTypeDetails.ageRestricted", false] },
         bookedCapacity: 1,
       },
     },

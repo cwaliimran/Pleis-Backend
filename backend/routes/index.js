@@ -4,6 +4,8 @@ router.use("/auth", require("./authRoutes"));
 router.use("/upload", require("./uploadRoutes"));
 router.use("/upload/azure", require("./uploadAzureBlobRoutes"));
 router.use("/settings", require("../admin/settings/adminSettingsRoutes"));
+// legal documents (versioned) + consent / re-acceptance
+router.use("/legal", require("../commonModules/legal/legalRoutes"));
 router.use("/communications", require("./communicationRoutes"));
 router.use("/notifications", require("./notificationsRoutes"));
 // router.use("/support", require("./supportRoutes"));

@@ -5,6 +5,7 @@ const router = express.Router();
 router.use("/", require("../../routes/index"));
 router.use(auth, roleMiddleware(["admin"]));
 router.use("/settings", require("../settings/adminSettingsRoutes"));
+router.use("/legal-documents", require("../../commonModules/legal/legalAdminRoutes"));
 router.use("/suppliers", require("../suppliers/suppliersRoutes"));
 router.use("/tags-types", require("../tagTypes/tagTypesRoutes"));
 router.use("/tags", require("../tags/tagsRoutes"));

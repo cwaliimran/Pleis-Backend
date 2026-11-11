@@ -35,7 +35,7 @@ const placeOrder = async (req, res) => {
     let validateData = {
       rawData: ["paymentMethod", "deliveryOption"],
       enumFields: {
-        pickupType: ["counter", "tableService", "togo"],
+        pickupType: ["counter", "tableService"], // #146: no "togo" destination
         paymentMethod: ["applePay", "card", "cash", "payLater"],
       },
       objectIdFields: ["deliveryOption"],
@@ -135,7 +135,7 @@ const updateOrderDetails = async (req, res) => {
     if (pickupType !== undefined) {
       validateData.rawData.push("pickupType");
 
-      validateData.enumFields.pickupType = ["counter", "tableService", "togo"];
+      validateData.enumFields.pickupType = ["counter", "tableService"]; // #146
     }
 
     if (paymentMethod !== undefined) {

@@ -6,7 +6,9 @@ const {
   updateAdminSettings,
   createAdminSettings,
   getCustomerTermsAndConditions,
-  getFaqs
+  getFaqs,
+  getComplianceSettings,
+  updateComplianceSettings,
 } = require("./controllers/adminSettingsController");
 const auth = require("../../middlewares/authMiddleware");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
@@ -29,6 +31,10 @@ router.get("/privacy-policy", apiRateLimiter, getPrivacyPolicy);
 
 // Route to fetch privacy policy with rate limiting
 router.get("/faqs", apiRateLimiter, getFaqs);
+
+// Compliance settings (18+ order notice mode) — public read, admin write
+router.get("/compliance", apiRateLimiter, getComplianceSettings);
+router.put("/compliance", auth, roleMiddleware(["admin"]), updateComplianceSettings);
 
 // Route to create admin settings (requires auth and admin privileges)
 router.post("/create", auth, roleMiddleware(["admin"]), createAdminSettings);

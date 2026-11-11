@@ -248,7 +248,8 @@ const getPickupOptions = async (req, res) => {
       data: {
         deliveryOptions,
         paymentMethods: orderingSettings.paymentMethods,
-        deliveryMethods: orderingSettings.deliveryMethods,
+        // #146: "to go" is never offered as a destination, whatever an old setting says
+        deliveryMethods: { ...(orderingSettings.deliveryMethods || {}), toGo: false },
         tips: orderingSettings.tips,
         // Same Setting doc placeOrder enforces (also mirrored into paymentMethods)
         appSettings: orderingSettings.appSettings || {},

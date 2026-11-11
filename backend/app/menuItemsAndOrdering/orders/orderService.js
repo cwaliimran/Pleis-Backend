@@ -1,3 +1,4 @@
+const MenuItemsModel = require("@MenuItemsModel");
 const orderRepo = require("./orderRepository");
 const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
@@ -352,6 +353,11 @@ const placeOrder = async ({
     if (deliveryOption && !deliveryOptionData) {
       throw new Error("Invalid delivery option");
     }
+    // #146: To go is not a delivery destination (removed for legal reasons). Legacy
+    // toGo options left in the DB must not accept orders; isTogo stays an item attribute.
+    if (String(deliveryOptionData?.deliveryMethod || "").toLowerCase() === "togo") {
+      throw new Error("to_go_is_not_a_delivery_destination");
+    }
     if (items?.length) {
       const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
       menuItems = await menuItemRepo.getMenuItemsWithFilters({
@@ -361,6 +367,20 @@ const placeOrder = async ({
       });
 
       if (!menuItems.length) throw new Error("Invalid items in cart");
+
+      // 18+ items can never be ordered for takeaway / delivery (Legal spec section 3).
+      // deliveryOption.deliveryMethod uses "toGo", request pickupType uses "togo".
+      const isTakeaway = [deliveryOptionData?.deliveryMethod, pickupType].some(
+        (m) => String(m || "").toLowerCase() === "togo"
+      );
+      if (isTakeaway) {
+        const restricted = await MenuItemsModel.exists({ _id: { $in: itemIds }, ageRestricted: true });
+        if (restricted) {
+          const err = new Error("age_restricted_items_not_available_for_takeaway");
+          err.statusCode = 400;
+          throw err;
+        }
+      }
 
       const orgData = await menuItemRepo.getOrganizationIdByMenuItemId(
         menuItems[0].menu,

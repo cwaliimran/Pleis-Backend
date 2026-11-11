@@ -124,11 +124,49 @@ const createAdmin = async (req, res) => {
 
 //register
 const register = async (req, res) => {
+  // Legal acceptance gate (spec 1.1 / 1.3): buyers must accept Terms of Use + Privacy
+  // Policy, partners Partner T&C + Privacy Policy. Mandatory on every sign-up.
+  const legalService = require("../commonModules/legal/legalService");
+  const signupType = req.body?.userType || "user";
+  const requiredLegal = legalService.requiredTypesFor(signupType);
+  let acceptedLegal = [];
+  if (requiredLegal.length) {
+    acceptedLegal = legalService.normalizeAcceptance(req.body?.legalAcceptance, signupType);
+    if (!acceptedLegal) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "legal_acceptance_required",
+        data: { required: requiredLegal },
+      });
+    }
+    try {
+      await legalService.assertLatestVersions(acceptedLegal);
+    } catch (error) {
+      return sendResponse({ res, statusCode: error.statusCode || 400, translationKey: error.message, data: error.data, error });
+    }
+  }
+
   const result = await registerUserUtility(req, res, {
     autoVerify: false,
   });
 
   if (result.responseSent) return;
+
+  if (result.success && acceptedLegal.length) {
+    const userId = result.user?.basicInfo?._id || result.user?._id;
+    try {
+      await legalService.acceptDocuments({
+        user: { _id: userId, accountState: { userType: signupType } },
+        acceptances: acceptedLegal,
+        source: "registration",
+        req,
+      });
+    } catch (error) {
+      // Account exists; the login gate will ask again if this ever fails.
+      console.error("[legal] registration consent log failed", error?.message);
+    }
+  }
 
   if (!result.success) {
     return sendResponse({
@@ -1237,7 +1275,24 @@ const socialAuth = async (req, res) => {
         data: response,
       });
     } else {
-      // If user does not exist, treat this as a signup
+      // If user does not exist, treat this as a signup.
+      // Buyers must accept Terms of Use + Privacy Policy before the account is created
+      // (spec 1.1, all sign-up methods). The app shows the checkboxes and retries.
+      const legalService = require("../commonModules/legal/legalService");
+      const socialType = userType || "user";
+      const legalItems = legalService.normalizeAcceptance(req.body.legalAcceptance, socialType);
+      if (socialType === "user" && !legalItems) {
+        await session.abortTransaction();
+        session.endSession();
+        return sendResponse({
+          res,
+          statusCode: 428,
+          translationKey: "legal_acceptance_required",
+          data: { required: legalService.requiredTypesFor(socialType), isNewUser: true },
+        });
+      }
+      if (legalItems?.length) await legalService.assertLatestVersions(legalItems);
+
       const newUser = new User({
         email,
         firstName,
@@ -1252,6 +1307,16 @@ const socialAuth = async (req, res) => {
       });
 
       await newUser.save({ session });
+
+      if (legalItems?.length) {
+        await legalService.acceptDocuments({
+          user: newUser,
+          acceptances: legalItems,
+          source: "registration",
+          req,
+          session,
+        });
+      }
 
       // Generate a token for the new user
       const token = newUser.generateAuthToken();
@@ -1286,8 +1351,9 @@ const socialAuth = async (req, res) => {
     session.endSession();
     return sendResponse({
       res,
-      statusCode: 500,
+      statusCode: error.statusCode || 500,
       translationKey: error.message,
+      data: error.data || null,
       error: error,
     });
   }

@@ -46,7 +46,7 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
   const [companyDoc, totalMembers] = await Promise.all([
     User.findById(companyOrganizer)
       .select(
-        "companyDetails.loyaltySettings.title companyDetails.logo companyDetails.coverImage companyDetails.category companyDetails.description accountState.status companyDetails.status"
+        "companyDetails.name companyDetails.loyaltySettings.title companyDetails.logo companyDetails.coverImage companyDetails.category companyDetails.description accountState.status companyDetails.status"
       )
       .populate({
         path: "companyDetails.category",

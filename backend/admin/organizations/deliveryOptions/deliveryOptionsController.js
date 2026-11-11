@@ -6,12 +6,21 @@ const {
 
 const deliveryOptionsService = require("./deliveryOptionsService");
 
-const DELIVERY_METHODS = ["counterPickup", "tableDelivery", "toGo"];
+// #146: in-place destinations only — "toGo" is rejected (it is a menu item attribute now).
+const DELIVERY_METHODS = ["counterPickup", "tableDelivery"];
+const rejectToGo = (req, res) => {
+  if (String(req.body?.deliveryMethod || "").toLowerCase() === "togo") {
+    sendResponse({ res, statusCode: 400, translationKey: "to_go_is_not_a_delivery_destination" });
+    return true;
+  }
+  return false;
+};
 const STATUS_VALUES = ["active", "inactive"];
 
 const createDeliveryOption = async (req, res) => {
   const { organizationId } = req.params;
   const { title, deliveryMethod = "counterPickup", status = "active" } = req.body;
+  if (rejectToGo(req, res)) return;
 
   if (
     !validateParams(req, res, {
@@ -137,6 +146,7 @@ const getDeliveryOptionDetails = async (req, res) => {
 const updateDeliveryOption = async (req, res) => {
   const { organizationId, id } = req.params;
   const { title, deliveryMethod, status } = req.body;
+  if (rejectToGo(req, res)) return;
 
   if (
     !validateParams(req, res, {

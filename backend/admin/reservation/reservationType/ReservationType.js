@@ -70,6 +70,12 @@ const reservationTypeSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // 18+ statutory age restriction (Legal spec section 3): 18+ badge in the app and the
+    // age notice above the pay button when the booking includes this type.
+    ageRestricted: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],

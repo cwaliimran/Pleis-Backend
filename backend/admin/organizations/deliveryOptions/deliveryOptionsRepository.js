@@ -52,7 +52,11 @@ const getDeliveryOptionsByOrganization = async (organizationId) => {
 
 const getActiveDeliveryOptionsByOrganization = async (organizationId) => {
   const options = await getDeliveryOptionsByOrganization(organizationId);
-  return (options || []).filter((option) => option.status === "active");
+  // #146: an option migrated from "to go" (no destination yet) is not offered to guests
+  // until the operator chooses table or counter.
+  return (options || []).filter(
+    (option) => option.status === "active" && ["counterPickup", "tableDelivery"].includes(option.deliveryMethod)
+  );
 };
 
 const findDeliveryOptionById = async (id, organizationId = null) => {

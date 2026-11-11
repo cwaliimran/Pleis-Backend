@@ -25,6 +25,12 @@ const presetsSchema = new mongoose.Schema(
       type: String,
       default: "0",
     },
+    // 18+ statutory age restriction (Legal spec section 3). Drives the 18+ badge and
+    // the order-screen notice; such items can never be offered for takeaway/delivery.
+    ageRestricted: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],

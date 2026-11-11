@@ -20,10 +20,12 @@ const deliveryOptionsSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // Delivery Methods
+    // Delivery destination. Requirement Set #146: IN-PLACE only (table, counter/bar).
+    // "To go" is a menu item attribute, never a destination of an order.
+    // null = migrated from the former "to go" destination; the operator must choose one.
     deliveryMethod: {
       type: String,
-      enum: ['counterPickup', 'tableDelivery', 'toGo'],
+      enum: ['counterPickup', 'tableDelivery', null],
       default: 'counterPickup',
     },
     status: {

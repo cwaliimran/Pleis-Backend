@@ -487,6 +487,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Latest accepted version per legal document (snapshot for gating; the
+    // source of truth / audit trail is the append-only ConsentLogs collection).
+    legalAcceptances: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     twoFA: {
       secret: {
         type: String,

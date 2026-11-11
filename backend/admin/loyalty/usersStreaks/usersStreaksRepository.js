@@ -307,7 +307,7 @@ const findByIdAndUpdate = async (id, data) => {
 
 const getUSerStreaskBuOrganizerAndUser = async (companyOrganizer, user) => {
   return UsersStreaks.find({ companyOrganizer, user })
-    .select("visits")
+    .select("visits streak longestStreak badge lastVisitAt")
     .lean()
     .exec();
 };

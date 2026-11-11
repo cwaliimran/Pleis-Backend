@@ -28,6 +28,7 @@ const createReservation = async (req, res) => {
     organizationId,
     timingSlots,
     allowPreOrderMenuItems = false,
+    ageRestricted = false,
     bonusPoints = 0,
   } = req.body;
 
@@ -172,6 +173,7 @@ const createReservation = async (req, res) => {
     status,
     organizationId,
     allowPreOrderMenuItems,
+    ageRestricted,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
     bonusPoints,
   };
@@ -319,6 +321,7 @@ const updateReservation = async (req, res) => {
     organizationId,
     notes,
     bonusPoints,
+    ageRestricted,
   } = req.body;
   const userId = req.user._id;
   const timezone = req.user.timezone;
@@ -349,6 +352,7 @@ const updateReservation = async (req, res) => {
     organizationId,
     notes,
     bonusPoints,
+    ageRestricted,
   };
   // --- Validate timing slots if enabled ---
   if (data.timingSlots?.enabled) {

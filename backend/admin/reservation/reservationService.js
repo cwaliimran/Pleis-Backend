@@ -190,6 +190,7 @@ const updateReservation = async (id, data) => {
     "reservationType",
     "notes",
     "bonusPoints",
+    "ageRestricted",
   ];
 
   // -----------------------------

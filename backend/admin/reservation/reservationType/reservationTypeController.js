@@ -27,6 +27,7 @@ const createReservationType = async (req, res) => {
     tax,
     status,
     minimumSpend,
+    ageRestricted,
   } = req.body;
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
@@ -68,6 +69,7 @@ const createReservationType = async (req, res) => {
     tax,
     status,
     minimumSpend,
+    ageRestricted,
   };
   try {
     const ReservationTypeData =
@@ -153,6 +155,7 @@ const updateReservationType = async (req, res) => {
     tax,
     status,
     minimumSpend,
+    ageRestricted,
   } = req.body;
 
   const user = req.user._id;
@@ -172,7 +175,8 @@ const updateReservationType = async (req, res) => {
     occasionRequired,
     tax,
     status,
-    minimumSpend
+    minimumSpend,
+    ageRestricted,
   };
 
   try {

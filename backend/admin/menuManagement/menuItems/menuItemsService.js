@@ -147,6 +147,10 @@ const importMenuItems = async (data) => {
     upSellItem: false,
     isAvailableInStock: true,
 
+    // 18+ flag travels with the preset; such items are never "to go"
+    ageRestricted: !!preset.ageRestricted,
+    isTogo: false,
+
     // tracking imported preset
     parentPreset: preset._id,
   }));
@@ -461,6 +465,7 @@ const updateMenuItem = async (id, data, timezone) => {
     "subCategory",
     "isTogo",
     "isRequiresOrderConfirmation",
+    "ageRestricted",
   ];
   const updateData = {};
   for (const key of allowedFields) {
