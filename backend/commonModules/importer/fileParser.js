@@ -216,6 +216,38 @@ const detectHeaderRow = (rows) => {
   return idx < 0 ? 0 : idx;
 };
 
+/**
+ * Convert Excel fractional-day time values to HH:mm.
+ * Excel stores time as a fraction of 24 hours.
+ */
+const normalizeExcelTime = (value) => {
+  const normalized = String(value ?? "").trim();
+
+  if (!normalized) return "";
+
+  // Already in HH:mm format.
+  if (/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(normalized)) {
+    return normalized;
+  }
+
+  // Excel numeric time fraction.
+  if (/^(?:0(?:\.\d+)?|1(?:\.0+)?)$/.test(normalized)) {
+    const fraction = Number(normalized);
+
+    if (fraction >= 0 && fraction < 1) {
+      const totalMinutes = Math.round(fraction * 24 * 60);
+      const minutes = totalMinutes % (24 * 60);
+
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+
+      return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+    }
+  }
+
+  return normalized;
+};
+
 /** Build { headers, rows } using the given header row (0-based index into rawRows). */
 const buildTable = (rawRows, headerRow = 0) => {
   const headerCells = rawRows[headerRow] || [];
@@ -223,19 +255,43 @@ const buildTable = (rawRows, headerRow = 0) => {
   const width = Math.max(headerCells.length, ...dataRows.map((r) => r.length), 0);
   const seen = {};
   const headers = [];
+
   for (let i = 0; i < width; i += 1) {
     let base = String(headerCells[i] ?? "").trim() || `Column ${i + 1}`;
+
     if (seen[base]) base = `${base} (${(seen[base] += 1)})`;
     else seen[base] = 1;
+
     headers.push(base);
   }
+
+  // Identify columns containing time values.
+  const timeColumns = new Set(
+    headers
+      .map((header, index) => ({
+        header: header.toLowerCase().trim(),
+        index,
+      }))
+      .filter(({ header }) =>
+        /\b(start time|end time|available from|available until)\b/.test(header)
+      )
+      .map(({ index }) => index)
+  );
+
   const rows = dataRows.map((r) => {
     const o = {};
+
     headers.forEach((h, i) => {
-      o[h] = String(r[i] ?? "").trim();
+      const value = String(r[i] ?? "").trim();
+
+      o[h] = timeColumns.has(i)
+        ? normalizeExcelTime(value)
+        : value;
     });
+
     return o;
   });
+
   return { headers, rows };
 };
 
