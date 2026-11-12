@@ -1,3 +1,4 @@
+const { resolveAnalyticsScope } = require("../../../helperUtils/analyticsScope");
 const convertToMongoArray = require("@utils/convertToMongoArray");
 const {
   sendResponse,
@@ -14,15 +15,8 @@ const { Analytics_KEYS } = require("./utils/analyticsKeyMap");
 const getAnalytics = async (req, res) => {
   let { dateFilter = "all", companyOrganizer, organizations } = req.query;
   let { timezone } = req.user || "UTC";
-  if (req.user.userType === "organizer") {
-    companyOrganizer = req.user._id;
-    if (organizations) {
-      if (!Array.isArray(organizations)) {
-        organizations = await convertToMongoArray(organizations);
-      }
-      companyOrganizer = undefined;
-    }
-  }
+  // #128 / #131 (D-06): company / organization scope, enforced per role.
+  ({ companyOrganizer, organizations } = await resolveAnalyticsScope(req));
 
   try {
 
@@ -57,15 +51,8 @@ const getAnalytics = async (req, res) => {
 const getReservationTransactions = async (req, res) => {
   let { page = 1, limit = 5, companyOrganizer, organizations } = req.query;
   let { timezone } = req.user || "UTC";
-  if (req.user.userType === "organizer") {
-    companyOrganizer = req.user._id;
-    if (organizations) {
-      if (!Array.isArray(organizations)) {
-        organizations = await convertToMongoArray(organizations);
-      }
-      companyOrganizer = undefined;
-    }
-  }
+  // #128 / #131 (D-06): company / organization scope, enforced per role.
+  ({ companyOrganizer, organizations } = await resolveAnalyticsScope(req));
   limit = parseInt(limit);
   try {
     const { data, meta } = await AnalyticsService.getReservationTransactions({
@@ -186,15 +173,8 @@ const getAnalyticsStats = async (req, res) => {
 const getReservationChnageLogs = async (req, res) => {
   let { page = 1, limit = 10, companyOrganizer, organizations } = req.query;
   let { timezone } = req.user || "UTC";
-  if (req.user.userType === "organizer") {
-    companyOrganizer = req.user._id;
-    if (organizations) {
-      if (!Array.isArray(organizations)) {
-        organizations = await convertToMongoArray(organizations);
-      }
-      companyOrganizer = undefined;
-    }
-  }
+  // #128 / #131 (D-06): company / organization scope, enforced per role.
+  ({ companyOrganizer, organizations } = await resolveAnalyticsScope(req));
   limit = parseInt(limit);
   try {
     const { data, meta } = await AnalyticsService.getReservationChnageLogs({
@@ -227,15 +207,8 @@ const getReservationChnageLogs = async (req, res) => {
 const getMenuItemSalesData = async (req, res) => {
   let { page = 1, limit = 10, companyOrganizer, organizations } = req.query;
   let { timezone } = req.user || "UTC";
-  if (req.user.userType === "organizer") {
-    companyOrganizer = req.user._id;
-    if (organizations) {
-      if (!Array.isArray(organizations)) {
-        organizations = await convertToMongoArray(organizations);
-      }
-      companyOrganizer = undefined;
-    }
-  }
+  // #128 / #131 (D-06): company / organization scope, enforced per role.
+  ({ companyOrganizer, organizations } = await resolveAnalyticsScope(req));
   limit = parseInt(limit);
   try {
     const { data, meta } = await AnalyticsService.getMenuItemSalesData({
