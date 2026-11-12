@@ -1061,6 +1061,7 @@ const getReservationsV2 = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let {
     status,
+    isNew,
     date,
     organizationsId,
     companyOrganizer,
@@ -1087,6 +1088,7 @@ const getReservationsV2 = async (req, res) => {
       page,
       limit,
       status,
+      isNew,
       companyOrganizer,
       organizationsId,
       date,

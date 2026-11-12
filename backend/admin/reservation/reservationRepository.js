@@ -981,10 +981,14 @@ const getReservationTypeCapacityStats = async (query) => {
 
   return UserReservations.aggregate(pipeline);
 };
+/** "New" on the reservation list: created in the last 48 hours (prototype v3.2). */
+const NEW_RESERVATION_WINDOW_MS = 48 * 60 * 60 * 1000;
+
 const getReservationsV2 = async ({
   page,
   limit,
   status,
+  isNew,
   companyOrganizer,
   organizationsId,
   date,
@@ -995,9 +999,16 @@ const getReservationsV2 = async ({
   endTime,
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
-  // Virtual filter: reservations received in the last 24 hours (any DB status).
-  const isNewStatus = typeof status === "string" && status.toLowerCase() === "new";
-  const isNeedsConfirmation = status === "needsConfirmation";
+  // Reservation list filters (Requirement Set #56, Filters v5 §2.1): statuses
+  // are OR'd (comma list), "New" is a separate filter (created in the last
+  // 48 h, prototype v3.2) and every filter is AND'd with the others.
+  // `status=new` is still accepted as the New filter.
+  const statusTokens = (Array.isArray(status) ? status : String(status || "").split(","))
+    .map((s) => String(s).trim())
+    .filter(Boolean);
+  const isNewStatus =
+    isNew === true || isNew === "true" || statusTokens.some((s) => s.toLowerCase() === "new");
+  const statuses = statusTokens.filter((s) => s.toLowerCase() !== "new");
 
   const summaryQuery = {
     ...(companyOrganizer && {
@@ -1008,9 +1019,9 @@ const getReservationsV2 = async ({
     }),
   };
   const query = {
-    ...(status && !isNewStatus && { status }),
+    ...(statuses.length && { status: statuses.length === 1 ? statuses[0] : { $in: statuses } }),
     ...(isNewStatus && {
-      createdAt: { $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+      createdAt: { $gte: new Date(now.getTime() - NEW_RESERVATION_WINDOW_MS) },
     }),
     ...(companyOrganizer && {
       companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
@@ -1041,11 +1052,6 @@ const getReservationsV2 = async ({
   } else if (date) {
     const { start, end } = getStartAndEndOfDay(date, timezone);
     dateTimeElemMatch.date = { $gte: start, $lt: end };
-  } else if (isNeedsConfirmation) {
-    // Date omitted: only upcoming / in-progress slots from now onward (user tz).
-    dateTimeElemMatch.timeSlots = {
-      $elemMatch: { endTime: { $gt: now } },
-    };
   }
 
   if (Object.keys(dateTimeElemMatch).length) {
@@ -1138,15 +1144,23 @@ const getReservationsV2 = async ({
     { $project: { occasionDetails: 0, organizationDetails: 0 } },
   ];
 
-  const [reservations, reservationTypeCapacityStats, totalFiltered] =
+  // Count shown beside the New filter: new reservations within the other filters.
+  const newCountQuery = {
+    ...query,
+    createdAt: { $gte: new Date(now.getTime() - NEW_RESERVATION_WINDOW_MS) },
+  };
+
+  const [reservations, reservationTypeCapacityStats, totalFiltered, newCount] =
     await Promise.all([
       UserReservations.aggregate(pipeline),
       getReservationTypeCapacityStats(summaryQuery),
       UserReservations.countDocuments(query),
+      UserReservations.countDocuments(newCountQuery),
     ]);
 
   let meta = generateMeta(page, limit, totalFiltered);
   meta.reservationTypeCapacityStats = reservationTypeCapacityStats;
+  meta.newCount = newCount;
 
   return { reservations, meta };
 };
