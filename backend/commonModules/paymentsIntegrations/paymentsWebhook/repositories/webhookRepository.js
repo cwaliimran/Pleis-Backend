@@ -1365,18 +1365,16 @@ const getUniqueUsers = async (Model, baseMatch, extra, range) => {
   return result[0] ? result[0].uniqueUsers : 0;
 };
 
-const getTransactionStats = async ({ dateFilter, timezone, companyOrganizer, organizations = [] }) => {
+const getTransactionStats = async ({ dateFilter, timezone, companyOrganizer, organizations }) => {
   const ranges = getDateRanges({ dateFilter, timezone });
 
-
-  if (organizations.length === 0) {
-    organizations = undefined
-  }
-
-  // Base match for aggregation
+  // organizations undefined = unscoped (superadmin, global). An empty list is
+  // a scope with nothing in it and must match nothing (#8).
+  // Only captured payments are transactions (#10): attempts are not counted.
   const baseMatch = {
+    paymentStatus: { $in: ["paid", "refunded"] },
     ...companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) },
-    ...organizations && { organization: { $in: organizations } },
+    ...(Array.isArray(organizations) && { organization: { $in: organizations } }),
   };
 
   // =========================

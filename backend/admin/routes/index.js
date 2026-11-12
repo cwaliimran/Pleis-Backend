@@ -65,6 +65,8 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 // transactions
 router.use("/transactions", require("../transactions/routes/unifiedTransactionsRoutes"));
+// Money transactions: one row per captured payment, from the ledger (#10, #8)
+router.use("/transaction-ledger", require("../../commonModules/paymentsIntegrations/ledger/transactionList/transactionListRoutes"));
 // thirdPParty
 router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
 // thirdPParty

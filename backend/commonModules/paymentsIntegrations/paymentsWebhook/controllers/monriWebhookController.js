@@ -2,7 +2,16 @@ const { default: mongoose } = require("mongoose");
 const { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService, getTransactionStatsService } = require("../services/paymentWebhookService");
 const { verifyMonriSignature } = require("../utils/monriSignature");
 const { parsePaginationParams, sendResponse, getReadableErrorMessage, validateParams } = require("../../../../helperUtils/responseUtil");
-const convertToMongoArray = require("@utils/convertToMongoArray");
+const { resolveTransactionScope } = require("../../ledger/transactionList/transactionScope");
+
+/**
+ * Was this order_number captured at Monri? Our MonriTransaction is "paid" only
+ * after a digest-verified success URL or the reconcile job; otherwise ask
+ * Monri now. Not confirmed → no transaction row; if the money was in fact
+ * captured, the reconcile job fulfils it later through the same path.
+ */
+// #10 / #25: shared server-side capture check (Monri status query).
+const { confirmMonriCapture } = require("../../monri/monriCaptureCheck");
 
 const monriWebhookController = async (req, res) => {
   try {
@@ -22,6 +31,19 @@ const monriWebhookController = async (req, res) => {
       })
     ) return;
 
+
+    // #10: this endpoint is called by the guest app, so its "paid" is a claim,
+    // not a capture. Accept it only when Monri confirms the capture.
+    if (String(bodyData?.transaction?.status || "").toLowerCase() === "paid") {
+      const capture = await confirmMonriCapture(String(bodyData.transaction.orderNumber));
+      if (!capture.confirmed) {
+        return res.status(202).json({
+          received: true,
+          processed: false,
+          reason: capture.reason,
+        });
+      }
+    }
 
     const result = await processPaymentWebhook({
       provider: "monri",
@@ -65,31 +87,30 @@ const getOrdersTransactions = async (req, res) => {
         : "sort_by_required_when_sort_order_is_provided";
       return sendResponse({ res, statusCode: 400, translationKey: key });
     }
-    if (organization) {
-      // If organization is a non-empty string, convert it to ObjectId array
-      if (!Array.isArray(organization)) {
-        organization = await convertToMongoArray(organization);
-      }
-    } else {
-      // If organization is empty, set it to undefined or an empty array
-      organization = undefined;
-    }
     const timezone = req.user?.timezone || "UTC";
 
-    if (!companyOrganizer) {
-      if (req.user.userType === "organizer") {
-        companyOrganizer = req.user._id;
-      }
-    }
-    if (organization) {
-      companyOrganizer = undefined; // If organization filter is applied, ignore companyOrganizer filter
+    // #8: admin global or a chosen company; organizer only their own company;
+    // manager only assigned organizations. A requested organization outside
+    // the scope is dropped, never honoured.
+    const scope = await resolveTransactionScope({
+      user: req.user,
+      query: { companyOrganizer, organizations: organization },
+    });
+    companyOrganizer = undefined;
+    organization = scope.organizations;
+    // #10: a row exists only for a captured payment (and its refund). Pending,
+    // failed or abandoned attempts are payment attempts, not transactions.
+    if (!paymentStatus && !status) {
+      paymentStatus = { $in: ["paid", "refunded"] };
+    } else if (!["paid", "refunded"].includes(paymentStatus || status)) {
+      return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: { transactions: [], meta: { page, limit, total: 0 } } });
     }
 
-    const ticketingBookings = await getOrdersTransactionsService({ event, page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate, resDate, resStartTime, resEndTime, timezone, futureRes, pastRes, paidRes, minimalSpendRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme, promotionOrders, eventBasedOrder, sortBy, sortOrder });
+    const ticketingBookings = await getOrdersTransactionsService({ isSuperAdmin: scope.isSuperAdmin, event, page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate, resDate, resStartTime, resEndTime, timezone, futureRes, pastRes, paidRes, minimalSpendRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme, promotionOrders, eventBasedOrder, sortBy, sortOrder });
     return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: ticketingBookings });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
-    return sendResponse({ res, statusCode: readableError.statusCode, translationKey: readableError.message, error });
+    return sendResponse({ res, statusCode: error?.statusCode || readableError.statusCode, translationKey: error?.statusCode === 403 ? "forbidden" : readableError.message, error });
   }
 };
 
@@ -99,28 +120,29 @@ const getOrdersTransactionDetails = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return sendResponse({ res, statusCode: 400, translationKey: "invalid_transaction_id" });
     }
-    const transactionDetails = await getOrdersTransactionDetailsService({ id });
+    const scope = await resolveTransactionScope({ user: req.user, query: {} });
+    const transactionDetails = await getOrdersTransactionDetailsService({ id, scope });
     if (!transactionDetails) {
       return sendResponse({ res, statusCode: 404, translationKey: "transaction_not_found" });
     }
     return sendResponse({ res, statusCode: 200, translationKey: "transaction_details_fetched_successfully", data: transactionDetails });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
-    return sendResponse({ res, statusCode: readableError.statusCode, translationKey: readableError.message, error });
+    return sendResponse({ res, statusCode: error?.statusCode || readableError.statusCode, translationKey: error?.statusCode === 403 ? "forbidden" : readableError.message, error });
   }
 };
 const getTransactionStats = async (req, res) => {
   let { dateFilter = "all", companyOrganizer, organizations } = req.query;
   dateFilter = dateFilter.trim();
   let { timezone } = req.user || "UTC";
-  if (req.user.userType === "organizer") {
-    companyOrganizer = req.user._id;
-    if (organizations) {
-      organizations = await convertToMongoArray(organizations);
-      companyOrganizer = undefined;
-    }
-  }
   try {
+    const scope = await resolveTransactionScope({
+      user: req.user,
+      query: { companyOrganizer, organizations },
+    });
+    companyOrganizer = undefined;
+    organizations = scope.organizations;
+    req.transactionScope = scope;
     if (dateFilter && !validateParams(req, res, {
       enumFields: {
         dateFilter: ["all", "today", "thisWeek", "thisMonth"],
@@ -128,6 +150,7 @@ const getTransactionStats = async (req, res) => {
     })) return;
 
     const dashboard = await getTransactionStatsService({
+      isSuperAdmin: req.transactionScope.isSuperAdmin,
       dateFilter,
       timezone,
       companyOrganizer,
@@ -143,8 +166,8 @@ const getTransactionStats = async (req, res) => {
   } catch (error) {
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
+      statusCode: error?.statusCode || 500,
+      translationKey: error?.statusCode === 403 ? "forbidden" : "internal_server",
       error,
     });
   }

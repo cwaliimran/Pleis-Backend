@@ -1,7 +1,7 @@
 const multer = require("multer");
 const { sendResponse } = require("@utils/responseUtil");
 const importService = require("./menuItemImportService");
-const { parseImportFile } = require("../../../../commonModules/importer/fileParser");
+const { parseImportFile, buildTable } = require("../../../../commonModules/importer/fileParser");
 const { emitMenuItemChange } = require("../menuItemsService");
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -89,15 +89,22 @@ const getFields = async (req, res) => {
 const parse = withUpload(async (req, res) => {
   try {
     const parsed = parseImportFile(req.file.buffer, req.file.originalname);
-    const sheets = parsed.sheets.map((s) => ({
-      name: s.name,
-      headerRow: s.headerRow,
-      rawRows: s.rawRows,
-      headers: s.headers,
-      rowCount: s.rowCount,
-      truncated: !!s.truncated,
-      suggestedMapping: importService.suggestMapping(s.headers),
-    }));
+    const sheets = importService.itemsSheetFirst(parsed.sheets).map((s) => {
+      // Template v2: menus in row 1, headers in row 2
+      const fileMenus = importService.menusInRow1(s.rawRows);
+      const headerRow = importService.headerRowOf(s);
+      const { headers } = headerRow === s.headerRow ? s : buildTable(s.rawRows, headerRow);
+      return {
+        name: s.name,
+        headerRow,
+        fileMenus: fileMenus || [],
+        rawRows: s.rawRows,
+        headers,
+        rowCount: Math.max(0, s.rawRows.length - headerRow - 1),
+        truncated: !!s.truncated,
+        suggestedMapping: importService.suggestMapping(headers),
+      };
+    });
     return sendResponse({
       res,
       statusCode: 200,
@@ -153,15 +160,16 @@ const commit = withUpload(async (req, res) => {
   }
 });
 
-// GET /export?companyOrganizer=&menu= — CSV in the same format as the template
+// GET /export?companyOrganizer=&menu=&format=xlsx|csv — same layout as the template (v2)
 const exportItems = async (req, res) => {
   const company = requireCompany(req, res);
   if (!company) return undefined;
   try {
-    const csv = await importService.exportCsv({ companyOrganizer: company, menu: req.query.menu, timezone: req.user?.timezone });
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="pleis-menu-items-${new Date().toISOString().slice(0, 10)}.csv"`);
-    return res.send(csv);
+    const format = req.query.format === "csv" ? "csv" : "xlsx";
+    const { body, type, ext } = await importService.exportItems({ companyOrganizer: company, menu: req.query.menu, timezone: req.user?.timezone, format });
+    res.setHeader("Content-Type", type);
+    res.setHeader("Content-Disposition", `attachment; filename="pleis-menu-items-${new Date().toISOString().slice(0, 10)}.${ext}"`);
+    return res.send(body);
   } catch (error) {
     return fail(res, error);
   }

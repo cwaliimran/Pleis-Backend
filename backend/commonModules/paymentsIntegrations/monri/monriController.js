@@ -4,6 +4,7 @@ const { buildAuthorizationHeader } = require("./monriAuth");
 const { sendResponse } = require("../../../helperUtils/responseUtil");
 
 const monriRepository = require("./monriRepository");
+const { confirmMonriCapture } = require("./monriCaptureCheck");
 const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
 const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
 const { SubscriptionTypes } = require("../../../models/UserModel");
@@ -13,6 +14,7 @@ const {
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { UserReservations } = require("@UserReservationsModel");
 const MenuOrders = require("@OrdersModel");
+const mongoose = require("mongoose");
 const {
   fulfillMonriRedirectPayment,
 } = require("../paymentsWebhook/services/paymentWebhookService");
@@ -53,6 +55,65 @@ function normalizeDbPaymentMethod(paymentMethod) {
   if (paymentMethod === "apple-pay") return "applePay";
   if (paymentMethod === "google-pay") return "googlePay";
   return "card";
+}
+
+/** Euro amount → integer cents, safe for values like 3.675 (= 367.4999… in floating point). */
+const toCents = (value) => Math.round(Number((Number(value || 0) * 100).toFixed(6)));
+
+/**
+ * Monri v1.4 §3.1–3.2: the server is the only source of the amount. The order's
+ * total is computed by the backend when the order is placed; the amount the app
+ * sends for the payment link must equal that stored total, in cents, or no
+ * payment is created. Returns the verified amount in cents.
+ */
+async function assertAmountMatchesOrder(orderType, orderNumber, amountCents, userId) {
+  const fail = (code, statusCode = 400) => {
+    const err = new Error(code);
+    err.code = "PAYMENT_AMOUNT_CHECK";
+    err.statusCode = statusCode;
+    throw err;
+  };
+  if (!mongoose.Types.ObjectId.isValid(String(orderNumber))) fail("order_not_found", 404);
+
+  let expected;
+  let owner;
+  let alreadyPaid = false;
+  if (orderType === "menuorders") {
+    const order = await MenuOrders.findById(orderNumber).select("totalPrice user paymentStatus").lean();
+    if (!order) fail("order_not_found", 404);
+    expected = order.totalPrice;
+    owner = order.user;
+    alreadyPaid = order.paymentStatus === "paid";
+  } else if (orderType === "ticketingbookings") {
+    const order = await TicketingOrders.findById(orderNumber).select("orderPricing user paymentDetails.paymentStatus").lean();
+    if (!order) fail("order_not_found", 404);
+    expected = order.orderPricing?.total;
+    owner = order.user;
+    alreadyPaid = order.paymentDetails?.paymentStatus === "paid";
+  } else if (orderType === "userreservations") {
+    const reservation = await UserReservations.findById(orderNumber)
+      .select("amount priceBreakDown userId paymentDetails.paymentStatus")
+      .lean();
+    if (!reservation) fail("order_not_found", 404);
+    // amount = reservation after promo + pre-ordered menu items, paid together (reservationRepository).
+    expected = reservation.amount ?? reservation.priceBreakDown?.reservationFinalAmount;
+    owner = reservation.userId;
+    alreadyPaid = reservation.paymentDetails?.paymentStatus === "paid";
+  } else {
+    // combinedBooking / tickettransfer: no stored total wired yet — logged, see HANDOFF.md.
+    console.warn(`[monri] amount not verified for orderType=${orderType} orderNumber=${orderNumber}`);
+    return amountCents;
+  }
+
+  if (userId && owner && String(owner) !== String(userId)) fail("order_not_found", 404);
+  if (alreadyPaid) fail("order_already_paid", 409);
+  if (toCents(expected) !== Number(amountCents)) {
+    console.warn(
+      `[monri] amount mismatch ${orderType} ${orderNumber}: sent=${amountCents} stored=${toCents(expected)}`,
+    );
+    fail("payment_amount_mismatch", 409);
+  }
+  return toCents(expected);
 }
 
 async function assertBillkoReadyForMonriOrder(orderType, orderNumber) {
@@ -517,6 +578,26 @@ exports.handleSuccess = async (req, res) => {
     }
 
     const status = decision.action === "fulfill_failed" ? "failed" : "paid";
+
+    // #25 / Monri v1.4 §3.2: the success redirect is the client returning to the
+    // app. It never opens the document gate by itself: Monri is asked for the
+    // order's status first. Unconfirmed stays pending for the callback and the
+    // 15-minute reconcile job.
+    if (status === "paid" && tx.status !== "paid") {
+      const capture = await confirmMonriCapture(orderNumber, { persist: false });
+      if (!capture.confirmed) {
+        await monriRepository.updateTransaction(orderNumber, { rawCallback: payload });
+        return res.status(200).json({
+          message: "Payment pending",
+          orderNumber,
+          orderType: tx.orderType,
+          userId: tx.userId,
+          orderFulfilled: false,
+          fulfillReason: capture.reason,
+        });
+      }
+    }
+
     const update = {
       rawCallback: payload,
       ...(payload.approval_code && { approvalCode: payload.approval_code }),
@@ -723,6 +804,7 @@ exports.createWebPaySession = async (req, res) => {
       });
     }
 
+    await assertAmountMatchesOrder(orderType, orderNumber, amountNum, userId);
     await assertBillkoReadyForMonriOrder(orderType, orderNumber);
 
     // Normalize query paymentMethod to DB enum value
@@ -865,6 +947,14 @@ exports.createWebPaySession = async (req, res) => {
     return res.json(response);
   } catch (err) {
     console.error("❌ createWebPaySession failed:", err);
+
+    if (err.code === "PAYMENT_AMOUNT_CHECK") {
+      return sendResponse({
+        res,
+        statusCode: err.statusCode || 400,
+        translationKey: err.message,
+      });
+    }
 
     if (err.code === "ORDER_ALREADY_FINALIZED" || err.statusCode === 409) {
       return sendResponse({

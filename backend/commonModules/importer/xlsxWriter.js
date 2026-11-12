@@ -1,7 +1,7 @@
 /**
- * Minimal .xlsx writer (Node built-ins only): text cells, a bold frozen header row and
- * column widths. Enough for import templates and reference sheets that open in Excel,
- * Numbers and Google Sheets.
+ * Minimal .xlsx writer (Node built-ins only): text, number and time cells, a bold frozen
+ * header row, column widths and data validation (dropdowns / number / time). Enough for
+ * import templates and exports that open in Excel, Numbers and Google Sheets.
  */
 const zlib = require("zlib");
 
@@ -89,27 +89,71 @@ const colName = (i) => {
   return s;
 };
 
-const sheetXml = ({ rows, widths = [] }) => {
+/** Cell styles (index into cellXfs below). */
+const STYLE = { text: 0, header: 1, number: 2, time: 3, bold: 4 };
+
+/**
+ * A cell is a string (text), a number, or { v, type: "number" | "time" } — a time is the
+ * Excel fraction of a day (07:00 → 0.291666…), shown as hh:mm.
+ */
+const cellXml = (v, ref, rowStyle) => {
+  if (v === null || v === undefined || v === "") return "";
+  if (typeof v === "object" && !Array.isArray(v)) {
+    if (v.v === null || v.v === undefined || v.v === "") return "";
+    const s = v.type === "time" ? STYLE.time : STYLE.number;
+    return `<c r="${ref}" s="${s}"><v>${Number(v.v)}</v></c>`;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) return `<c r="${ref}"${rowStyle ? ` s="${rowStyle}"` : ""}><v>${v}</v></c>`;
+  return `<c r="${ref}" t="inlineStr"${rowStyle ? ` s="${rowStyle}"` : ""}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+};
+
+/**
+ * validations: [{ sqref: "B3:B2000", type: "list"|"decimal"|"time", formula1, formula2?, operator?, error? }]
+ * A list formula1 is a range such as 'Valid values'!$A$2:$A$686.
+ */
+const validationsXml = (validations = []) => {
+  if (!validations.length) return "";
+  const items = validations
+    .map((d) => {
+      const attrs = [
+        `type="${d.type}"`,
+        d.operator ? `operator="${d.operator}"` : "",
+        'allowBlank="1"',
+        'showErrorMessage="1"',
+        d.errorStyle ? `errorStyle="${d.errorStyle}"` : "",
+        d.error ? `errorTitle="Invalid value" error="${esc(d.error)}"` : "",
+        `sqref="${d.sqref}"`,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const f2 = d.formula2 !== undefined ? `<formula2>${esc(d.formula2)}</formula2>` : "";
+      return `<dataValidation ${attrs}><formula1>${esc(d.formula1)}</formula1>${f2}</dataValidation>`;
+    })
+    .join("");
+  return `<dataValidations count="${validations.length}">${items}</dataValidations>`;
+};
+
+/**
+ * headerRow: 0-based row shown bold and frozen with everything above it (default 0).
+ * boldRows: extra 0-based rows shown bold (e.g. the "menus" row above the header).
+ */
+const sheetXml = ({ rows, widths = [], headerRow = 0, boldRows = [], validations = [] }) => {
   const cols = widths.length
     ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>`
     : "";
   const body = rows
     .map((r, ri) => {
-      const cells = r
-        .map((v, ci) => {
-          if (v === null || v === undefined || v === "") return "";
-          const style = ri === 0 ? ' s="1"' : "";
-          return `<c r="${colName(ci)}${ri + 1}" t="inlineStr"${style}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
-        })
-        .join("");
+      const rowStyle = ri === headerRow ? STYLE.header : boldRows.includes(ri) ? STYLE.bold : 0;
+      const cells = r.map((v, ci) => cellXml(v, `${colName(ci)}${ri + 1}`, rowStyle)).join("");
       return `<row r="${ri + 1}">${cells}</row>`;
     })
     .join("");
+  const split = headerRow + 1;
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
-    `${cols}<sheetData>${body}</sheetData></worksheet>`
+    `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${split}" topLeftCell="A${split + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
+    `${cols}<sheetData>${body}</sheetData>${validationsXml(validations)}</worksheet>`
   );
 };
 
@@ -165,13 +209,17 @@ const buildXlsx = (sheets) => {
       data:
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+        '<numFmts count="1"><numFmt numFmtId="164" formatCode="hh:mm"/></numFmts>' +
         '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
         '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
         '<fill><patternFill patternType="solid"><fgColor rgb="FFEFEFEF"/><bgColor indexed="64"/></patternFill></fill></fills>' +
         '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
         '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-        '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
-        '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>' +
+        '<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+        '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
+        '<xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+        '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+        '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>' +
         "</styleSheet>",
     },
     ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(s) })),
@@ -179,4 +227,4 @@ const buildXlsx = (sheets) => {
   return zip(files);
 };
 
-module.exports = { buildXlsx };
+module.exports = { buildXlsx, colName };

@@ -179,6 +179,55 @@ const OrdersSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // #130: the recorded composition of the payment — what funded the order
+    // and with which amount. A voucher is a funding component, never the
+    // guest's declared method; the amounts sum exactly to the order total.
+    paymentComposition: {
+      type: [
+        {
+          _id: false,
+          type: { type: String, required: true }, // voucher | card | cash | cardTerminal | other | applePay | googlePay
+          amount: { type: Number, required: true },
+          reservation: { type: mongoose.Schema.Types.ObjectId, ref: "UserReservations", default: undefined },
+        },
+      ],
+      default: undefined,
+    },
+    // #129 / #130: Edit order before payment. Every edit keeps the actor, the
+    // time, the channel and the previous contents of the order (IAO-34).
+    editHistory: {
+      type: [
+        {
+          _id: false,
+          at: { type: Date, default: Date.now },
+          by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+          byName: { type: String, default: "" },
+          byRole: { type: String, default: "" },
+          via: { type: String, enum: ["mobile_staff_app", "web_admin_app"], default: "web_admin_app" },
+          changes: { type: [String], default: [] },
+          previous: { type: Object, default: {} },
+          next: { type: Object, default: {} },
+        },
+      ],
+      default: [],
+    },
+    // #89: Mark as Paid / Mark as Unpaid by staff, only where the venue collects
+    // the money. Records the payment type and the staff member who received it
+    // (Order Statuses v2.2.2 §3.2; Logging Schema v11.2 payment_log; IAO-32).
+    manualPaymentStatus: {
+      type: {
+        _id: false,
+        action: { type: String, enum: ["paid", "unpaidClosed"], required: true },
+        paymentMethod: { type: String, default: "" }, // cash | cardTerminal | other | voucher
+        paymentMethodLabel: { type: String, default: "" },
+        at: { type: Date, default: Date.now },
+        by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+        byName: { type: String, default: "" },
+        byRole: { type: String, default: "" },
+        via: { type: String, enum: ["mobile_staff_app", "web_admin_app"], default: "web_admin_app" },
+      },
+      default: undefined,
+    },
     updateHistory: {
       type: [
         {

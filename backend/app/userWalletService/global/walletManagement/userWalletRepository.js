@@ -13,6 +13,30 @@ const { NotificationTypes } = require("../../../../models/Notifications");
 const { getStatusLevels } = require("../../../globalLoyalty/statusLevels/globalStatusLevelsRepository");
 
 // ======================================================================
+// ASSIGN STARTER STATUS IF MISSING
+// Wallets created before admin configured any status level were stored with
+// global.level = null. On any later activity, give them the starter status.
+// Returns the assigned level (lean) when a wallet was updated, otherwise null.
+// ======================================================================
+const assignDefaultGlobalLevelIfMissing = async (userId, session = null) => {
+  const defaultStatus = await getFirstStatusLevel().catch(() => null);
+  if (!defaultStatus) return null;
+
+  const res = await UserGlobalWallet.updateOne(
+    { user: userId, "global.level": null },
+    {
+      $set: {
+        "global.level": defaultStatus._id,
+        "global.lastEvaluated": new Date(),
+      },
+    },
+    session ? { session } : {}
+  );
+
+  return res.modifiedCount ? defaultStatus : null;
+};
+
+// ======================================================================
 // CREATE WALLET IF NOT EXISTS
 // ======================================================================
 const createUserWallet = async (user, session) => {
@@ -23,7 +47,13 @@ const createUserWallet = async (user, session) => {
 
   // 1️⃣ Find wallet within the session
   let wallet = await UserGlobalWallet.findOne({ user: userId }).session(session);
-  if (wallet) return wallet;
+  if (wallet) {
+    if (!wallet.global?.level) {
+      const assigned = await assignDefaultGlobalLevelIfMissing(userId, session);
+      if (assigned) wallet.global.level = assigned._id;
+    }
+    return wallet;
+  }
 
   // 2️⃣ Fetch default status level
   let defaultStatus = await getFirstStatusLevel().catch(() => null);
@@ -65,6 +95,10 @@ const getUserWallet = async (user) => {
     return getUserWallet(userId);
   }
 
+  if (!wallet.global?.level && await assignDefaultGlobalLevelIfMissing(userId)) {
+    return getUserWallet(userId);
+  }
+
   // compute next status level for UI
   let nextStatus = null;
   if (wallet.global?.level?.entryPoints != null) {
@@ -99,6 +133,14 @@ const updateGlobalPoints = async ({
   }
 
   walletDoc.global.points = newBalance;
+
+  if (!walletDoc.global.level) {
+    const defaultStatus = await getFirstStatusLevel().catch(() => null);
+    if (defaultStatus) {
+      walletDoc.global.level = defaultStatus._id;
+      walletDoc.global.lastEvaluated = new Date();
+    }
+  }
 
   await walletDoc.save({ session });
 
@@ -141,9 +183,13 @@ const checkPromotionGlobal = async (userId, session = null) => {
     .populate("global.level")
     .session(session);
 
-  if (!wallet || !wallet.global.level) return;
+  if (!wallet) return;
 
-  const currentLevel = wallet.global.level;
+  const currentLevel =
+    wallet.global.level ||
+    await assignDefaultGlobalLevelIfMissing(userId, session);
+
+  if (!currentLevel) return;
 
   // all higher levels
   const levels =
@@ -247,9 +293,13 @@ const checkDemotionGlobal = async (userId, session = null) => {
     .populate("global.level")
     .session(session);
 
-  const currentLevel = wallet?.global?.level;
+  if (!wallet) return;
 
-  if (!wallet || !currentLevel) return;
+  const currentLevel =
+    wallet.global?.level ||
+    await assignDefaultGlobalLevelIfMissing(userId, session);
+
+  if (!currentLevel) return;
 
   // User still qualifies → no demotion
   if (earned12Months >= currentLevel.retainPoints) {
@@ -336,6 +386,7 @@ const getTotalRedeemPurchases = async (userId) => {
 };
 module.exports = {
   createUserWallet,
+  assignDefaultGlobalLevelIfMissing,
   updateGlobalPoints,
   getUserWallet,
   getTotalRedeemPurchases,

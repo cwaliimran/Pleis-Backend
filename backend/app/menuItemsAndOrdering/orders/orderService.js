@@ -10,6 +10,7 @@ const orderRepo = require("./orderRepository");
 const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
 const clubMemberRepo = require("../../loyalty/clubMembers/clubMembersRepository");
+const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
 
 const {
   menuItemOrderFormatter,
@@ -760,6 +761,13 @@ const updateOrder = async ({
       throw new Error("Order not found");
     }
 
+    // #129: once Paid nothing on the order is edited; the correction is a refund.
+    if (existingOrder.paymentStatus === "paid" || existingOrder.paymentStatus === "unpaidClosed") {
+      const err = new Error("order_locked_after_payment");
+      err.statusCode = 409;
+      throw err;
+    }
+
     // if (existingOrder.status !== "pending") {
     //   throw new Error("Only orders in pending state can be updated");
     // }
@@ -804,8 +812,10 @@ const updateOrder = async ({
           throw new Error("Invalid items in cart");
         }
         // Make sure all items belong to same organization
-        const itemOrganizationId =
+        const itemOrg =
           await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+        // The repository returns { organization, isOrderingEnabled }.
+        const itemOrganizationId = itemOrg?.organization ?? itemOrg;
 
         if (itemOrganizationId.toString() !== organizationId.toString()) {
           throw new Error(
@@ -1358,6 +1368,31 @@ const addMoreItemsToOrder = async ({
   return { order: formattedOrder };
 };
 
+/**
+ * Points actually credited for a menu order (#115) — what the guest received, so the
+ * app does not re-estimate them later with a different tier / happy hour or with the
+ * voucher draw-down counted as spend. Same shape as POST /loyalty/calculate-points.
+ * null until the payment has been finalized and points written.
+ */
+const getOrderLoyaltyEarned = async (orderId) => {
+  if (!mongoose.Types.ObjectId.isValid(String(orderId))) return null;
+  const rows = await UnifiedWalletTransactions.find({
+    domainType: "menuorders",
+    // entityId is Mixed (no casting) — match it whether stored as ObjectId or string
+    entityId: { $in: [new mongoose.Types.ObjectId(String(orderId)), String(orderId)] },
+    type: "earn",
+  })
+    .select("walletType points")
+    .lean();
+  if (!rows.length) return null;
+  const sum = (walletType) => rows.filter((r) => r.walletType === walletType).reduce((n, r) => n + Number(r.points?.total || 0), 0);
+  const multiplierOf = (walletType) => rows.find((r) => r.walletType === walletType)?.points?.multiplier || 1;
+  return {
+    global: { earnedPoints: sum("globalWallet"), globalMultiplier: multiplierOf("globalWallet") },
+    organizer: { earnedPoints: sum("companyLoyalty"), organizerMultiplier: multiplierOf("companyLoyalty") },
+  };
+};
+
 // 2️⃣ Get order by ID
 const getOrderDetails = async (orderId, timezone) => {
   let order = await orderRepo.getOrderById(orderId);
@@ -1386,6 +1421,7 @@ const getOrderDetails = async (orderId, timezone) => {
       lifetimePoints: wallet.lifetimePoints,
     };
   }
+  formattedOrder.loyaltyEarned = await getOrderLoyaltyEarned(order._id);
   return { order: formattedOrder };
 };
 
@@ -1423,6 +1459,11 @@ const cancelOrder = async (orderId) => {
 };
 
 module.exports = {
+  // shared with Edit order (#129 / #130)
+  assertPaymentMethodAllowed,
+  buildPricedMenuItemSnapshot,
+  buildOrderCombos,
+  orderNeedsConfirmation,
   placeOrder,
   updateOrder,
   getOrderDetails,

@@ -28,6 +28,8 @@ router.use("/locations", require("../shared/locations/routes"));
 
 //helper route for generating shareable links
 router.use("/share", require("./shareRoute"));
+// QR / share deep link open page: <API base>q/<token> (#59, #82, #84)
+router.use("/q", require("../commonModules/qrCode/qrLinkRoutes").qrLinkRouter);
 
 
 module.exports = router;

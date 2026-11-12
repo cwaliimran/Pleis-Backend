@@ -13,7 +13,42 @@ const { resolvePleisAppScheme } = require("../../config/CONSTANTS");
 const { renderSmartOpenHtml } = require("../../helperUtils/appDeepLinkUtil");
 
 
+const { resolveToken, getShareCodeByPublicId } = require("../../commonModules/qrCode/qrLinks");
+const createRateLimiter = require("../../helperUtils/rateLimiter");
+
 const router = express.Router();
+
+/**
+ * Resolves a QR / share deep link for the app (#82, #83).
+ *   GET /app/qr-code/resolve/<token>
+ *   GET /app/qr-code/resolve?type=event&id=<publicId>   (links sent before #83)
+ * → { type: organization|event|loyaltyClub|checkIn|table|reservation,
+ *     organizationId, venueId, eventId, loyaltyClubId, reservationId,
+ *     table: { deliveryOptionId, code, label } }
+ * 404 when the code is unknown or revoked.
+ */
+const sendResolved = (res, resolved) =>
+  resolved
+    ? sendResponse({ res, statusCode: 200, translationKey: "qr_code_resolved_successfully", data: resolved })
+    : sendResponse({ res, statusCode: 404, translationKey: "qr_code_not_valid" });
+
+router.get("/resolve/:token", createRateLimiter("QrResolve"), async (req, res) => {
+  try {
+    return sendResolved(res, await resolveToken(req.params.token));
+  } catch (err) {
+    return sendResponse({ res, statusCode: 500, translationKey: "internal_server_error", error: err });
+  }
+});
+
+router.get("/resolve", createRateLimiter("QrResolve"), async (req, res) => {
+  try {
+    const code = await getShareCodeByPublicId({ type: req.query.type, publicId: req.query.id });
+    return sendResolved(res, code ? await resolveToken(code.token) : null);
+  } catch (err) {
+    return sendResponse({ res, statusCode: 500, translationKey: "internal_server_error", error: err });
+  }
+});
+
 // ✅ Base web URL for universal links
 const BASE_WEB_URL = process.env.API_BASE_URL;
 

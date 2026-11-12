@@ -106,6 +106,9 @@ const updateOrders = async (req, res) => {
     noteForCancellation,
     paymentMethod,
     updateBy: req.user._id,
+    via: "mobile_staff_app",
+    byRole: "staff",
+    byName: `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim(),
   };
 
   try {

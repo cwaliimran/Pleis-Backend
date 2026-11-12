@@ -8,6 +8,24 @@ const {
 } = require("../../helperUtils/responseUtil");
 
 const UserBillingInformationService = require("./userBillingInformationService");
+const { isValidOib } = require("../../commonModules/paymentsIntegrations/ledger/ibanOibValidation");
+
+/**
+ * #67 / Billko v2.9 §2.1, §9.1: billing is a person (type 1) or a company (type 2).
+ * A company needs both companyName and a valid OIB (mod-11). Returns the
+ * normalized fields, or { error } with a translation key.
+ */
+const normalizeBillingParty = ({ type, companyName, personalIdentificationNumber, oib } = {}) => {
+  const rawType = String(type ?? "person").toLowerCase();
+  const isCompany = rawType === "company" || rawType === "2";
+  if (!["person", "company", "1", "2"].includes(rawType)) return { error: "billing_type_invalid" };
+  if (!isCompany) return { type: "person", companyName: "", personalIdentificationNumber: "" };
+  const name = typeof companyName === "string" ? companyName.trim() : "";
+  const id = String(personalIdentificationNumber ?? oib ?? "").replace(/\s+/g, "");
+  if (!name) return { error: "billing_company_name_required" };
+  if (!isValidOib(id)) return { error: "billing_oib_invalid" };
+  return { type: "company", companyName: name, personalIdentificationNumber: id };
+};
 
 
 
@@ -76,6 +94,13 @@ const createUserBillingInformation = async (req, res) => {
       });
     }
 
+    /* ================= PERSON / COMPANY (#67) ================= */
+
+    const party = normalizeBillingParty(req.body);
+    if (party.error) {
+      return sendResponse({ res, statusCode: 400, translationKey: party.error });
+    }
+
     /* ================= BUILD DATA ================= */
 
     const data = {
@@ -83,6 +108,8 @@ const createUserBillingInformation = async (req, res) => {
       email: email.trim().toLowerCase(), // Trim and lowercase the email
       firstName: firstName.trim(), // Trim the first name
       lastName: lastName.trim(), // Trim the last name
+      ...party,
+      ...(typeof req.body.phone === "string" && { phone: req.body.phone.trim() }),
       billingAddress: {
         address: billingAddress.address.trim(),
         city: billingAddress.city.trim(),
@@ -258,11 +285,22 @@ const updateUserBillingInformation = async (req, res) => {
 
 
 
+  /* ================= PERSON / COMPANY (#67) ================= */
+  const partyKeys = ["type", "companyName", "personalIdentificationNumber", "oib"];
+  if (partyKeys.some((key) => req.body[key] !== undefined)) {
+    const party = normalizeBillingParty(req.body);
+    if (party.error) {
+      return sendResponse({ res, statusCode: 400, translationKey: party.error });
+    }
+    Object.assign(data, party);
+  }
+  if (typeof req.body.phone === "string") data.phone = req.body.phone.trim();
+
   /* ================= UPDATE ================= */
   try {
-    const updated = await UserBillingInformationService.updateUserBillingInformation(id, data);
+    const updated = await UserBillingInformationService.updateUserBillingInformation(id, data, req.user._id);
 
-    if (!updated) {
+    if (!updated || updated.error) {
       return sendResponse({
         res,
         statusCode: 404,

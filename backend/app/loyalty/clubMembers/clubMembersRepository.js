@@ -65,6 +65,30 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
 
 
 // ==========================================================
+// ASSIGN STARTER TIER IF MISSING
+// Members who joined before admin configured any tier were stored with
+// level = null. On any later activity, give them the starter tier.
+// Returns the assigned tier (lean) when a member was updated, otherwise null.
+// ==========================================================
+const assignDefaultTierIfMissing = async (
+  userId,
+  companyOrganizer,
+  tierKey,
+  session = null
+) => {
+  const defaultTier = await TierRepo.getFirstTier(tierKey || "essential");
+  if (!defaultTier) return null;
+
+  const res = await ClubMembers.updateOne(
+    { user: userId, companyOrganizer, level: null },
+    { $set: { level: defaultTier._id, lastEvaluated: new Date() } },
+    session ? { session } : {}
+  );
+
+  return res.modifiedCount ? defaultTier : null;
+};
+
+// ==========================================================
 // ENSURE CLUB MEMBER WALLET EXISTS
 // ==========================================================
 const ensureClubMemberWallet = async (
@@ -100,6 +124,16 @@ const ensureClubMemberWallet = async (
     },
     options
   );
+
+  if (member && !member.level) {
+    const assigned = await assignDefaultTierIfMissing(
+      userId,
+      companyOrganizer,
+      member.tierKey,
+      session
+    );
+    if (assigned) member.level = assigned._id;
+  }
 
   await invalidateClubMemberCache(userId, companyOrganizer);
   return member;
@@ -166,10 +200,15 @@ const checkLoyaltyTierPromotion = async (
     options: session ? { session } : {},
   });
 
-  if (!member || !member.level) return;
+  if (!member) return;
 
   const tierKey = member.tierKey;
-  const currentLevel = member.level;
+  const currentLevel =
+    member.level ||
+    await assignDefaultTierIfMissing(userId, companyOrganizer, tierKey, session);
+
+  if (!currentLevel) return;
+
   const currentEntry =
     currentLevel[tierKey]?.entryPoints || 0;
 
@@ -265,10 +304,15 @@ const checkDemotion = async (
     options: session ? { session } : {},
   });
 
-  if (!member || !member.level) return;
+  if (!member) return;
 
   const tierKey = member.tierKey;
-  const currentLevel = member.level;
+  const currentLevel =
+    member.level ||
+    await assignDefaultTierIfMissing(userId, companyOrganizer, tierKey, session);
+
+  if (!currentLevel) return;
+
   const retainNeeded =
     currentLevel[tierKey]?.retainPoints || 0;
 
@@ -400,6 +444,15 @@ const updateUserCompanyPointsRepo = async ({
         success: false,
         message: "Insufficient company loyalty points."
       };
+    }
+
+    if (!updated.level) {
+      await assignDefaultTierIfMissing(
+        userId,
+        companyOrganizer,
+        updated.tierKey,
+        session
+      );
     }
 
     return {
@@ -925,5 +978,6 @@ module.exports = {
   getClubMembersForUsers,
   checkLoyaltyTierPromotion,
   checkDemotion,
+  assignDefaultTierIfMissing,
   getClosingBalance,
 };

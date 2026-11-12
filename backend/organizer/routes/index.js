@@ -34,6 +34,8 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/general", require("../generalAPIs/generalAPIRoutes"));
 router.use("/in-app-ordering", require("../../admin/inAppOrdering/inAppOrderingRoutes"));
 router.use("/transactions", require("../../admin/transactions/routes/unifiedTransactionsRoutes"));
+// Money transactions, organizer visibility (#8): own company, no SA figures
+router.use("/transaction-ledger", require("../../commonModules/paymentsIntegrations/ledger/transactionList/transactionListRoutes"));
 router.use("/notifications", require("../../admin/notifications/notificationsRoutes"))
 router.use("/reservations-analytics", require("../../admin/reservation/reservationAnalytics/reservationAnalyticsRoutes"));
 router.use("/preset-menu", require("../../admin/presetMenu/index"));

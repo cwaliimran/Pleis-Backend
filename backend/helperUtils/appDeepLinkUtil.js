@@ -3,6 +3,7 @@ const {
   resolvePleisAppScheme,
   resolvePleisIosStoreUrl,
   resolvePleisAndroidStoreUrl,
+  resolvePleisAndroidPackage,
 } = require("../config/CONSTANTS");
 
 function getStoreUrls() {
@@ -12,6 +13,24 @@ function getStoreUrls() {
     web: resolvePleisWeb(),
     scheme: resolvePleisAppScheme(),
   };
+}
+
+/**
+ * Android intent for an app-scheme link: Chrome opens the app when it is
+ * installed and goes to `fallbackUrl` (the Play Store) when it is not (#84).
+ * Nothing is passed through the install: there is no deferred deep link.
+ */
+function buildAndroidIntentUrl(appLink, fallbackUrl) {
+  const match = /^([a-z][a-z0-9+.-]*):\/\/(.*)$/i.exec(String(appLink || ""));
+  if (!match) return "";
+  const [, scheme, rest] = match;
+  const pkg = resolvePleisAndroidPackage();
+  return (
+    `intent://${rest}#Intent;scheme=${scheme};` +
+    (pkg ? `package=${pkg};` : "") +
+    (fallbackUrl ? `S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};` : "") +
+    "end"
+  );
 }
 
 /**
@@ -281,6 +300,7 @@ function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
     <script>
       (function () {
         const appLink = ${JSON.stringify(appLink)};
+        const androidIntent = ${JSON.stringify(buildAndroidIntentUrl(appLink, android))};
         const iosFallback = ${JSON.stringify(ios)};
         const androidFallback = ${JSON.stringify(android)};
         const displayTitle = ${JSON.stringify(safeTitle)};
@@ -301,7 +321,8 @@ function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
           leftPage = false;
           statusEl.innerHTML = '<span class="pulse" aria-hidden="true"></span>Opening <strong>' + displayTitle + '</strong>…';
           retryBtn.hidden = true;
-          window.location.href = appLink;
+          // Android: the intent opens the app, or the Play Store without it.
+          window.location.href = isAndroid && androidIntent ? androidIntent : appLink;
         }
 
         function showFallback() {
@@ -328,5 +349,6 @@ function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
 
 module.exports = {
   getStoreUrls,
+  buildAndroidIntentUrl,
   renderSmartOpenHtml,
 };

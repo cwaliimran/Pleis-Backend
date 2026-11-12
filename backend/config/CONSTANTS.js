@@ -84,6 +84,42 @@ function resolvePleisAndroidStoreUrl() {
   return envOr("PLEIS_ANDROID_STORE_URL", PLEIS_ANDROID_STORE_URL);
 }
 
+// App identity used for verified links (Android App Links / iOS Universal
+// Links) and for the Android "open app or store" intent (#82, #84).
+const PLEIS_ANDROID_PACKAGE = "com.Efuria.org";
+const PLEIS_IOS_APP_IDS = "BUKST6P34T.com.Efuria.org";
+
+/**
+ * Base of every QR / share deep link (#59, #82, #83): `<base>q/<token>`.
+ * PLEIS_LINK_BASE_URL is the Pleis link domain once it points at this server
+ * (e.g. https://go.pleis.hr/); until then the API base is used.
+ */
+function resolvePleisLinkBase() {
+  const base = envOr("PLEIS_LINK_BASE_URL", envOr("API_BASE_URL", ""));
+  if (!base) return "";
+  return base.endsWith("/") ? base : `${base}/`;
+}
+
+function resolvePleisAndroidPackage() {
+  return envOr("PLEIS_ANDROID_PACKAGE", PLEIS_ANDROID_PACKAGE);
+}
+
+/** SHA-256 fingerprints of the app signing certificates (Play Console → App signing), comma separated. */
+function resolvePleisAndroidCertFingerprints() {
+  return envOr("PLEIS_ANDROID_SHA256_FINGERPRINTS", "")
+    .split(",")
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+/** "<TEAM_ID>.<bundle id>" entries, comma separated. */
+function resolvePleisIosAppIds() {
+  return envOr("PLEIS_IOS_APP_IDS", PLEIS_IOS_APP_IDS)
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 function resolveMailgunApiBase() {
   return envOr("MAILGUN_BASE_URL", MAILGUN_API_BASE);
 }
@@ -151,6 +187,10 @@ module.exports = {
   resolvePleisAppScheme,
   resolvePleisIosStoreUrl,
   resolvePleisAndroidStoreUrl,
+  resolvePleisLinkBase,
+  resolvePleisAndroidPackage,
+  resolvePleisAndroidCertFingerprints,
+  resolvePleisIosAppIds,
   resolveMailgunApiBase,
   resolveFirebaseDatabaseUrl,
   resolveMailFrom,

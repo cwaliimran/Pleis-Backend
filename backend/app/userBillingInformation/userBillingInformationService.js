@@ -16,11 +16,11 @@ const getUserBillingInformations = async ({ timezone, page, limit, keyword, stat
     meta
   };
 };
-const updateUserBillingInformation = async (id, data) => {
+const updateUserBillingInformation = async (id, data, userId) => {
   const userBillingInformation = await UserBillingInformationRepo.findUserBillingInformationById(id);
 
-  
-  if (!userBillingInformation) {
+  // A guest edits only their own billing data.
+  if (!userBillingInformation || (userId && String(userBillingInformation.user) !== String(userId))) {
     return { error: "UserBillingInformation_not_found" };
   }
 
@@ -32,6 +32,11 @@ const updateUserBillingInformation = async (id, data) => {
     "status",
     "firstName",
     "lastName",
+    // #67: person / company, with company name and OIB (validated in the controller)
+    "type",
+    "companyName",
+    "personalIdentificationNumber",
+    "phone",
   ];
 
   /* ================= APPLY UPDATE FIELDS ================= */

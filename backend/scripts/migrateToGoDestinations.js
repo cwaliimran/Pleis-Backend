@@ -26,7 +26,7 @@ const CLOSED = ["completed", "cancelled", "canceled", "rejected", "delivered", "
   const plan = {
     deliveryOptions: await db.collection("deliveryoptions").countDocuments({ deliveryMethod: TOGO }),
     organizations: await db.collection("organizations").countDocuments({ "inAppOrderingSettings.deliveryMethods.toGo": true }),
-    openOrders: await db.collection("orders").countDocuments({ pickupType: TOGO, status: { $nin: CLOSED } }),
+    openOrders: await db.collection("menuorders").countDocuments({ pickupType: TOGO, status: { $nin: CLOSED } }),
   };
   console.log(`[#146] ${APPLY ? "APPLYING" : "DRY RUN"} on ${NODE_ENV}:`, plan);
   if (APPLY) {
@@ -35,7 +35,7 @@ const CLOSED = ["completed", "cancelled", "canceled", "rejected", "delivered", "
       { "inAppOrderingSettings.deliveryMethods.toGo": true },
       { $set: { "inAppOrderingSettings.deliveryMethods.toGo": false } }
     );
-    const r3 = await db.collection("orders").updateMany({ pickupType: TOGO, status: { $nin: CLOSED } }, { $set: { pickupType: null } });
+    const r3 = await db.collection("menuorders").updateMany({ pickupType: TOGO, status: { $nin: CLOSED } }, { $set: { pickupType: null } });
     console.log("[#146] updated:", { deliveryOptions: r1.modifiedCount, organizations: r2.modifiedCount, openOrders: r3.modifiedCount });
   }
   await mongoose.disconnect();

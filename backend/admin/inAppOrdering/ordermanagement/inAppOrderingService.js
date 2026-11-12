@@ -1,6 +1,9 @@
 const {
   buildPaymentMethodLabel,
+  enabledMethodsFor,
+  OFF_APP_METHODS,
 } = require("../../../commonModules/menuItemsAndOrders/paymentMethods");
+const { getSetttings } = require("../settings/setting/settingService");
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const OrdersRepo = require("./inAppOrderingRepository");
 const { NotificationTypes } = require("@NotificationsModel");
@@ -211,6 +214,58 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   }
 
   /* ===============================
+     1️⃣b PAYMENT METHOD (before payment; applied first so that
+     Mark as Paid in the same request records this type)
+  =============================== */
+  if (data.paymentMethod !== undefined && data.paymentMethod !== order.paymentMethod) {
+    // Staff may change the method before payment (Legal_req_features_2 §1);
+    // the recorded value follows, keeping the voucher part of a composite.
+    if (order.paymentStatus === "paid") {
+      const err = new Error("payment_method_locked_after_payment");
+      err.statusCode = 409;
+      throw err;
+    }
+    // #89 / #24: staff record a way the venue collected the money itself, and only
+    // one the venue has switched on. A Pleis payment is never set by hand.
+    if (!OFF_APP_METHODS.includes(data.paymentMethod)) {
+      return { error: "payment_method_not_available" };
+    }
+    const venueSetting = await getSetttings({ organization: order.organization });
+    if (!enabledMethodsFor(venueSetting).includes(data.paymentMethod)) {
+      return { error: "payment_method_not_available" };
+    }
+    const previousMethod = {
+      paymentMethod: order.paymentMethod,
+      paymentMethodLabel: order.paymentMethodLabel || "",
+      paymentComposition: order.paymentComposition || [],
+    };
+    const voucherAmount = Number(order.priceBreakdown?.voucherDiscount || 0);
+    order.paymentMethod = data.paymentMethod;
+    order.paymentMethodLabel = buildPaymentMethodLabel({
+      paymentMethod: data.paymentMethod,
+      voucherAmount,
+    });
+    // #130: recorded composition, voucher component + method, summing to the total.
+    order.paymentComposition = [
+      ...(voucherAmount > 0 ? [{ type: "voucher", amount: voucherAmount, reservation: order.reservation }] : []),
+      ...(Number(order.totalPrice) > 0 ? [{ type: data.paymentMethod, amount: Number(order.totalPrice) }] : []),
+    ];
+    order.editHistory = [
+      ...(order.editHistory || []),
+      {
+        at: new Date(),
+        by: updateBy,
+        via: data.via || "web_admin_app",
+        byRole: data.byRole || "",
+        changes: ["paymentMethod"],
+        previous: previousMethod,
+        next: { paymentMethod: order.paymentMethod, paymentMethodLabel: order.paymentMethodLabel },
+      },
+    ];
+    updateTypes.push("paymentMethod");
+  }
+
+  /* ===============================
      2️⃣ PAYMENT STATUS
   =============================== */
   if (data.paymentStatus !== undefined && data.paymentStatus !== order.paymentStatus) {
@@ -222,6 +277,18 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
 
     paymentChanged = true;
     updateTypes.push("payment");
+
+    // #89: who received the payment (or closed the walk-away), and as which type.
+    order.manualPaymentStatus = {
+      action: data.paymentStatus === "unpaidClosed" ? "unpaidClosed" : "paid",
+      paymentMethod: order.paymentMethod || "",
+      paymentMethodLabel: order.paymentMethodLabel || "",
+      at: new Date(),
+      by: updateBy || null,
+      byName: data.byName || "",
+      byRole: data.byRole || "",
+      via: data.via || "web_admin_app",
+    };
 
     if (data.paymentStatus === "paid") {
       markPaidViaFinalizer = (order.totalPrice || 0) > 0;
@@ -307,23 +374,10 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
     order.noteForCancellation = data.noteForCancellation;
     if (!updateTypes.includes("cancellation")) updateTypes.push("cancellation");
   }
-  if (data.paymentMethod !== undefined && data.paymentMethod !== order.paymentMethod) {
-    // Staff may change the method before payment (Legal_req_features_2 §1);
-    // the recorded value follows, keeping the voucher part of a composite.
-    if (order.paymentStatus === "paid") {
-      const err = new Error("payment_method_locked_after_payment");
-      err.statusCode = 409;
-      throw err;
-    }
-    order.paymentMethod = data.paymentMethod;
-    order.paymentMethodLabel = buildPaymentMethodLabel({
-      paymentMethod: data.paymentMethod,
-      voucherAmount: order.priceBreakdown?.voucherDiscount || 0,
-    });
-    updateTypes.push("paymentMethod");
-  }
-
   if (markPaidViaFinalizer) {
+    // The finalizer reads the order from the database: persist a method change
+    // made in this same request first, so the ledger row gets the recorded type.
+    if (updateTypes.includes("paymentMethod")) await order.save();
     await menuOrderFinalizerService({
       menuOrderId: order._id,
       result: {

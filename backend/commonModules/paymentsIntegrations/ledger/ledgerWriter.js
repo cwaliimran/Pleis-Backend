@@ -13,7 +13,17 @@ const EXCLUSION_REASONS = {
   OFF_APP_PAYMENT: "OFF_APP_PAYMENT",
 };
 
-const OFF_APP_PAYMENT_METHODS = new Set(["cash", "external", "pos", "offapp"]);
+// Money Pleis did not collect (Payout v10 §3.7): cash, the venue's own card
+// terminal and the Off App option "Other" (#68, order-settings prototype v2.3).
+// The recorded method decides the track at ingestion (#130).
+const OFF_APP_PAYMENT_METHODS = new Set([
+  "cash",
+  "cardterminal",
+  "other",
+  "external",
+  "pos",
+  "offapp",
+]);
 
 function hashPayload(payload) {
   if (!payload) return "";

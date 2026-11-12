@@ -1093,11 +1093,14 @@ const logout = async (req, res) => {
     const { deviceId } = req.body;
     const userId = req.user._id;
 
-    // Use $pull to remove the specific device from the devices array
-    await Devices.updateOne(
-      { userId: userId }, // Find the user by userId
-      { $pull: { devices: { deviceId: deviceId } } } // Remove the device with matching deviceId
-    );
+    // Stop pushes for this account on this phone: remove only the token the
+    // app sends. Without one, leave the user's other devices untouched.
+    if (typeof deviceId === "string" && deviceId.trim()) {
+      await Devices.updateOne(
+        { userId: userId },
+        { $pull: { devices: { deviceId: deviceId.trim() } } },
+      );
+    }
 
     return sendResponse({
       res,
