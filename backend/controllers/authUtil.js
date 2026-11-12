@@ -70,10 +70,9 @@ const registerUserUtility = async (req, res, options = {}) => {
     }
     if (userType === "organizer") {
       rawData.push("organizationName", "phoneNumber", "companyDetails");
-      // Public signup stays pending for admin review; admin-created (autoVerify) is active
-      if (!autoVerify) {
-        verificationStatus = "pending";
-      }
+      // Every organizer starts pending for admin review, including ones the admin creates
+      // (autoVerify only marks the email as verified).
+      verificationStatus = "pending";
     }
 
     const allowedUserTypes = [
