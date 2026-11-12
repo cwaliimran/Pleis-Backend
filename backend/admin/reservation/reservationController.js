@@ -574,20 +574,21 @@ const getUserReservations = async (req, res) => {
 
 const updateUserReservationStatus = async (req, res) => {
   const { id, value } = req.params;
-  const changedBy = req.user._id;
+  // Managers act on behalf of their organizer; keep the real person for the audit (IAO-34).
+  const changedBy = req.user.originalUserId || req.user._id;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
       enumFields: {
+        // Lifecycle per Requirement Set #54 / prototype v3.2. Completed is removed.
         value: [
           "pendingPayment",
-          "needsConfirmation",
           "confirmed",
           "checkedIn",
+          "noShow",
           "rejected",
           "cancelled",
-          "completed",
         ],
       },
     })
@@ -595,17 +596,26 @@ const updateUserReservationStatus = async (req, res) => {
     return;
 
   try {
-    const userReservation =
-      await reservationService.updateUserReservationStatus(
-        id,
-        value,
-        changedBy,
-      );
-    if (!userReservation) {
+    const isStaff = req.user.userType === "staff";
+    let organizationIds = null;
+    if (isStaff) {
+      const { getOrganizationsAsStaff } = require("../../staff/organizations/organizationService");
+      const orgs = (await getOrganizationsAsStaff(req.user._id)) || [];
+      organizationIds = orgs.map((org) => String(org._id));
+    }
+
+    const result = await reservationService.updateUserReservationStatus(id, value, changedBy, {
+      companyOrganizer: req.user.userType === "organizer" ? req.user._id : null,
+      organizationIds,
+      via: isStaff ? "staff" : "admin",
+    });
+
+    if (!result.ok) {
       return sendResponse({
         res,
-        statusCode: 404,
-        translationKey: "Reservation_not_found",
+        statusCode: result.statusCode,
+        translationKey: result.translationKey,
+        data: result.values,
       });
     }
 
@@ -613,6 +623,7 @@ const updateUserReservationStatus = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "Reservation_updated_successfully",
+      data: { _id: result.reservation._id, status: result.reservation.status },
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -652,6 +663,7 @@ const updateUserReservation = async (req, res) => {
 
   let data = {
     id,
+    userId: req.user._id,
     firstName,
     lastName,
     email,

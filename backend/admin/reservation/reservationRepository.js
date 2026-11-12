@@ -317,6 +317,7 @@ const getUserReservations = async ({
       "needsConfirmation",
       "confirmed",
       "checkedIn",
+      "noShow",
       "rejected",
       "cancelled",
       "completed",
@@ -1484,7 +1485,7 @@ const checkReservationAvailabilityForUpdate = async ({
     return { allowed: false, message: "Reservation not found" };
   }
 
-  if (["cancelled", "completed", "rejected", "deleted"].includes(existing.status)) {
+  if (["cancelled", "completed", "rejected", "deleted", "checkedIn", "noShow"].includes(existing.status)) {
     return { allowed: false, message: `A ${existing.status} reservation cannot be updated` };
   }
 

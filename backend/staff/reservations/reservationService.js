@@ -4,6 +4,9 @@ const { UserReservations } = require("@UserReservationsModel");
 const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
 const ReservationRepo = require("./reservationRepository");
+const {
+  changeReservationStatus,
+} = require("../../commonModules/reservations/reservationStatusService");
 const { getActiveEventsForOrg } = require("../../admin/events/eventRepository");
 const {
   maybeSendFreeReservationConfirmation,
@@ -23,106 +26,9 @@ const createReservation = async (data) => {
   return Reservation;
 };
 
-const updateReservationStatus = async (id, status) => {
-  const existing = await UserReservations.findById(id)
-    .select("status userId amount")
-    .lean();
-  if (!existing) return null;
-
-  // Approving a prepaid / min-spend hold: collect payment before confirmed.
-  let nextStatus = status;
-  const update = { status: nextStatus };
-  if (
-    status === "confirmed" &&
-    existing.status === "needsConfirmation" &&
-    Number(existing.amount || 0) > 0
-  ) {
-    nextStatus = "pendingPayment";
-    update.status = nextStatus;
-    update.lockUntil = new Date(Date.now() + 30 * 60 * 1000);
-  } else if (nextStatus === "pendingPayment") {
-    update.lockUntil = new Date(Date.now() + 30 * 60 * 1000);
-  }
-
-  const updated = await ReservationRepo.findByIdAndUpdate(id, update);
-  if (!updated) return null;
-
-  if (nextStatus === "confirmed") {
-    fireAndForget(
-      maybeSendFreeReservationConfirmation(updated._id),
-      "PLAIN_FREE_RESERVATION_CONFIRMATION",
-    );
-  }
-
-  if (nextStatus === "checkedIn") {
-    // Handle checked-in logic if needed
-    fireAndForget(
-      (async () => {
-        const reservation = updated;
-        const now = new Date();
-
-        let events = [];
-
-        // 1️⃣ If explicitly linked event exists
-        if (reservation.optionalEventId) {
-          events = [
-            {
-              _id: reservation.optionalEventId,
-              companyOrganizer: reservation.companyOrganizer,
-            },
-          ];
-        } else {
-          // 2️⃣ fallback → find active events
-          events = await getActiveEventsForOrg(
-            reservation.organizationId,
-            now
-          );
-        }
-
-        if (!events.length) return;
-
-        const userId = reservation.userId;
-
-        if (!userId) return;
-
-        const ops = events.map((event) => ({
-          updateOne: {
-            filter: {
-              event: event._id,
-              user: userId,
-            },
-            update: {
-              $setOnInsert: {
-                organization: reservation.organizationId,
-                companyOrganizer: event.companyOrganizer,
-                source: "reservation",
-                checkedInAt: now,
-              },
-            },
-            upsert: true,
-          },
-        }));
-
-        await EventCheckins.bulkWrite(ops, { ordered: false });
-      })(),
-      "RESERVATION_EVENT_CHECKIN"
-    );
-
-  }
-
-  if (updated.userId && existing?.status !== nextStatus) {
-    fireAndForget(
-      sendReservationNotification({
-        reservationId: updated._id,
-        action: resolveReservationStatusAction(nextStatus),
-        context: { status: nextStatus },
-      }),
-      `RESERVATION_${String(nextStatus).toUpperCase()}_NOTIFICATION`,
-    );
-  }
-
-  return true;
-};
+// Lifecycle, audit and notifications live in the shared status service (#54, #92, #93).
+const updateReservationStatus = async (id, status, { actorId = null, organizationIds = null } = {}) =>
+  changeReservationStatus({ id, status, actorId, via: "staff", organizationIds });
 
 const getUserBookingsByDate = async ({ date, status, timezone }) => {
   const bookings = await ReservationRepo.getUserBookingsByDate({

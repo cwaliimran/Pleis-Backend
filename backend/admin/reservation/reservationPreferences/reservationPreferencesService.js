@@ -24,6 +24,7 @@ const updateReservationPreferences = async (id, data) => {
     "timeSlotsSetting",
     "automaticResponse",
     "cancellationPolicy",
+    "noShowPolicy",
     "organization",
   ];
 

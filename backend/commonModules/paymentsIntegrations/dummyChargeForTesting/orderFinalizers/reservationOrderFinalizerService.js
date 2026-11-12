@@ -328,9 +328,10 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       fireAndForget(
         sendReservationNotification({
           reservationId: userReservation._id,
-          action: "RESERVATION_CONFIRMED",
+          // D-04: Awaiting payment → Confirmed is "Deposit paid"
+          action: "RESERVATION_DEPOSIT_PAID",
         }),
-        "RESERVATION_CONFIRMED_NOTIFICATION",
+        "RESERVATION_DEPOSIT_PAID_NOTIFICATION",
       );
     }
 

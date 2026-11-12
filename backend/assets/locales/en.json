@@ -910,5 +910,10 @@
   "refund_failed": "Refund failed",
   "card_not_found": "Card not found",
   "billing_information_not_found": "Billing information not found",
-  "payment_failed": "Payment failed"
+  "payment_failed": "Payment failed",
+  "reservation_status_unchanged": "The reservation already has this status.",
+  "reservation_status_final": "This reservation has ended and its status can no longer be changed.",
+  "reservation_status_transition_not_allowed": "This status change is not allowed for the reservation's current status.",
+  "reservation_no_show_too_early": "No-show can be marked only after the grace period following the reservation time.",
+  "invalid_no_show_grace_period": "No-show grace period must be 15, 30, 45 or 60 minutes."
 }

@@ -46,6 +46,14 @@ const {
   formatReservationDates,
 } = require("./formatters/reservationDateFormatter");
 const { checkReservationAvailability } = require("../../app/reservations/reservationRepository");
+const {
+  changeReservationStatus,
+} = require("../../commonModules/reservations/reservationStatusService");
+const {
+  validateManualTransition,
+  resolveGraceMinutes,
+  getNoShowAvailableAt,
+} = require("../../commonModules/reservations/reservationLifecycle");
 
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
@@ -279,119 +287,20 @@ const getUserReservations = async ({
   };
 };
 
-const updateUserReservationStatus = async (id, value, changedBy) => {
-  const now = new Date();
-
-  const userReservation = await UserReservations.findById(id);
-  if (!userReservation) return null;
-
-  // Approving a prepaid / min-spend hold: collect payment before confirmed.
-  let nextStatus = value;
-  let lockUntil = null;
-  if (
-    value === "confirmed" &&
-    userReservation.status === "needsConfirmation" &&
-    Number(userReservation.amount || 0) > 0
-  ) {
-    nextStatus = "pendingPayment";
-    lockUntil = new Date(Date.now() + 30 * 60 * 1000);
-  } else if (nextStatus === "pendingPayment") {
-    lockUntil = new Date(Date.now() + 30 * 60 * 1000);
-  }
-
-  const updated = await UserReservations.findByIdAndUpdate(
+const updateUserReservationStatus = async (
+  id,
+  value,
+  changedBy,
+  { companyOrganizer = null, organizationIds = null, via = "admin" } = {},
+) =>
+  changeReservationStatus({
     id,
-    {
-      $set: {
-        status: nextStatus,
-        ...(lockUntil ? { lockUntil } : {}),
-      },
-      $push: {
-        reservationChanges: {
-          changedBy: changedBy ? new mongoose.Types.ObjectId(changedBy) : null,
-          action: "reservationStatusChanged",
-          oldValue: userReservation.status,
-          newValue: nextStatus,
-          reason: "Reservation status updated by organizer",
-          createdAt: now,
-        },
-      },
-    },
-    {
-      new: true,
-      runValidators: true,
-    },
-  );
-
-  if (!updated) return null;
-
-  if (nextStatus === "confirmed") {
-    const {
-      maybeSendFreeReservationConfirmation,
-    } = require("../../helperUtils/plainConfirmationEmailService");
-    fireAndForget(
-      maybeSendFreeReservationConfirmation(updated._id),
-      "PLAIN_FREE_RESERVATION_CONFIRMATION",
-    );
-  }
-
-  if (nextStatus === "checkedIn") {
-    fireAndForget(
-      (async () => {
-        const reservation = updated;
-
-        let events = [];
-
-        if (reservation.optionalEventId) {
-          events = [
-            {
-              _id: reservation.optionalEventId,
-              companyOrganizer: reservation.companyOrganizer,
-            },
-          ];
-        } else {
-          events = await getActiveEventsForOrg(reservation.organizationId, now);
-        }
-
-        if (!events.length || !reservation.userId) return;
-
-        const ops = events.map((event) => ({
-          updateOne: {
-            filter: {
-              event: event._id,
-              user: reservation.userId,
-            },
-            update: {
-              $setOnInsert: {
-                organization: reservation.organizationId,
-                companyOrganizer: event.companyOrganizer,
-                source: "reservation",
-                checkedInAt: now,
-              },
-            },
-            upsert: true,
-          },
-        }));
-
-        await EventCheckins.bulkWrite(ops, { ordered: false });
-      })(),
-      "RESERVATION_EVENT_CHECKIN",
-    );
-  }
-
-  //notify user about every reservation status change
-  if (updated.userId && userReservation.status !== nextStatus) {
-    fireAndForget(
-      sendReservationNotification({
-        reservationId: updated._id,
-        action: resolveReservationStatusAction(nextStatus),
-        context: { status: nextStatus },
-      }),
-      `RESERVATION_${String(nextStatus).toUpperCase()}_NOTIFICATION`,
-    );
-  }
-  return true;
-};
+    status: value,
+    actorId: changedBy,
+    via,
+    companyOrganizer,
+    organizationIds,
+  });
 
 const updateUserReservation = async (data) => {
   const UserReservation = await ReservationRepo.findUserReservationById(
@@ -412,10 +321,41 @@ const updateUserReservation = async (data) => {
     "conditionType",
     "amount",
     "email",
-    "status",
   ];
 
   const previousStatus = UserReservation.status;
+
+  // Status changes from the edit form follow the same lifecycle as the row actions
+  // (prototype v3.2: the status field offers only the transitions allowed from
+  // the current status). Validate up front so nothing is saved on a refused change.
+  const requestedStatus =
+    data.status !== undefined && data.status !== null && data.status !== previousStatus
+      ? data.status
+      : null;
+  if (requestedStatus) {
+    let graceMinutes;
+    if (requestedStatus === "noShow") {
+      const ReservationPreferences = require("@ReservationPreferencesModel");
+      const prefs = await ReservationPreferences.findOne({
+        organization: UserReservation.organizationId,
+      })
+        .select("noShowPolicy")
+        .lean();
+      graceMinutes = resolveGraceMinutes(prefs);
+    }
+    const effectiveStatus =
+      requestedStatus === "confirmed" &&
+      previousStatus === "needsConfirmation" &&
+      Number(UserReservation.amount || 0) > 0
+        ? "pendingPayment"
+        : requestedStatus;
+    const check = validateManualTransition({
+      reservation: UserReservation,
+      nextStatus: effectiveStatus,
+      graceMinutes,
+    });
+    if (!check.ok) return { error: check.translationKey };
+  }
   const previousSnapshot = {
     firstName: UserReservation.firstName,
     lastName: UserReservation.lastName,
@@ -501,8 +441,18 @@ const updateUserReservation = async (data) => {
 
   await UserReservation.save();
 
-  const statusChanged =
-    data.status !== undefined && previousStatus !== UserReservation.status;
+  let statusChanged = false;
+  if (requestedStatus) {
+    const statusResult = await changeReservationStatus({
+      id: UserReservation._id,
+      status: requestedStatus,
+      actorId: data.userId || null,
+      via: "admin",
+    });
+    if (!statusResult.ok) return { error: statusResult.translationKey };
+    UserReservation.status = statusResult.reservation.status;
+    statusChanged = true;
+  }
 
   const detailsChanged = Object.keys(previousSnapshot).some((key) => {
     if (key === "status") return false;
@@ -517,17 +467,9 @@ const updateUserReservation = async (data) => {
   // -----------------------------
   // Notify user (status > timing > details)
   // -----------------------------
-  if (UserReservation.userId && (statusChanged || timingChanged || detailsChanged)) {
-    if (statusChanged) {
-      fireAndForget(
-        sendReservationNotification({
-          reservationId: UserReservation._id,
-          action: resolveReservationStatusAction(UserReservation.status),
-          context: { status: UserReservation.status },
-        }),
-        `RESERVATION_${String(UserReservation.status).toUpperCase()}_NOTIFICATION`,
-      );
-    } else if (timingChanged) {
+  // The status notification (D-04) is sent by changeReservationStatus.
+  if (UserReservation.userId && !statusChanged && (timingChanged || detailsChanged)) {
+    if (timingChanged) {
       fireAndForget(
         sendReservationNotification({
           reservationId: UserReservation._id,
@@ -877,10 +819,46 @@ const getReservationsV2 = async ({
     endTime,
   });
 
+  reservations = await attachNoShowAvailability(reservations);
+
   return {
     reservations: formatReservationDates(reservations, timezone),
     meta,
   };
+};
+
+/**
+ * #93: tells the list when "Mark as no-show" becomes available
+ * (slot start + the venue's No-show policy grace period).
+ */
+const attachNoShowAvailability = async (reservations = []) => {
+  const confirmed = reservations.filter((r) => r.status === "confirmed");
+  if (!confirmed.length) return reservations;
+
+  const ReservationPreferences = require("@ReservationPreferencesModel");
+  const orgIds = [
+    ...new Set(
+      confirmed.map((r) => String(r.organizationId?._id || r.organizationId || "")).filter(Boolean),
+    ),
+  ].map((id) => new mongoose.Types.ObjectId(id));
+  const prefs = await ReservationPreferences.find({ organization: { $in: orgIds } })
+    .select("organization noShowPolicy")
+    .lean();
+  const graceByOrg = new Map(prefs.map((p) => [String(p.organization), resolveGraceMinutes(p)]));
+
+  const now = new Date();
+  return reservations.map((r) => {
+    if (r.status !== "confirmed") return r;
+    const orgId = String(r.organizationId?._id || r.organizationId || "");
+    const graceMinutes = graceByOrg.get(orgId) ?? resolveGraceMinutes(null);
+    const availableAt = getNoShowAvailableAt(r, graceMinutes);
+    return {
+      ...r,
+      noShowGraceMinutes: graceMinutes,
+      noShowAvailableAt: availableAt,
+      canMarkNoShow: Boolean(availableAt && now >= availableAt),
+    };
+  });
 };
 
 const getWeekRange = (date, timezone) => {

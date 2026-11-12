@@ -42,7 +42,7 @@ const getReservationPreferencess = async (req, res) => {
 };
 const updateReservationPreferences = async (req, res) => {
   const { id } = req.params;
-  let { companyOrganizer, isReservationEnabled, timeSlotsSetting, automaticResponse, cancellationPolicy } = req.body;
+  let { companyOrganizer, isReservationEnabled, timeSlotsSetting, automaticResponse, cancellationPolicy, noShowPolicy } = req.body;
   const organization = id;
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
@@ -55,6 +55,18 @@ const updateReservationPreferences = async (req, res) => {
     });
   }
 
+  if (noShowPolicy !== undefined) {
+    const grace = Number(noShowPolicy?.gracePeriodMinutes);
+    if (![15, 30, 45, 60].includes(grace)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_no_show_grace_period",
+      });
+    }
+    noShowPolicy = { gracePeriodMinutes: grace };
+  }
+
   const user = req.user._id;
   const timezone = req.user.timezone;
 
@@ -64,6 +76,7 @@ const updateReservationPreferences = async (req, res) => {
     timeSlotsSetting,
     automaticResponse,
     cancellationPolicy,
+    noShowPolicy,
     organization,
   };
 

@@ -60,6 +60,16 @@ const ReservationPreferencesSchema = new mongoose.Schema(
         default: 0,
       },
     },
+    // #93 / Reservations prototype v3.2: staff may mark a Confirmed reservation
+    // as No-show only once this grace period after the slot start has passed.
+    // No-show is never set automatically.
+    noShowPolicy: {
+      gracePeriodMinutes: {
+        type: Number,
+        enum: [15, 30, 45, 60],
+        default: 30,
+      },
+    },
   },
   {
     timestamps: true,
