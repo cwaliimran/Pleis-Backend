@@ -103,11 +103,20 @@ const OrdersSchema = new mongoose.Schema(
 
     notes: { type: String, default: "" },
 
+    // #68 / Legal_req_features_2 §1: the method the guest picked on the order
+    // confirmation screen. Pleis (Monri): card, applePay, googlePay. At the
+    // venue: cash, cardTerminal, other. voucher = voucher covered the whole order.
     paymentMethod: {
       type: String,
       required: true,
-      enum: ["applePay", "card", "cash"],
+      enum: ["applePay", "card", "googlePay", "cash", "cardTerminal", "other", "voucher"],
       default: "card",
+    },
+    // Recorded payment method value, identical everywhere it is shown:
+    // "Card", "Cash", "Other - Voucher", "Other - Voucher + Card" …
+    paymentMethodLabel: {
+      type: String,
+      default: "",
     },
     //with payLater user can add more items to cart
     // for applePay/card order can't be cancelled

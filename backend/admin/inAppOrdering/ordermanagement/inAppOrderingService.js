@@ -1,3 +1,6 @@
+const {
+  buildPaymentMethodLabel,
+} = require("../../../commonModules/menuItemsAndOrders/paymentMethods");
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const OrdersRepo = require("./inAppOrderingRepository");
 const { NotificationTypes } = require("@NotificationsModel");
@@ -305,7 +308,18 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
     if (!updateTypes.includes("cancellation")) updateTypes.push("cancellation");
   }
   if (data.paymentMethod !== undefined && data.paymentMethod !== order.paymentMethod) {
+    // Staff may change the method before payment (Legal_req_features_2 §1);
+    // the recorded value follows, keeping the voucher part of a composite.
+    if (order.paymentStatus === "paid") {
+      const err = new Error("payment_method_locked_after_payment");
+      err.statusCode = 409;
+      throw err;
+    }
     order.paymentMethod = data.paymentMethod;
+    order.paymentMethodLabel = buildPaymentMethodLabel({
+      paymentMethod: data.paymentMethod,
+      voucherAmount: order.priceBreakdown?.voucherDiscount || 0,
+    });
     updateTypes.push("paymentMethod");
   }
 

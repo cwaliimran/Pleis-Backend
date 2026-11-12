@@ -915,5 +915,9 @@
   "reservation_status_final": "This reservation has ended and its status can no longer be changed.",
   "reservation_status_transition_not_allowed": "This status change is not allowed for the reservation's current status.",
   "reservation_no_show_too_early": "No-show can be marked only after the grace period following the reservation time.",
-  "invalid_no_show_grace_period": "No-show grace period must be 15, 30, 45 or 60 minutes."
+  "invalid_no_show_grace_period": "No-show grace period must be 15, 30, 45 or 60 minutes.",
+  "at_least_one_payment_method_required": "Enable at least one payment method: Pleis Payment, Cash, Card or Other.",
+  "payment_method_not_available": "This payment method is no longer available at this venue. Please choose another one.",
+  "payment_method_locked_after_payment": "The payment method can't be changed after the order is paid.",
+  "voucher_no_longer_covers_order": "Your voucher no longer covers the whole order. Please choose how to pay the rest."
 }

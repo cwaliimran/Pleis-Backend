@@ -1,3 +1,10 @@
+const {
+  VOUCHER_METHOD,
+  isPleisMethod,
+  isOffAppMethod,
+  enabledMethodsFor,
+  buildPaymentMethodLabel,
+} = require("../../../commonModules/menuItemsAndOrders/paymentMethods");
 const MenuItemsModel = require("@MenuItemsModel");
 const orderRepo = require("./orderRepository");
 const menuItemRepo = require("../menuItems/menuItemsRepository");
@@ -71,27 +78,18 @@ const {
 
 const assertPaymentMethodAllowed = (setting, paymentMethod, paymentTiming) => {
   const methods = setting?.paymentMethod || {};
-  if (paymentMethod === "cash" && methods.cash !== true) {
-    const err = new Error("Cash payment is not enabled for this organization");
+  // A voucher covering the whole order needs no method (Legal_req_features_2 §1).
+  if (paymentMethod === VOUCHER_METHOD) return;
+
+  // #68: the guest's method must be one the venue has enabled. The app shows
+  // this message and refreshes the list when a method was switched off meanwhile.
+  if (!enabledMethodsFor(setting).includes(paymentMethod)) {
+    const err = new Error("payment_method_not_available");
     err.statusCode = 400;
     throw err;
   }
-  if (
-    (paymentMethod === "card" || paymentMethod === "applePay") &&
-    methods.inAppPayment !== true
-  ) {
-    const err = new Error(
-      "In-app payment is not enabled for this organization",
-    );
-    err.statusCode = 400;
-    throw err;
-  }
-  // payNow setting: card/Apple Pay must settle up front; payLater timing only when payNow is off
-  if (
-    (paymentMethod === "card" || paymentMethod === "applePay") &&
-    paymentTiming === "payLater" &&
-    methods.payNow === true
-  ) {
+  // payNow setting: in-app methods must settle up front; payLater timing only when payNow is off
+  if (isPleisMethod(paymentMethod) && paymentTiming === "payLater" && methods.payNow === true) {
     const err = new Error(
       "Pay later is not enabled for in-app payments at this organization",
     );
@@ -99,7 +97,7 @@ const assertPaymentMethodAllowed = (setting, paymentMethod, paymentTiming) => {
     throw err;
   }
   if (
-    (paymentMethod === "card" || paymentMethod === "applePay") &&
+    isPleisMethod(paymentMethod) &&
     paymentTiming === "payNow" &&
     methods.payNow !== true &&
     methods.inAppPayment === true
@@ -517,8 +515,22 @@ const placeOrder = async ({
 
     const setting = await getSetttings({ organization: organizationId });
     const methods = setting?.paymentMethod || {};
-    const isOnlinePayment =
-      paymentMethod === "applePay" || paymentMethod === "card";
+    // Tips are not covered by the reservation voucher (org setting comment).
+    totalPrice += Number(tip || 0);
+
+    // Legal_req_features_2 §1: a voucher covering the whole order shows no method
+    // selector; it is completed as voucher payment ("Other - Voucher").
+    if (voucherAmount > 0 && Number(totalPrice) <= 0) {
+      paymentMethod = VOUCHER_METHOD;
+    } else if (paymentMethod === VOUCHER_METHOD) {
+      // The voucher no longer covers the whole order (balance changed meanwhile):
+      // the guest gets the new totals and picks a method for the rest.
+      const err = new Error("voucher_no_longer_covers_order");
+      err.statusCode = 409;
+      throw err;
+    }
+
+    const isOnlinePayment = isPleisMethod(paymentMethod);
     // Org setting owns timing for in-app methods (client must not invent payLater when payNow is on)
     const resolvedPaymentTiming = isOnlinePayment
       ? methods.payNow === true
@@ -527,8 +539,6 @@ const placeOrder = async ({
       : paymentTiming || "payLater";
 
     assertPaymentMethodAllowed(setting, paymentMethod, resolvedPaymentTiming);
-    // Tips are not covered by the reservation voucher (org setting comment).
-    totalPrice += Number(tip || 0);
     let orderData = {
       user: userId,
       organization: organizationId,
@@ -549,6 +559,7 @@ const placeOrder = async ({
       },
       notes,
       paymentMethod,
+      paymentMethodLabel: buildPaymentMethodLabel({ paymentMethod, voucherAmount }),
       pickupType: deliveryOptionData?.deliveryMethod || pickupType,
       tableNumber,
       deliveryOption,
@@ -1289,7 +1300,8 @@ const addMoreItemsToOrder = async ({
   if (order.status === "cancelled")
     throw new Error("Cannot add items to a cancelled order");
 
-  if (order.paymentMethod !== "cash")
+  // Open bills are settled at the venue: cash, venue card terminal or other.
+  if (!isOffAppMethod(order.paymentMethod))
     throw new Error("Cannot add items to this order");
 
   // 2️⃣ Fetch menu items

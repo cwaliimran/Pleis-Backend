@@ -19,6 +19,39 @@ const {
   pastOnOrderBoardMatch,
 } = require("../../../commonModules/menuItemsAndOrders/orderLifecycle");
 
+
+// #68 / Legal_req_features_2 §1: recorded payment method value (stored on new
+// orders; derived for older ones) and the four values organizers see.
+const PAYMENT_METHOD_LABEL_EXPR = {
+  $cond: [
+    { $gt: [{ $strLenCP: { $ifNull: ["$paymentMethodLabel", ""] } }, 0] },
+    "$paymentMethodLabel",
+    {
+      $switch: {
+        branches: [
+          { case: { $eq: ["$paymentMethod", "card"] }, then: "Card" },
+          { case: { $eq: ["$paymentMethod", "applePay"] }, then: "Apple Pay" },
+          { case: { $eq: ["$paymentMethod", "googlePay"] }, then: "Google Pay" },
+          { case: { $eq: ["$paymentMethod", "cash"] }, then: "Cash" },
+          { case: { $eq: ["$paymentMethod", "cardTerminal"] }, then: "Card (venue terminal)" },
+          { case: { $eq: ["$paymentMethod", "voucher"] }, then: "Other - Voucher" },
+        ],
+        default: "Other",
+      },
+    },
+  ],
+};
+const ORGANIZER_PAYMENT_METHOD_EXPR = {
+  $switch: {
+    branches: [
+      { case: { $in: ["$paymentMethod", ["card", "applePay", "googlePay"]] }, then: "Pleis" },
+      { case: { $eq: ["$paymentMethod", "cash"] }, then: "Cash" },
+      { case: { $eq: ["$paymentMethod", "cardTerminal"] }, then: "Card" },
+    ],
+    default: "Other",
+  },
+};
+
 const withFullItemImage = (item) => {
   if (!item?.menuItemSnapShot) return item;
   return {
@@ -339,6 +372,8 @@ const getOrders = async ({
         paymentStatus: 1,
         deliveryOption: 1,
         paymentMethod: 1,
+        paymentMethodLabel: PAYMENT_METHOD_LABEL_EXPR,
+        organizerPaymentMethod: ORGANIZER_PAYMENT_METHOD_EXPR,
         pickupType: 1,
         createdAt: 1,
         combos: 1,
@@ -529,6 +564,8 @@ const getOrderByIdForAdminUI = async (orderId) => {
         paymentStatus: 1,
         deliveryOption: 1,
         paymentMethod: 1,
+        paymentMethodLabel: PAYMENT_METHOD_LABEL_EXPR,
+        organizerPaymentMethod: ORGANIZER_PAYMENT_METHOD_EXPR,
         pickupType: 1,
         createdAt: 1,
         combos: 1,

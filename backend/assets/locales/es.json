@@ -4,5 +4,9 @@
     "reservation_status_final": "Esta reserva ha finalizado y su estado ya no se puede cambiar.",
     "reservation_status_transition_not_allowed": "Este cambio de estado no está permitido para el estado actual de la reserva.",
     "reservation_no_show_too_early": "La no presentación solo se puede marcar después del periodo de gracia posterior a la hora de la reserva.",
-    "invalid_no_show_grace_period": "El periodo de gracia debe ser de 15, 30, 45 o 60 minutos."
+    "invalid_no_show_grace_period": "El periodo de gracia debe ser de 15, 30, 45 o 60 minutos.",
+  "at_least_one_payment_method_required": "Activa al menos un método de pago: Pleis Payment, efectivo, tarjeta u otro.",
+  "payment_method_not_available": "Este método de pago ya no está disponible en este local. Elige otro.",
+  "payment_method_locked_after_payment": "El método de pago no se puede cambiar después de pagar el pedido.",
+  "voucher_no_longer_covers_order": "Tu vale ya no cubre todo el pedido. Elige cómo pagar el resto."
 }

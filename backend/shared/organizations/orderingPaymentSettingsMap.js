@@ -48,6 +48,9 @@ const mapOrgPaymentMethodsToSetting = (paymentMethods = {}, existingSetting = {}
       inAppPayment: instant || laterAllow,
       payNow: instant,
       cash,
+      // Card (venue terminal) / Other have no org-level counterpart — keep the Setting's values.
+      card: existingSetting?.paymentMethod?.card === true,
+      other: existingSetting?.paymentMethod?.other === true,
     },
     automaticOrderAcceptance:
       payLater.enableOrderAcceptance === undefined
