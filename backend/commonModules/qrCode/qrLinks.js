@@ -27,7 +27,7 @@ const Venues = require("../venues/Venues");
 const { Events } = require("../events/Event");
 const { UserReservations } = require("../reservations/UsersReservation");
 const { User } = require("../../models/UserModel");
-const { resolvePleisLinkBase, resolvePleisAppScheme } = require("../../config/CONSTANTS");
+const { buildPleisLink, resolvePleisAppScheme } = require("../../config/CONSTANTS");
 
 // No 0/O, 1/l/I: the token may be typed from a label. 57^10 ≈ 3.6e17.
 const TOKEN_ALPHABET = "23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -37,7 +37,7 @@ const TOKEN_PATTERN = new RegExp(`^[${TOKEN_ALPHABET}]{${TOKEN_LENGTH}}$`);
 
 const isValidToken = (token) => typeof token === "string" && TOKEN_PATTERN.test(token);
 
-const buildCodeLink = (token) => (token ? `${resolvePleisLinkBase()}q/${token}` : "");
+const buildCodeLink = (token) => (token ? buildPleisLink(`q/${token}`) : "");
 const buildAppLink = (token) => `${resolvePleisAppScheme()}://q/${token}`;
 
 /** Public type names the app understands, by stored type. */

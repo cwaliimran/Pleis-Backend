@@ -3,14 +3,9 @@ const {
   resolvePleisAppScheme,
   resolvePleisIosStoreUrl,
   resolvePleisAndroidStoreUrl,
+  buildPleisLink,
 } = require("../../../config/CONSTANTS");
-const { renderSmartOpenHtml } = require("../../../helperUtils/appDeepLinkUtil");
-
-function withTrailingSlash(url) {
-  const base = String(url || "").trim();
-  if (!base) return "";
-  return base.endsWith("/") ? base : `${base}/`;
-}
+const { renderSmartOpenHtml, sendSmartOpen } = require("../../../helperUtils/appDeepLinkUtil");
 
 function sanitizeOpenId(value) {
   return String(value || "")
@@ -35,12 +30,8 @@ function buildAppSchemeLink(confirmationNumber) {
 }
 
 function buildConfirmationOpenUrl(confirmationNumber) {
-  const base = withTrailingSlash(process.env.API_BASE_URL);
-  if (!base) {
-    return resolvePleisWeb();
-  }
   const id = encodeURIComponent(sanitizeOpenId(confirmationNumber) || "wallet");
-  return `${base}app/open?id=${id}`;
+  return buildPleisLink(`api/v1/app/open?id=${id}`) || resolvePleisWeb();
 }
 
 function renderOpenAppHtml(confirmationNumber) {
@@ -52,8 +43,7 @@ function renderOpenAppHtml(confirmationNumber) {
 
 function openConfirmationInApp(req, res) {
   const id = req.query.id || req.query.confirmation || "";
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  return res.send(renderOpenAppHtml(id));
+  return sendSmartOpen(req, res, { appLink: buildAppSchemeLink(id), title: "PLEIS" });
 }
 
 module.exports = {

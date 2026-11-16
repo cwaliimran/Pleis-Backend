@@ -10,7 +10,7 @@
  */
 const express = require("express");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
-const { renderSmartOpenHtml } = require("../../helperUtils/appDeepLinkUtil");
+const { sendSmartOpen } = require("../../helperUtils/appDeepLinkUtil");
 const {
   resolvePleisWeb,
   resolvePleisAndroidPackage,
@@ -94,16 +94,19 @@ wellKnownRouter.get(["/.well-known/apple-app-site-association", "/apple-app-site
 const qrLinkRouter = express.Router();
 qrLinkRouter.get("/:token", createRateLimiter("QrLink"), async (req, res) => {
   const { token } = req.params;
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.setHeader("Cache-Control", "no-store");
+  const sendInvalid = (status) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(status).send(renderInvalidCodeHtml());
+  };
   try {
     const resolved = isValidToken(token) ? await resolveToken(token) : null;
-    if (!resolved) {
-      return res.status(404).send(renderInvalidCodeHtml());
-    }
-    return res.send(renderSmartOpenHtml({ appLink: buildAppLink(token), title: "PLEIS" }));
+    if (!resolved) return sendInvalid(404);
+    // A table code scanned with the phone camera lands here: Android goes
+    // straight into the app, which resolves the token and selects the table.
+    return sendSmartOpen(req, res, { appLink: buildAppLink(token), title: "PLEIS" });
   } catch (error) {
-    return res.status(500).send(renderInvalidCodeHtml());
+    return sendInvalid(500);
   }
 });
 

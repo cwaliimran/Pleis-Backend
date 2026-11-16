@@ -90,14 +90,26 @@ const PLEIS_ANDROID_PACKAGE = "com.Efuria.org";
 const PLEIS_IOS_APP_IDS = "BUKST6P34T.com.Efuria.org";
 
 /**
- * Base of every QR / share deep link (#59, #82, #83): `<base>q/<token>`.
- * PLEIS_LINK_BASE_URL is the Pleis link domain once it points at this server
- * (e.g. https://go.pleis.hr/); until then the API base is used.
+ * Base of every public link the app hands out — QR / share deep links
+ * (#59, #82, #83), referral share links and the "open in app" link in
+ * confirmation emails. PLEIS_LINK_BASE_URL is the server root that serves
+ * them (e.g. https://go.pleis.hr/); until it is set the API base is used.
  */
 function resolvePleisLinkBase() {
   const base = envOr("PLEIS_LINK_BASE_URL", envOr("API_BASE_URL", ""));
   if (!base) return "";
   return base.endsWith("/") ? base : `${base}/`;
+}
+
+/**
+ * The one place public links are built: `<link base><path>`.
+ * `path` is relative to the server root, e.g. `q/<token>` or
+ * `api/v1/app/global-referral/share?id=…`. Empty when no base is configured.
+ */
+function buildPleisLink(path) {
+  const base = resolvePleisLinkBase();
+  if (!base) return "";
+  return `${base}${String(path || "").replace(/^\/+/, "")}`;
 }
 
 function resolvePleisAndroidPackage() {
@@ -188,6 +200,7 @@ module.exports = {
   resolvePleisIosStoreUrl,
   resolvePleisAndroidStoreUrl,
   resolvePleisLinkBase,
+  buildPleisLink,
   resolvePleisAndroidPackage,
   resolvePleisAndroidCertFingerprints,
   resolvePleisIosAppIds,
