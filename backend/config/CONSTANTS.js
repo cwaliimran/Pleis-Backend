@@ -33,10 +33,9 @@ const PLEIS_WEB = "https://pleis.hr";
 const PLEIS_SUPPORT_EMAIL = "support@pleis.hr";
 const PLEIS_MAIL_DOMAIN = "pleis.ai";
 const PLEIS_APP_SCHEME = "com.pleis";
-const PLEIS_IOS_STORE_URL =
-  "https://apps.apple.com/app/pleisapp/id1234567890";
+const PLEIS_IOS_STORE_URL = "https://apps.apple.com/app/id6538720292";
 const PLEIS_ANDROID_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.pleis";
+  "https://play.google.com/store/apps/details?id=com.Efuria.org";
 const MAILGUN_API_BASE = "https://api.mailgun.net";
 const FIREBASE_DATABASE_URL = "https://pleis-4fb7b.firebaseio.com";
 

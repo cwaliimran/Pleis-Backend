@@ -71,47 +71,95 @@ async function createPayByLink(amount) {
   return response.data;
 }
 
-// Monri source of truth: GET /v2/transactions?order_number=
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * The order's own fields from an /orders/show reply, as a flat object with
+ * Monri's JSON names (approval-code → approval_code). Nested blocks
+ * (custom-attributes: card BIN, 3DS, URLs) are left out.
+ */
+function parseMonriOrderXml(xml) {
+  const body = String(xml || "").replace(
+    /<custom-attributes[\s\S]*?<\/custom-attributes>/,
+    "",
+  );
+  const order = {};
+  const field = /<([a-z][a-z0-9-]*)((?:\s[^>]*)?)(?:\/>|>([^<]*)<\/\1>)/gi;
+  let match;
+  while ((match = field.exec(body))) {
+    const [, tag, attrs, text] = match;
+    if (tag === "order" || tag === "masked-pan") continue;
+    const key = tag.replace(/-/g, "_");
+    if (/nil="true"/.test(attrs) || text == null) order[key] = null;
+    else if (/type="integer"/.test(attrs)) order[key] = Number(text);
+    else order[key] = text.trim();
+  }
+  return order;
+}
+
+/**
+ * Monri source of truth (#10, #25; Monri v1.4 §3.2 server-side status query):
+ * POST {base}/orders/show with the order number, the merchant's authenticity
+ * token and digest = SHA1(key + order_number).
+ *
+ * Returns the order's fields ({ status: "approved", amount, currency,
+ * approval_code, response_code, … }), or null when Monri has no approved
+ * payment for this order number (not paid yet, abandoned or declined).
+ * Throws MONRI_BAD_RESPONSE for anything else (bad digest, HTTP error).
+ */
 async function verifyTransaction(orderNumber) {
-  const url = `${getMonriBaseUrl()}/v2/transactions`;
-  const response = await axios.get(url, {
-    params: { order_number: orderNumber },
-    headers: {
-      Accept: "application/json",
-      Authorization: `key-${getMonriAuthToken()}`,
-    },
+  const url = `${getMonriBaseUrl()}/orders/show`;
+  const digest = crypto
+    .createHash("sha1")
+    .update(getMonriKey() + orderNumber)
+    .digest("hex");
+  const xml =
+    '<?xml version="1.0" encoding="UTF-8"?>' +
+    "<order>" +
+    `<order-number>${escapeXml(orderNumber)}</order-number>` +
+    `<authenticity-token>${escapeXml(getMonriAuthToken())}</authenticity-token>` +
+    `<digest>${digest}</digest>` +
+    "</order>";
+
+  const response = await axios.post(url, xml, {
+    headers: { "Content-Type": "application/xml", Accept: "application/xml" },
     timeout: 15000,
+    responseType: "text",
     validateStatus: () => true,
   });
 
+  const order = response.status === 200 ? parseMonriOrderXml(response.data) : null;
+
   console.log(
-    "[monri-verify] exact response:",
+    "[monri-verify]",
     JSON.stringify({
       orderNumber,
-      url,
       httpStatus: response.status,
-      statusText: response.statusText,
-      data: response.data ?? null,
+      status: order?.status ?? null,
+      amount: order?.amount ?? null,
+      currency: order?.currency ?? null,
+      error: order?.error ?? null,
     }),
   );
 
-  if (response.status !== 200) {
-    const err = new Error(
-      `Monri HTTP ${response.status}: ${JSON.stringify(response.data ?? null)}`,
-    );
-    err.code = "MONRI_BAD_RESPONSE";
-    err.httpStatus = response.status;
-    err.data = response.data ?? null;
-    throw err;
-  }
+  if (order && !order.error) return order;
 
-  const data = response.data;
-  if (!data) return null;
-  if (Array.isArray(data.transactions) && data.transactions.length) {
-    return data.transactions[0];
-  }
-  if (data.transaction) return data.transaction;
-  return null;
+  // Monri answers "order number … not approved" when it holds no approved
+  // payment for the order: nothing has been charged (yet).
+  if (order?.error && /not approved/i.test(order.error)) return null;
+
+  const err = new Error(
+    `Monri HTTP ${response.status}: ${order?.error || String(response.data ?? "").slice(0, 300)}`,
+  );
+  err.code = "MONRI_BAD_RESPONSE";
+  err.httpStatus = response.status;
+  err.data = order?.error || null;
+  throw err;
 }
 
 

@@ -32,6 +32,10 @@ async function confirmMonriCapture(orderNumber, { persist = true } = {}) {
     console.error(`[monri-capture] amount mismatch ${orderNumber}: monri=${remote.amount} local=${tx.amount}`);
     return { confirmed: false, reason: "amount_mismatch" };
   }
+  if (remote.currency && tx.currency && String(remote.currency).toUpperCase() !== String(tx.currency).toUpperCase()) {
+    console.error(`[monri-capture] currency mismatch ${orderNumber}: monri=${remote.currency} local=${tx.currency}`);
+    return { confirmed: false, reason: "currency_mismatch" };
+  }
   if (persist) {
     await monriRepository.updateTransaction(orderNumber, {
       status: "paid",

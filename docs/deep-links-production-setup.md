@@ -76,22 +76,34 @@ deployment reads app settings there.
 
 | Variable | Production value | Notes |
 |---|---|---|
-| `PLEIS_LINK_BASE_URL` | Option A: `https://pleis-bmgwc0exbmdzc8cn.germanywestcentral-01.azurewebsites.net/`<br>Option B: `https://go.pleis.hr/` | Server root, **not** `/api/v1/`. Trailing slash optional. Without it the code falls back to `API_BASE_URL` |
+| `PLEIS_LINK_BASE_URL` | Option A: `https://pleis-bmgwc0exbmdzc8cn.germanywestcentral-01.azurewebsites.net/`<br>Option B: `https://go.pleis.hr/` | Server root, **not** `/api/v1/`. Trailing slash optional. Without it the code falls back to `API_BASE_URL`, so links become `…/api/v1/q/<token>`. Those still work (the route is also mounted there), but they are longer, so set it before printing labels |
 | `API_BASE_URL` | `https://pleis-bmgwc0exbmdzc8cn.germanywestcentral-01.azurewebsites.net/api/v1/` | Unchanged. Still used for server-to-server callbacks (Billko) |
 | `PLEIS_APP_SCHEME` | `com.pleis` | Must match the app (see step 4) |
 | `PLEIS_ANDROID_PACKAGE` | `com.Efuria.org` | Default in code; set only if the package changes |
-| `PLEIS_ANDROID_SHA256_FINGERPRINTS` | **Replace**: SHA-256 of the app signing key, from Play Console | Comma separated, `AA:BB:…` format. Empty today, so Android cannot verify the domain. See step 3 |
+| `PLEIS_ANDROID_SHA256_FINGERPRINTS` | Debug key (set) **plus**: the SHA-256 of the app signing key, from Play Console | Comma separated, `AA:BB:…` format. Today only the debug key is set, so Play builds cannot verify the domain yet. See step 3 |
 | `PLEIS_IOS_APP_IDS` | `BUKST6P34T.com.Efuria.org` | `<Team ID>.<bundle id>`. Default in code; comma separated for several apps |
-| `PLEIS_IOS_STORE_URL` | **Replace**: real App Store URL, e.g. `https://apps.apple.com/app/pleis/id<real id>` | Today it is the placeholder `id1234567890` |
-| `PLEIS_ANDROID_STORE_URL` | **Replace**: `https://play.google.com/store/apps/details?id=com.Efuria.org` | Today it says `id=com.pleis`, which is not the app's package |
+| `PLEIS_IOS_STORE_URL` | `https://apps.apple.com/app/id6538720292` | Apple ID 6538720292 from App Store Connect. Set in every env file and as the code default. The page opens once the app is live on the App Store |
+| `PLEIS_ANDROID_STORE_URL` | `https://play.google.com/store/apps/details?id=com.Efuria.org` | Set in every env file. Check that the listing is public: today the page returns "not found" |
 | `PLEIS_WEB` | `https://pleis.hr` | Only for the link on the "code not valid" page and the email fallback |
 
 Other environments:
 
-| Env | `PLEIS_LINK_BASE_URL` |
-|---|---|
-| Dev on Azure | `https://pleis-backend-dev-bgd6a6hxefgwbzg5.germanywestcentral-01.azurewebsites.net/` |
-| Local testing | `http://<your LAN IP>:<PORT>/` (`.env.dev` / `.env.prodtest` point at the local machine) |
+| Env file | `PLEIS_LINK_BASE_URL` | `PLEIS_ANDROID_SHA256_FINGERPRINTS` | Notes |
+|---|---|---|---|
+| `.env.prodtest` (`npm run prodtest:api`, port 4020) | `http://<your LAN IP>:4020/`, today `http://192.168.18.3:4020/` | Debug key (`FA:C6:17:…:3B:9C`) | Local backend on the production database. If it is ever deployed, switch to its public HTTPS host and add the Play signing key |
+| `.env.dev` (port 4012) | `http://<your LAN IP>:4012/`, today `http://192.168.18.3:4012/` | Debug key | When deploying to Azure dev, use `https://pleis-backend-dev-bgd6a6hxefgwbzg5.germanywestcentral-01.azurewebsites.net/` |
+| `.env.example` | `http://localhost:3000/` | Debug key | Template only |
+
+The other link variables (`PLEIS_ANDROID_PACKAGE`, `PLEIS_IOS_APP_IDS`,
+`PLEIS_APP_SCHEME`, both store URLs, `PLEIS_WEB`) are the same in every env file.
+
+A local `http://` base URL is enough for the Android emulator and the browser
+fallback. App Links and Universal Links need the HTTPS host (step 5).
+
+When your LAN IP changes, update `PLEIS_LINK_BASE_URL` in `.env.prodtest` and
+`.env.dev`, then restart the backend. The database stores only the token, so
+codes shown in the admin panel switch to the new address. Links already copied
+or printed keep the old one.
 
 After changing env values, restart the app service. Check:
 
@@ -115,14 +127,20 @@ Android verifies the domain by comparing the app's signing certificate with
    Builds installed from Google Play are signed with this key.
 3. Optionally also copy the **Upload key certificate** SHA-256 (for builds
    installed outside Play, e.g. Firebase App Distribution).
-4. Put them in `PLEIS_ANDROID_SHA256_FINGERPRINTS`, comma separated.
+4. Add them to `PLEIS_ANDROID_SHA256_FINGERPRINTS` after the debug key,
+   comma separated.
 
-For local testing only, the React Native debug keystore
-(`android/app/debug.keystore`) has the public SHA-256
+Every env file starts with the React Native debug keystore
+(`android/app/debug.keystore`), whose public SHA-256 is
 `FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C`.
-`.env.dev` and `.env.prodtest` use it. Do not use it in `.env.prod`: every
-React Native project ships the same debug key, so any app signed with it could
-claim the Pleis links.
+With it, debug builds open links directly against any backend. Play builds
+need the app signing key from step 2 as well.
+
+Every React Native project ships this same debug key, so in production any
+debug-signed app with the package name `com.Efuria.org` could also claim the
+Pleis links. Play does not allow installing such an app over the real one, so
+the risk is low, but once the release key is in place you can remove the debug
+key from `.env.prod`.
 
 ### Release keystore
 
