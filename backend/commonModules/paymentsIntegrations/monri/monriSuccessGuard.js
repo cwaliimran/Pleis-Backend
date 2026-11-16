@@ -1,12 +1,15 @@
 const crypto = require("crypto");
 const { getMonriKey } = require("./monriEnv");
 
+/**
+ * Approved = Monri's response code 0000 (or 000). `status: "approved"` alone is
+ * not a capture: Monri's /orders/show answers status "approved" for every
+ * payment session it created, also when the guest never entered a card (no
+ * response code, approval code or card). Trusting it marked unpaid orders paid.
+ */
 function isApprovedMonriResponse(payload = {}) {
-  return (
-    payload.response_code === "0000" ||
-    payload.response_code === "000" ||
-    payload.status === "approved"
-  );
+  const code = payload?.response_code == null ? "" : String(payload.response_code).trim();
+  return code === "0000" || code === "000";
 }
 
 function isDeclinedMonriResponse(payload = {}) {

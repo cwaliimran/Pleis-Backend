@@ -14,6 +14,8 @@ const {
   evaluateMonriSuccessIntent,
   buildDummyMonriSuccessRequest,
   verifyMonriSuccessDigest,
+  isApprovedMonriResponse,
+  isDeclinedMonriResponse,
 } = require("./monriSuccessGuard");
 
 const ORDER_NUMBER = "6a9aad3eabe30c611ee7432e";
@@ -97,8 +99,20 @@ function runGuardCases() {
     merchantKey: MERCHANT_KEY,
   });
   assert(
-    spoof.action === "reject" && spoof.reason === "digest_required",
-    "status=approved without digest is rejected",
+    spoof.action === "ignore" && spoof.reason === "incomplete_callback",
+    "status=approved without a response code does not fulfil",
+  );
+
+  // Monri /orders/show for a session the guest opened but never paid.
+  const sessionOnly = {
+    amount: 1627, currency: "EUR", transaction_type: "purchase", status: "approved",
+    approval_code: null, response_code: null, cc_type: null,
+  };
+  assert(!isApprovedMonriResponse(sessionOnly), "unpaid Monri session (status approved, no response code) is not approved");
+  assert(!isDeclinedMonriResponse(sessionOnly), "unpaid Monri session is not declined either (stays pending)");
+  assert(
+    isApprovedMonriResponse({ ...sessionOnly, response_code: "0000", approval_code: "849544" }),
+    "captured order (response code 0000) is approved",
   );
 
   const alreadyPaid = evaluateMonriSuccessIntent({
