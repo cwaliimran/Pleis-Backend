@@ -53,27 +53,50 @@ function tryRequire(name) {
 }
 
 /**
+ * @sparticuz/chromium ships Chromium plus the system libraries it needs
+ * (libnss3, libnspr4, …) but unpacks those libraries only on AWS. The Azure
+ * App Service image has none of them, so unpack them here too and hand their
+ * folder to the Chromium process alone (not to the rest of the server).
+ * Everything goes to /tmp: nothing is installed, and a restart just unpacks again.
+ */
+async function sparticuzLaunchEnv(chromiumModule) {
+  const binDir = path.join(path.dirname(require.resolve("@sparticuz/chromium")), "..", "bin");
+  const libDir = path.join(os.tmpdir(), "al2023", "lib");
+  if (!fs.existsSync(libDir)) {
+    await chromiumModule.inflate(path.join(binDir, "al2023.tar.br"));
+  }
+  const inherited = process.env.LD_LIBRARY_PATH;
+  return {
+    ...process.env,
+    LD_LIBRARY_PATH: inherited ? `${libDir}:${inherited}` : libDir,
+    FONTCONFIG_PATH: process.env.FONTCONFIG_PATH || path.join(os.tmpdir(), "fonts"),
+  };
+}
+
+/**
  * Prefer puppeteer-core + @sparticuz/chromium (Azure App Service / Linux),
  * then explicit/system Chrome, then full puppeteer if present.
  */
 async function resolveLaunch() {
   const puppeteerCore = tryRequire("puppeteer-core");
-  const chromium = tryRequire("@sparticuz/chromium");
+  // @sparticuz/chromium is an ES module: require() returns { default: Chromium }.
+  const chromiumModule = tryRequire("@sparticuz/chromium");
+  const chromium = chromiumModule?.default ?? chromiumModule;
 
-  if (puppeteerCore && chromium) {
+  if (puppeteerCore && chromium && process.platform === "linux") {
     try {
       return {
         puppeteer: puppeteerCore,
         options: {
           args: chromium.args,
-          defaultViewport: chromium.defaultViewport,
           executablePath: await chromium.executablePath(),
-          headless: chromium.headless,
+          env: await sparticuzLaunchEnv(chromiumModule),
+          headless: "shell",
         },
         engine: "sparticuz-chromium",
       };
-    } catch {
-      // Binary may be Linux-only; fall through to system Chrome on macOS/dev.
+    } catch (err) {
+      console.error("[html-to-pdf] @sparticuz/chromium unavailable:", err?.message || err);
     }
   }
 
