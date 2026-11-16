@@ -35,8 +35,8 @@ const placeOrder = async (req, res) => {
     let validateData = {
       rawData: ["paymentMethod", "deliveryOption"],
       enumFields: {
-        pickupType: ["counter", "tableService", "togo"],
-        paymentMethod: ["applePay", "card", "cash", "payLater"],
+        pickupType: ["counter", "tableService"], // #146: no "togo" destination
+        paymentMethod: ["applePay", "card", "googlePay", "cash", "cardTerminal", "other", "voucher", "payLater"],
       },
       objectIdFields: ["deliveryOption"],
     };
@@ -135,13 +135,13 @@ const updateOrderDetails = async (req, res) => {
     if (pickupType !== undefined) {
       validateData.rawData.push("pickupType");
 
-      validateData.enumFields.pickupType = ["counter", "tableService", "togo"];
+      validateData.enumFields.pickupType = ["counter", "tableService"]; // #146
     }
 
     if (paymentMethod !== undefined) {
       validateData.rawData.push("paymentMethod");
 
-      validateData.enumFields.paymentMethod = ["applePay", "card", "cash", "payLater"];
+      validateData.enumFields.paymentMethod = ["applePay", "card", "googlePay", "cash", "cardTerminal", "other", "voucher", "payLater"];
     }
 
     if (reservationId !== undefined && reservationId !== null && reservationId !== "") {

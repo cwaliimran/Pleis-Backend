@@ -9,6 +9,8 @@ const DATE_FIELDS = new Set([
   "updatedAt",
   "paidAt",
   "lockUntil",
+  "noShowAvailableAt",
+  "at",
 ]);
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$/;

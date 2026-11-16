@@ -4,6 +4,9 @@ const { acquireLock, releaseLock } = require("@redisCache");
 const {
   reconcilePendingMonriPayments,
 } = require("../../commonModules/paymentsIntegrations/monri/monriReconcileService");
+const {
+  runDocumentReconciliation,
+} = require("../../commonModules/paymentsIntegrations/ledger/documentReconciliationService");
 
 const { runRecurringEventsCron } = require("./events/recurringEvents.core");
 const { runEventReminderCron } = require("./events/eventReminder.cron");
@@ -336,6 +339,27 @@ const startCrons = () => {
       await runLogCleanupCron();
     } catch (err) {
       console.error("Log cleanup cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+  /* ======================================================
+     🧾 CRON: Document reconciliation (daily at 03:30)
+     #25 / Billko v2.9 §13.3 — reports any document for a
+     payment that never reached a captured state, and any
+     captured Pleis payment without a document. Report only.
+     ====================================================== */
+  cron.schedule("30 3 * * *", async () => {
+    const lockKey = "cron:document-reconciliation";
+    const lock = await acquireLock(lockKey, 600);
+
+    if (!lock) return;
+
+    try {
+      await runDocumentReconciliation({ trigger: "cron" });
+    } catch (err) {
+      console.error("Document reconciliation cron error:", err);
     } finally {
       await releaseLock(lockKey, lock);
     }

@@ -56,7 +56,22 @@ const updateSetttings = async (organization, data) => {
         data.paymentMethod.cash !== undefined
           ? data.paymentMethod.cash
           : prevPaymentMethod.cash,
+      card:
+        data.paymentMethod.card !== undefined
+          ? data.paymentMethod.card
+          : prevPaymentMethod.card === true,
+      other:
+        data.paymentMethod.other !== undefined
+          ? data.paymentMethod.other
+          : prevPaymentMethod.other === true,
     };
+  }
+  // Legal_req_features_2 §1: at least one payment method must stay enabled.
+  const pm = Setttings.paymentMethod || {};
+  if (!pm.inAppPayment && !pm.cash && !pm.card && !pm.other) {
+    const err = new Error("at_least_one_payment_method_required");
+    err.statusCode = 400;
+    throw err;
   }
   await Setttings.save();
   await SetttingsRepo.warmOrganizationSettingsCache(organization, Setttings);

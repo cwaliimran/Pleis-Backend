@@ -2,14 +2,13 @@
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const Categories = require("./Categories");
 const categoryRepo = require("./categoriesRepository");
-const mongoose = require("mongoose");
 const { formatCategories } = require("./formatters/categoryFormatter");
 const { invalidateCategoryCaches } = require("@cacheNamespaces");
 
 const createCategory = async ({ image, title, status }) => {
   return await categoryRepo.createCategory({ image, title, status });
 };
-const getCategories = async ({ page, limit, keyword, status, date, sortBy = "createdAt", sortOrder = "asc" }) => {
+const getCategories = async ({ page, limit, keyword, status, date, sortBy = "order", sortOrder = "asc" }) => {
   const query = {};
 
   //Filter by status
@@ -30,7 +29,9 @@ const getCategories = async ({ page, limit, keyword, status, date, sortBy = "cre
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
+  const dir = sortOrder === "desc" ? -1 : 1;
+  // Stable tie-breakers so admin list order matches app order (duplicate `order` values otherwise shuffle)
+  const sort = { [sortBy]: dir, ...(sortBy !== "createdAt" && { createdAt: 1 }), _id: 1 };
 
   let [categories, totalFiltered, total, active, inactive] = await Promise.all([
     categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
@@ -114,35 +115,40 @@ const deleteCategory = async (id) => {
 };
 
 
-const reorderCategory = async (movedId, previousOrder,
-      newOrder) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    if (previousOrder > newOrder) {
-      await Categories.updateMany(
-        { order: { $gte: newOrder, $lt: previousOrder } },
-        { $inc: { order: 1 } },
-        { session }
-      );
-    } else {
-      await Categories.updateMany(
-        { order: { $gt: previousOrder, $lte: newOrder } },
-        { $inc: { order: -1 } },
-        { session }
-      );
-    }
+/**
+ * Reorder by POSITION (1-based), as sent by the admin drag & drop list.
+ * Positions refer to the list the admin sees (active categories when the moved item is active).
+ * Rebuilds a contiguous 1..n order for every non-deleted category, which also self-heals
+ * duplicate / gapped `order` values instead of shifting ranges on stale numbers.
+ */
+const reorderCategory = async (movedId, previousOrder, newOrder) => {
+  const all = await Categories.find({ status: { $ne: "deleted" } })
+    .sort({ order: 1, createdAt: 1, _id: 1 })
+    .select("_id status")
+    .lean();
 
-    await Categories.findByIdAndUpdate(movedId, { order: newOrder }, { session });
-    await session.commitTransaction();
-    session.endSession();
-    await invalidateCategoryCaches();
-    return true;
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
-  }
+  const moved = all.find((c) => String(c._id) === String(movedId));
+  if (!moved) return null;
+
+  // Work on the subset the admin sees, then put it back into the same slots.
+  const inSubset = (c) => (moved.status === "active" ? c.status === "active" : true);
+  const subset = all.filter(inSubset);
+
+  const fromIdx = subset.findIndex((c) => String(c._id) === String(movedId));
+  const target = Math.min(Math.max(parseInt(newOrder, 10) || 1, 1), subset.length) - 1;
+  subset.splice(fromIdx, 1);
+  subset.splice(target, 0, moved);
+
+  let k = 0;
+  const finalList = all.map((c) => (inSubset(c) ? subset[k++] : c));
+
+  const ops = finalList.map((c, i) => ({
+    updateOne: { filter: { _id: c._id }, update: { $set: { order: i + 1 } } },
+  }));
+  if (ops.length) await Categories.bulkWrite(ops);
+
+  await invalidateCategoryCaches();
+  return true;
 };
 
 module.exports = {

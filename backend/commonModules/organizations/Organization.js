@@ -193,10 +193,10 @@ const organizationSchema = new mongoose.Schema(
           default: false,
           // Staff delivers orders directly to the table.
         },
+        // #146: "to go" is no longer a delivery destination — always false, kept for old docs.
         toGo: {
           type: Boolean,
           default: false,
-          // Orders are packaged for takeaway.
         },
       },
 

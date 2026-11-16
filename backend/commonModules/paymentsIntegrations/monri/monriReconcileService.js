@@ -46,6 +46,11 @@ function amountsMatch(remoteAmount, txAmount) {
   return String(remoteAmount) === String(txAmount);
 }
 
+function currenciesMatch(remoteCurrency, txCurrency) {
+  if (!remoteCurrency || !txCurrency) return true;
+  return String(remoteCurrency).toUpperCase() === String(txCurrency).toUpperCase();
+}
+
 function applyRemoteFields(remote) {
   return {
     rawCallback: remote,
@@ -78,6 +83,12 @@ async function reconcileOne(tx) {
     if (!amountsMatch(remote.amount, tx.amount)) {
       console.error(
         `[payment-reconcile] amount mismatch ${tx.orderNumber}: monri=${remote.amount} local=${tx.amount}`,
+      );
+      return "error";
+    }
+    if (!currenciesMatch(remote.currency, tx.currency)) {
+      console.error(
+        `[payment-reconcile] currency mismatch ${tx.orderNumber}: monri=${remote.currency} local=${tx.currency}`,
       );
       return "error";
     }

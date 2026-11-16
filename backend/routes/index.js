@@ -4,6 +4,8 @@ router.use("/auth", require("./authRoutes"));
 router.use("/upload", require("./uploadRoutes"));
 router.use("/upload/azure", require("./uploadAzureBlobRoutes"));
 router.use("/settings", require("../admin/settings/adminSettingsRoutes"));
+// legal documents (versioned) + consent / re-acceptance
+router.use("/legal", require("../commonModules/legal/legalRoutes"));
 router.use("/communications", require("./communicationRoutes"));
 router.use("/notifications", require("./notificationsRoutes"));
 // router.use("/support", require("./supportRoutes"));
@@ -26,6 +28,8 @@ router.use("/locations", require("../shared/locations/routes"));
 
 //helper route for generating shareable links
 router.use("/share", require("./shareRoute"));
+// QR / share deep link open page: <API base>q/<token> (#59, #82, #84)
+router.use("/q", require("../commonModules/qrCode/qrLinkRoutes").qrLinkRouter);
 
 
 module.exports = router;

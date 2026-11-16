@@ -30,13 +30,31 @@ const DevicesSchema = mongoose.Schema(
 
 const Devices = mongoose.model("device", DevicesSchema);
 
+// Real FCM registration tokens are ~140+ characters. Anything shorter is a
+// placeholder the apps send when no token is ready ("123", "abc123",
+// "no-fcm-token", "test", ...) and can never receive a push.
+const MIN_FCM_TOKEN_LENGTH = 32;
+const PLACEHOLDER_DEVICE_ID = new RegExp(`^.{0,${MIN_FCM_TOKEN_LENGTH - 1}}$`, "s");
+
+const isPushToken = (deviceId) =>
+  typeof deviceId === "string" && deviceId.trim().length >= MIN_FCM_TOKEN_LENGTH;
+
 // Function to add a device after checking for duplicate deviceId
 function createOrSkipDevice(userId, deviceId, deviceType) {
   setImmediate(async () => {
     try {
-      if (deviceId === "test") {
+      if (!isPushToken(deviceId)) {
         return;
       }
+      deviceId = deviceId.trim();
+
+      // Drop placeholder entries saved by older app versions so they don't
+      // pile up next to the real token.
+      await Devices.updateOne(
+        { userId: userId },
+        { $pull: { devices: { deviceId: { $regex: PLACEHOLDER_DEVICE_ID } } } },
+      );
+
       const userDevice = await Devices.findOne({
         userId: userId,
         "devices.deviceId": deviceId,

@@ -210,7 +210,8 @@ const updatePreset = async (id, data) => {
     "category",
     "description",
     "basePrice",
-    "status"
+    "status",
+    "ageRestricted",
   ];
   const updateData = {};
   for (const key of allowedFields) {

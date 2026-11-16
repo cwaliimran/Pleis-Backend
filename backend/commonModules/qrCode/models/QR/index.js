@@ -4,6 +4,7 @@ const Globalloyalty  = require("./loyalty");
 const GlobalcheckInOrder  = require("./checkInOrder");
 const Globaleventn  = require("./event");
 const GlobalOrganization  = require("./organization");
+const GlobalReservation = require("./reservation");
 
 
 module.exports = {
@@ -12,5 +13,6 @@ module.exports = {
   Globalloyalty,
   GlobalcheckInOrder,
   Globaleventn,
-  GlobalOrganization
+  GlobalOrganization,
+  GlobalReservation,
 };

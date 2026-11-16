@@ -17,6 +17,7 @@ const createPreset = async (req, res) => {
     description = "",
     basePrice = "0",
     status = "active",
+    ageRestricted = false,
   } = req.body;
 
   if (
@@ -33,6 +34,7 @@ const createPreset = async (req, res) => {
     description,
     basePrice,
     status,
+    ageRestricted,
   };
 
   try {
@@ -156,6 +158,7 @@ const updatePreset = async (req, res) => {
     basePrice,
     category,
     status = "active",
+    ageRestricted,
   } = req.body;
 
   if (
@@ -173,6 +176,7 @@ const updatePreset = async (req, res) => {
     basePrice,
     category,
     status,
+    ageRestricted,
   };
 
   try {

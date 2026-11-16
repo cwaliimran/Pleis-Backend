@@ -8,14 +8,59 @@ const {
 const clubService = require("./clubMembersService");
 const { getSuggestedLoyaltyClubs } = require("../../organizationProfile/organizationProfileService");
 
+// Loyalty club data-sharing consent (spec section 4): joining requires an explicit
+// Accept in the app popup. Consent is per organizer and logged in the consent log.
+const legalService = require("../../../commonModules/legal/legalService");
+const { CONSENT_TYPES, CONSENT_ACTIONS, LOYALTY_CONSENT_VERSION, loyaltyConsentText } = require("../../../commonModules/legal/legalConstants");
+const { User } = require("../../../models/UserModel");
+
+const organizerDisplayName = async (companyOrganizer) => {
+  const org = await User.findById(companyOrganizer).select("companyDetails.name firstName lastName").lean();
+  return org?.companyDetails?.name || [org?.firstName, org?.lastName].filter(Boolean).join(" ") || "";
+};
+
+const logClubConsent = async (req, companyOrganizer, action) => {
+  try {
+    const organizerName = await organizerDisplayName(companyOrganizer);
+    await legalService.logConsent({
+      userId: req.user._id,
+      userType: "user",
+      documentType: CONSENT_TYPES.LOYALTY_CONSENT,
+      action,
+      documentVersion: LOYALTY_CONSENT_VERSION,
+      context: {
+        source: action === CONSENT_ACTIONS.WITHDRAWN ? "club_leave" : "club_join",
+        clubId: String(companyOrganizer),
+        organizerName,
+        text: loyaltyConsentText(organizerName),
+      },
+      meta: legalService.requestMeta(req),
+    });
+  } catch (e) {
+    console.error("[legal] loyalty consent log failed", e?.message);
+  }
+};
+
 const joinClub = async (req, res) => {
-  const { companyOrganizer, referrerId } = req.body;
+  const { companyOrganizer, referrerId, consent } = req.body;
   const userId = req.user._id;
 
   if (!validateParams(req, res, { rawData: ["companyOrganizer"] })) return;
 
+  // Decline (or an old client without the popup) => no join, no points, no sharing.
+  if (consent !== true && consent !== "true") {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "loyalty_consent_required",
+      data: { consentText: loyaltyConsentText(await organizerDisplayName(companyOrganizer).catch(() => "")) },
+    });
+  }
+
   try {
+    const wasMember = await clubService.isClubMember(userId, companyOrganizer);
     const data = await clubService.joinClub(userId, companyOrganizer, referrerId);
+    if (!wasMember) await logClubConsent(req, companyOrganizer, CONSENT_ACTIONS.ACCEPTED);
 
     return sendResponse({
       res,
@@ -42,7 +87,10 @@ const leaveClub = async (req, res) => {
   if (!validateParams(req, res, { bodyParams: ["companyOrganizer"] })) return;
 
   try {
+    const wasMember = await clubService.isClubMember(userId, companyOrganizer);
     const data = await clubService.leaveClub(userId, companyOrganizer);
+    // Leaving the club = withdrawing the data-sharing consent from this moment.
+    if (wasMember && data) await logClubConsent(req, companyOrganizer, CONSENT_ACTIONS.WITHDRAWN);
 
     return sendResponse({
       res,

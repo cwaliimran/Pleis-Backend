@@ -1,7 +1,16 @@
+const {
+  VOUCHER_METHOD,
+  isPleisMethod,
+  isOffAppMethod,
+  enabledMethodsFor,
+  buildPaymentMethodLabel,
+} = require("../../../commonModules/menuItemsAndOrders/paymentMethods");
+const MenuItemsModel = require("@MenuItemsModel");
 const orderRepo = require("./orderRepository");
 const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
 const clubMemberRepo = require("../../loyalty/clubMembers/clubMembersRepository");
+const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
 
 const {
   menuItemOrderFormatter,
@@ -70,27 +79,18 @@ const {
 
 const assertPaymentMethodAllowed = (setting, paymentMethod, paymentTiming) => {
   const methods = setting?.paymentMethod || {};
-  if (paymentMethod === "cash" && methods.cash !== true) {
-    const err = new Error("Cash payment is not enabled for this organization");
+  // A voucher covering the whole order needs no method (Legal_req_features_2 §1).
+  if (paymentMethod === VOUCHER_METHOD) return;
+
+  // #68: the guest's method must be one the venue has enabled. The app shows
+  // this message and refreshes the list when a method was switched off meanwhile.
+  if (!enabledMethodsFor(setting).includes(paymentMethod)) {
+    const err = new Error("payment_method_not_available");
     err.statusCode = 400;
     throw err;
   }
-  if (
-    (paymentMethod === "card" || paymentMethod === "applePay") &&
-    methods.inAppPayment !== true
-  ) {
-    const err = new Error(
-      "In-app payment is not enabled for this organization",
-    );
-    err.statusCode = 400;
-    throw err;
-  }
-  // payNow setting: card/Apple Pay must settle up front; payLater timing only when payNow is off
-  if (
-    (paymentMethod === "card" || paymentMethod === "applePay") &&
-    paymentTiming === "payLater" &&
-    methods.payNow === true
-  ) {
+  // payNow setting: in-app methods must settle up front; payLater timing only when payNow is off
+  if (isPleisMethod(paymentMethod) && paymentTiming === "payLater" && methods.payNow === true) {
     const err = new Error(
       "Pay later is not enabled for in-app payments at this organization",
     );
@@ -98,7 +98,7 @@ const assertPaymentMethodAllowed = (setting, paymentMethod, paymentTiming) => {
     throw err;
   }
   if (
-    (paymentMethod === "card" || paymentMethod === "applePay") &&
+    isPleisMethod(paymentMethod) &&
     paymentTiming === "payNow" &&
     methods.payNow !== true &&
     methods.inAppPayment === true
@@ -352,6 +352,11 @@ const placeOrder = async ({
     if (deliveryOption && !deliveryOptionData) {
       throw new Error("Invalid delivery option");
     }
+    // #146: To go is not a delivery destination (removed for legal reasons). Legacy
+    // toGo options left in the DB must not accept orders; isTogo stays an item attribute.
+    if (String(deliveryOptionData?.deliveryMethod || "").toLowerCase() === "togo") {
+      throw new Error("to_go_is_not_a_delivery_destination");
+    }
     if (items?.length) {
       const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
       menuItems = await menuItemRepo.getMenuItemsWithFilters({
@@ -361,6 +366,20 @@ const placeOrder = async ({
       });
 
       if (!menuItems.length) throw new Error("Invalid items in cart");
+
+      // 18+ items can never be ordered for takeaway / delivery (Legal spec section 3).
+      // deliveryOption.deliveryMethod uses "toGo", request pickupType uses "togo".
+      const isTakeaway = [deliveryOptionData?.deliveryMethod, pickupType].some(
+        (m) => String(m || "").toLowerCase() === "togo"
+      );
+      if (isTakeaway) {
+        const restricted = await MenuItemsModel.exists({ _id: { $in: itemIds }, ageRestricted: true });
+        if (restricted) {
+          const err = new Error("age_restricted_items_not_available_for_takeaway");
+          err.statusCode = 400;
+          throw err;
+        }
+      }
 
       const orgData = await menuItemRepo.getOrganizationIdByMenuItemId(
         menuItems[0].menu,
@@ -497,8 +516,22 @@ const placeOrder = async ({
 
     const setting = await getSetttings({ organization: organizationId });
     const methods = setting?.paymentMethod || {};
-    const isOnlinePayment =
-      paymentMethod === "applePay" || paymentMethod === "card";
+    // Tips are not covered by the reservation voucher (org setting comment).
+    totalPrice += Number(tip || 0);
+
+    // Legal_req_features_2 §1: a voucher covering the whole order shows no method
+    // selector; it is completed as voucher payment ("Other - Voucher").
+    if (voucherAmount > 0 && Number(totalPrice) <= 0) {
+      paymentMethod = VOUCHER_METHOD;
+    } else if (paymentMethod === VOUCHER_METHOD) {
+      // The voucher no longer covers the whole order (balance changed meanwhile):
+      // the guest gets the new totals and picks a method for the rest.
+      const err = new Error("voucher_no_longer_covers_order");
+      err.statusCode = 409;
+      throw err;
+    }
+
+    const isOnlinePayment = isPleisMethod(paymentMethod);
     // Org setting owns timing for in-app methods (client must not invent payLater when payNow is on)
     const resolvedPaymentTiming = isOnlinePayment
       ? methods.payNow === true
@@ -507,8 +540,6 @@ const placeOrder = async ({
       : paymentTiming || "payLater";
 
     assertPaymentMethodAllowed(setting, paymentMethod, resolvedPaymentTiming);
-    // Tips are not covered by the reservation voucher (org setting comment).
-    totalPrice += Number(tip || 0);
     let orderData = {
       user: userId,
       organization: organizationId,
@@ -529,6 +560,7 @@ const placeOrder = async ({
       },
       notes,
       paymentMethod,
+      paymentMethodLabel: buildPaymentMethodLabel({ paymentMethod, voucherAmount }),
       pickupType: deliveryOptionData?.deliveryMethod || pickupType,
       tableNumber,
       deliveryOption,
@@ -729,6 +761,13 @@ const updateOrder = async ({
       throw new Error("Order not found");
     }
 
+    // #129: once Paid nothing on the order is edited; the correction is a refund.
+    if (existingOrder.paymentStatus === "paid" || existingOrder.paymentStatus === "unpaidClosed") {
+      const err = new Error("order_locked_after_payment");
+      err.statusCode = 409;
+      throw err;
+    }
+
     // if (existingOrder.status !== "pending") {
     //   throw new Error("Only orders in pending state can be updated");
     // }
@@ -773,8 +812,10 @@ const updateOrder = async ({
           throw new Error("Invalid items in cart");
         }
         // Make sure all items belong to same organization
-        const itemOrganizationId =
+        const itemOrg =
           await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+        // The repository returns { organization, isOrderingEnabled }.
+        const itemOrganizationId = itemOrg?.organization ?? itemOrg;
 
         if (itemOrganizationId.toString() !== organizationId.toString()) {
           throw new Error(
@@ -1269,7 +1310,8 @@ const addMoreItemsToOrder = async ({
   if (order.status === "cancelled")
     throw new Error("Cannot add items to a cancelled order");
 
-  if (order.paymentMethod !== "cash")
+  // Open bills are settled at the venue: cash, venue card terminal or other.
+  if (!isOffAppMethod(order.paymentMethod))
     throw new Error("Cannot add items to this order");
 
   // 2️⃣ Fetch menu items
@@ -1326,6 +1368,31 @@ const addMoreItemsToOrder = async ({
   return { order: formattedOrder };
 };
 
+/**
+ * Points actually credited for a menu order (#115) — what the guest received, so the
+ * app does not re-estimate them later with a different tier / happy hour or with the
+ * voucher draw-down counted as spend. Same shape as POST /loyalty/calculate-points.
+ * null until the payment has been finalized and points written.
+ */
+const getOrderLoyaltyEarned = async (orderId) => {
+  if (!mongoose.Types.ObjectId.isValid(String(orderId))) return null;
+  const rows = await UnifiedWalletTransactions.find({
+    domainType: "menuorders",
+    // entityId is Mixed (no casting) — match it whether stored as ObjectId or string
+    entityId: { $in: [new mongoose.Types.ObjectId(String(orderId)), String(orderId)] },
+    type: "earn",
+  })
+    .select("walletType points")
+    .lean();
+  if (!rows.length) return null;
+  const sum = (walletType) => rows.filter((r) => r.walletType === walletType).reduce((n, r) => n + Number(r.points?.total || 0), 0);
+  const multiplierOf = (walletType) => rows.find((r) => r.walletType === walletType)?.points?.multiplier || 1;
+  return {
+    global: { earnedPoints: sum("globalWallet"), globalMultiplier: multiplierOf("globalWallet") },
+    organizer: { earnedPoints: sum("companyLoyalty"), organizerMultiplier: multiplierOf("companyLoyalty") },
+  };
+};
+
 // 2️⃣ Get order by ID
 const getOrderDetails = async (orderId, timezone) => {
   let order = await orderRepo.getOrderById(orderId);
@@ -1354,6 +1421,7 @@ const getOrderDetails = async (orderId, timezone) => {
       lifetimePoints: wallet.lifetimePoints,
     };
   }
+  formattedOrder.loyaltyEarned = await getOrderLoyaltyEarned(order._id);
   return { order: formattedOrder };
 };
 
@@ -1391,6 +1459,11 @@ const cancelOrder = async (orderId) => {
 };
 
 module.exports = {
+  // shared with Edit order (#129 / #130)
+  assertPaymentMethodAllowed,
+  buildPricedMenuItemSnapshot,
+  buildOrderCombos,
+  orderNeedsConfirmation,
   placeOrder,
   updateOrder,
   getOrderDetails,

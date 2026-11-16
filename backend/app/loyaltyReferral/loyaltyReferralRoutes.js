@@ -9,8 +9,8 @@ const {
 const mongoose = require("mongoose");
 const auth = require("../../middlewares/authMiddleware");
 const { getUserOrganizationPublicIds } = require("./loyaltyReferralController");
-const { resolvePleisAppScheme } = require("../../config/CONSTANTS");
-const { renderSmartOpenHtml } = require("../../helperUtils/appDeepLinkUtil");
+const { resolvePleisAppScheme, buildPleisLink } = require("../../config/CONSTANTS");
+const { sendSmartOpen } = require("../../helperUtils/appDeepLinkUtil");
 
 
 const router = express.Router();
@@ -28,20 +28,19 @@ const router = express.Router();
 
 
 
-// ✅ Base web URL for universal links
-const BASE_WEB_URL = process.env.API_BASE_URL;
-
 /**
  * Helper to get model dynamically by type
  */
 
 
 /**
- * Helper to generate one universal share URL
- * Example: https://pleisapp.com/open?type=event&id=XYZabc123
+ * Loyalty referral share URL on the Pleis link base (PLEIS_LINK_BASE_URL).
+ * Example: <link base>api/v1/app/loyalty-referral/share?organizer=<publicId>&user=<publicId>
  */
 function generateShareLink(organizationPublicId, userPublicId) {
-    return `${BASE_WEB_URL}app/loyalty-referral/share?organizer=${organizationPublicId}&user=${userPublicId}`;
+    return buildPleisLink(
+        `api/v1/app/loyalty-referral/share?organizer=${encodeURIComponent(organizationPublicId)}&user=${encodeURIComponent(userPublicId)}`
+    );
 }
 /**
  * ✅ Generate shareable link
@@ -97,8 +96,8 @@ const result = await saveUserReferralData(organizer,referrer);
 
         const appLink = `${resolvePleisAppScheme()}://organizer=${result.organizerId}/referrer=${result.referrerId}`;
 
-        // Smart redirect HTML with the link to the app or store
-        return res.send(renderSmartOpenHtml({ appLink, title: "PLEIS" }));
+        // Opens the app (Android: straight intent redirect) or the store
+        return sendSmartOpen(req, res, { appLink, title: "PLEIS" });
     } catch (err) {
         
         return sendResponse({

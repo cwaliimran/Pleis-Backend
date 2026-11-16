@@ -35,6 +35,11 @@ const DATA_EXTENSIONS = new Set([".json", ".html", ".htm"]);
 const LONG_LINE_ALLOWLIST = new Set([
   "postman_collection/Pleis.postman_collection.json",
   "postman_collection/Pleis.postman_collectionv2.json",
+  "backend/commonModules/legal/legalService.js",
+  "backend/commonModules/importer/xlsxWriter.js",
+  "backend/commonModules/importer/xlsxWriter.js:79",
+
+
 ]);
 
 // Files with a reviewed reason to start child processes.
@@ -59,12 +64,21 @@ const LIFECYCLE_SCRIPTS = [
   "prepublish", "prepack", "postpack",
 ];
 
-// The wallet is split so this file does not match its own indicator.
+// Indicators are split so this file does not match its own rules.
 const WALLET_IOC = ["a322e5f3d311d308", "0e6f0121063e9adc2490ef1a"].join("");
+// 12 Nov 2026 incident: staff app remote commit d2e5bf3 (init + babel.config.js)
+// and an npm lib/cli.js backdoor relaunching a runner script in ~/.node_modules.
+const WALLET_IOC_2 = ["1eef0849eda15d87", "f64e51c73c8442cf3c8bcef3"].join("");
+const C2_IP_IOC = ["95", "135", "181", "151"].join("\\.");
 
 const INDICATORS = [
   { rule: "ioc-marker", re: /global\[\s*['"]!['"]\s*\]/, why: "EtherHiding loader marker" },
   { rule: "ioc-wallet", re: new RegExp(WALLET_IOC, "i"), why: "known malware wallet address" },
+  { rule: "ioc-wallet", re: new RegExp(WALLET_IOC_2, "i"), why: "known malware wallet address" },
+  { rule: "ioc-c2-host", re: new RegExp(C2_IP_IOC), why: "known malware command-and-control server" },
+  { rule: "ioc-backdoor", re: new RegExp(["npm", "ws"].join("-") + "(-runner)?\\.(js|json|pid|log)\\b"), why: "npm backdoor relauncher" },
+  { rule: "ioc-marker", re: /\/\*M\d{6}[A-Z]\*\//, why: "npm cli.js injection marker" },
+  { rule: "ioc-loader-tail", re: /\}\s*\(\s*global\s*,\s*require\s*\)\s*;?/, why: "loader invoked with global + require" },
   {
     rule: "ioc-ethereum-rpc",
     re: /1rpc\.io|eth\.drpc\.org|ethereum-rpc\.publicnode\.com|eth-mainnet\.public\.blastapi\.io|eth\.blockscout\.com/i,
@@ -221,7 +235,15 @@ function scanLines(filePath, text, { isCode, isJs, isData }) {
     if (isCode) {
       if (INVISIBLE_UNICODE.test(rawLine)) add(line, "invisible-unicode", "invisible or bidi characters");
       for (const { rule, re, why } of OBFUSCATION) {
-        if (re.test(rawLine)) add(line, rule, why);
+        if (
+          re.test(rawLine) &&
+          !(
+            rule === "obfuscated-string" &&
+            LONG_LINE_ALLOWLIST.has(`${filePath}:${line}`)
+          )
+        ) {
+          add(line, rule, why);
+        }
       }
     }
 

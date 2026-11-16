@@ -125,19 +125,25 @@ const updateReservationStatus = async (req, res) => {
       objectIdFields: ["id"],
       rawData: ["status"],
       enumFields: {
-        status: ["active", "checkedIn", "cancelled", "inactive", "deleted", "completed"],
+        status: ["confirmed", "checkedIn", "noShow", "rejected", "cancelled"],
       },
     })
   )
     return;
 
   try {
-    const userReservation = await reservationService.updateReservationStatus(id, status);
-    if (!userReservation) {
+    const { getOrganizationsAsStaff } = require("../organizations/organizationService");
+    const orgs = (await getOrganizationsAsStaff(req.user._id)) || [];
+    const result = await reservationService.updateReservationStatus(id, status, {
+      actorId: req.user._id,
+      organizationIds: orgs.map((org) => String(org._id)),
+    });
+    if (!result.ok) {
       return sendResponse({
         res,
-        statusCode: 404,
-        translationKey: "Reservation_not_found",
+        statusCode: result.statusCode,
+        translationKey: result.translationKey,
+        data: result.values,
       });
     }
 

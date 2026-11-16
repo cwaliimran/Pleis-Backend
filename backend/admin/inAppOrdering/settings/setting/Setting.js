@@ -22,7 +22,18 @@ const settingSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
+      // Off App Payment Options (order-settings prototype v2.3): each one
+      // offered to the guest only when enabled. Receipt markers: Cash =
+      // Gotovina, Card (venue terminal) = Kartica, Other = Ostalo.
       cash: {
+        type: Boolean,
+        default: false,
+      },
+      card: {
+        type: Boolean,
+        default: false,
+      },
+      other: {
         type: Boolean,
         default: false,
       },

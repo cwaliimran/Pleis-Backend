@@ -3,6 +3,7 @@ const {
   resolvePleisAppScheme,
   resolvePleisIosStoreUrl,
   resolvePleisAndroidStoreUrl,
+  resolvePleisAndroidPackage,
 } = require("../config/CONSTANTS");
 
 function getStoreUrls() {
@@ -15,11 +16,29 @@ function getStoreUrls() {
 }
 
 /**
- * Smart open: try app scheme, then show store / web fallbacks.
+ * Android intent for an app-scheme link: Chrome opens the app when it is
+ * installed and goes to `fallbackUrl` (the Play Store) when it is not (#84).
+ * Nothing is passed through the install: there is no deferred deep link.
+ */
+function buildAndroidIntentUrl(appLink, fallbackUrl) {
+  const match = /^([a-z][a-z0-9+.-]*):\/\/(.*)$/i.exec(String(appLink || ""));
+  if (!match) return "";
+  const [, scheme, rest] = match;
+  const pkg = resolvePleisAndroidPackage();
+  return (
+    `intent://${rest}#Intent;scheme=${scheme};` +
+    (pkg ? `package=${pkg};` : "") +
+    (fallbackUrl ? `S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};` : "") +
+    "end"
+  );
+}
+
+/**
+ * Smart open: try app scheme, then show the store fallbacks (there is no web app).
  * @param {{ appLink: string, title?: string }} opts
  */
 function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
-  const { ios, android, web } = getStoreUrls();
+  const { ios, android } = getStoreUrls();
   const safeTitle = String(title || "PLEIS").replace(/</g, "");
   return `<!DOCTYPE html>
 <html lang="en">
@@ -214,21 +233,6 @@ function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
 
       .retry:hover { opacity: 1; }
 
-      .web {
-        display: inline-block;
-        margin-top: 22px;
-        color: var(--muted);
-        font-size: 0.9rem;
-        text-decoration: none;
-        border-bottom: 1px solid transparent;
-        transition: color 0.2s, border-color 0.2s;
-      }
-
-      .web:hover {
-        color: var(--ink);
-        border-bottom-color: var(--line);
-      }
-
       @media (prefers-reduced-motion: reduce) {
         .shell, .pulse { animation: none; }
       }
@@ -274,48 +278,51 @@ function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
         </a>
       </div>
 
-      <button type="button" class="retry" id="retry" hidden>Try opening the app again</button>
-      <a class="web" href="${web}" rel="noopener noreferrer">Continue on the web</a>
-    </main>
+      <button type="button" class="retry" id="retry">Try opening the app again</button>    </main>
 
     <script>
       (function () {
         const appLink = ${JSON.stringify(appLink)};
+        const androidIntent = ${JSON.stringify(buildAndroidIntentUrl(appLink, android))};
         const iosFallback = ${JSON.stringify(ios)};
-        const androidFallback = ${JSON.stringify(android)};
         const displayTitle = ${JSON.stringify(safeTitle)};
         const statusEl = document.getElementById("status");
         const retryBtn = document.getElementById("retry");
         const ua = navigator.userAgent || navigator.vendor || window.opera || "";
         const isAndroid = /android/i.test(ua);
         const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+        // Only a hidden page means the app took over. "blur" is not used: a
+        // browser popup also fires it and would hide the fallback for good.
         let leftPage = false;
 
         document.addEventListener("visibilitychange", function () {
           if (document.hidden) leftPage = true;
         });
         window.addEventListener("pagehide", function () { leftPage = true; });
-        window.addEventListener("blur", function () { leftPage = true; });
 
         function openApp() {
           leftPage = false;
           statusEl.innerHTML = '<span class="pulse" aria-hidden="true"></span>Opening <strong>' + displayTitle + '</strong>…';
-          retryBtn.hidden = true;
-          window.location.href = appLink;
+          // Android: the intent opens the app, or the Play Store without it
+          // (the intent carries the store as its fallback).
+          window.location.href = isAndroid && androidIntent ? androidIntent : appLink;
         }
 
         function showFallback() {
           if (leftPage) return;
           statusEl.innerHTML = "App didn’t open? Grab it from the store:";
-          retryBtn.hidden = false;
         }
 
+        // iOS has no intent fallback: go to the App Store when the app did not
+        // open. On Android a browser that blocks the automatic hand-off (no tap
+        // yet) must not be sent to the store while the app is installed; the
+        // button below opens the app, or the store through the intent.
         function softStoreRedirect() {
           if (leftPage) return;
-          if (isAndroid) window.location.href = androidFallback;
-          else if (isIOS) window.location.href = iosFallback;
+          if (isIOS) window.location.href = iosFallback;
         }
 
+        // Always visible: a tap is what browsers require before opening an app.
         retryBtn.addEventListener("click", openApp);
         openApp();
         setTimeout(showFallback, 1600);
@@ -326,7 +333,39 @@ function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
 </html>`;
 }
 
+/**
+ * Android browsers that follow an intent on a server redirect: Chrome and
+ * the Chromium-based ones. In-app browsers (WebView "; wv)", Facebook,
+ * Instagram) don't, so they get the open page with its button instead.
+ */
+const isAndroidBrowser = (userAgent) => {
+  const ua = String(userAgent || "");
+  return /android/i.test(ua) && !/; wv\)|FBAN|FBAV|Instagram/i.test(ua);
+};
+
+/**
+ * Answers a link that should open the app (QR codes, share and referral
+ * links, "open in app" from emails).
+ *
+ * Android: a 302 straight to the app intent. A link opened from another app
+ * (camera QR scan, chat) carries no tap inside the browser, and Chrome only
+ * hands such a link to an app on a server redirect; a script redirect from
+ * the page is blocked. The intent falls back to the Play Store when the app
+ * is not installed (#84). Everything else gets the open page.
+ */
+function sendSmartOpen(req, res, { appLink, title = "PLEIS" }) {
+  const intent = buildAndroidIntentUrl(appLink, resolvePleisAndroidStoreUrl());
+  res.setHeader("Cache-Control", "no-store");
+  if (intent && isAndroidBrowser(req.headers?.["user-agent"])) {
+    return res.redirect(302, intent);
+  }
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  return res.send(renderSmartOpenHtml({ appLink, title }));
+}
+
 module.exports = {
   getStoreUrls,
+  buildAndroidIntentUrl,
   renderSmartOpenHtml,
+  sendSmartOpen,
 };

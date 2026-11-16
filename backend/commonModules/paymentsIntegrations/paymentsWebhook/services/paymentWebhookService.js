@@ -286,7 +286,31 @@ const fulfillMonriRedirectPayment = async ({ tx, payload, status }) => {
   return result;
 };
 
+/**
+ * #8: what an organizer must never receive on a transaction (Filters v5 §2.5):
+ * the raw gateway payload (gateway figures) and the ticketing service fee.
+ * Commission stays — it is deducted from the organizer's money.
+ */
+const stripSuperAdminFields = (tx) => {
+  if (!tx) return tx;
+  const out = { ...tx };
+  delete out.payload;
+  const pricing = out.orderData?.orderPricing;
+  if (pricing) {
+    out.orderData = { ...out.orderData, orderPricing: { ...pricing } };
+    delete out.orderData.orderPricing.taxAmount;
+    delete out.orderData.orderPricing.serviceFee;
+  }
+  if (out.ticketingorders?.orderPricing) {
+    out.ticketingorders = { ...out.ticketingorders, orderPricing: { ...out.ticketingorders.orderPricing } };
+    delete out.ticketingorders.orderPricing.taxAmount;
+    delete out.ticketingorders.orderPricing.serviceFee;
+  }
+  return out;
+};
+
 const getOrdersTransactionsService = async ({
+  isSuperAdmin = false,
   page = 1,
   limit = 10,
   keyword,
@@ -421,12 +445,12 @@ const getOrdersTransactionsService = async ({
   ]);
   const meta = generateMeta(page, limit, totalFiltered);
   return {
-    transactions,
+    transactions: isSuperAdmin ? transactions : transactions.map(stripSuperAdminFields),
     meta
   };
 };
 
-const getOrdersTransactionDetailsService = async ({ id }) => {
+const getOrdersTransactionDetailsService = async ({ id, scope }) => {
   if (!Types.ObjectId.isValid(id)) {
     throw new Error("invalid_transaction_id");
   }
@@ -435,10 +459,17 @@ const getOrdersTransactionDetailsService = async ({ id }) => {
   if (!transactionDetails) {
     throw new Error("transaction_not_found");
   }
+  if (scope && !scope.isSuperAdmin) {
+    // #8: another company's transaction reads as not found.
+    const orgId = String(transactionDetails.organization?._id || transactionDetails.organization || "");
+    const allowed = (scope.organizations || []).map(String);
+    if (!orgId || !allowed.includes(orgId)) return null;
+    return stripSuperAdminFields(transactionDetails);
+  }
   return transactionDetails;
 };
 
-const getTransactionStatsService = async ({ dateFilter, timezone, companyOrganizer, organizations }) => {
+const getTransactionStatsService = async ({ isSuperAdmin = true, dateFilter, timezone, companyOrganizer, organizations }) => {
   const stats = await webhookRepository.getTransactionStats({ dateFilter, timezone, companyOrganizer, organizations });
   return {
     stats: [
@@ -484,8 +515,8 @@ const getTransactionStatsService = async ({ dateFilter, timezone, companyOrganiz
         ),
         ...withSubFilters("totalCommission"),
       },
-      {
-        key: "serviceFee",  // used 
+      isSuperAdmin && {
+        key: "serviceFee",  // used — superadmin only (#8)
         title: TRANSSECTION_KEYS.serviceFee.title,
         value: stats.serviceFeeCurrent || 0,
         growth: calculateGrowth(

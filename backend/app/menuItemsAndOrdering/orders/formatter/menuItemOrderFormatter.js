@@ -1,5 +1,9 @@
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { convertUtcToTimezone } = require("@utils/responseUtil");
+const {
+  buildPaymentMethodLabel,
+  organizerPaymentMethod,
+} = require("../../../../commonModules/menuItemsAndOrders/paymentMethods");
 
 /**
  * Format the order and each menu item snapshot for display
@@ -135,6 +139,18 @@ function menuItemOrderFormatter(order, timezone) {
   // Doc alias: expose delivered; keep completed for older clients reading the same value
   if (obj.status === "completed") {
     obj.status = "delivered";
+  }
+
+  // #68 / Legal_req_features_2 §1: one recorded payment method value everywhere,
+  // and the four values organizers see (Pleis, Card, Cash, Other).
+  if (obj.paymentMethod) {
+    if (!obj.paymentMethodLabel) {
+      obj.paymentMethodLabel = buildPaymentMethodLabel({
+        paymentMethod: obj.paymentMethod,
+        voucherAmount: obj.priceBreakdown?.voucherDiscount || 0,
+      });
+    }
+    obj.organizerPaymentMethod = organizerPaymentMethod(obj.paymentMethod);
   }
 
   return obj;

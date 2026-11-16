@@ -136,12 +136,30 @@ const UserReservationsSchema = new mongoose.Schema(
         "needsConfirmation",
         "confirmed",
         "checkedIn",
+        "noShow",
         "rejected",
         "cancelled",
+        // Legacy only (#54): Completed is removed from the lifecycle and never set.
+        // Kept in the enum so historic rows still validate on save.
         "completed",
         "deleted",
       ],
       default: "confirmed",
+    },
+
+    // Show / No-show audit (#92, #93, checklist IAO-34): who set it, when, at which venue.
+    checkInRecord: {
+      at: { type: Date, default: null },
+      by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      venue: { type: mongoose.Schema.Types.ObjectId, ref: "Organizations", default: null },
+      // staff = staff app / staff action, admin = admin panel, guest = app check-in, scan = reservation QR
+      via: { type: String, enum: [null, "staff", "admin", "guest", "scan"], default: null },
+    },
+    noShowRecord: {
+      at: { type: Date, default: null },
+      by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      venue: { type: mongoose.Schema.Types.ObjectId, ref: "Organizations", default: null },
+      via: { type: String, enum: [null, "staff", "admin"], default: null },
     },
 
     paymentDetails: {
@@ -250,7 +268,8 @@ const UserReservationsSchema = new mongoose.Schema(
       code: { type: String, default: () => `ORD-${generateShortId()}` },
       status: {
         type: String,
-        enum: [null, "pending", "applied", "expired", "cancelled"],
+        // forfeited: minimum spend voucher retained by the organizer on a no-show (#55)
+        enum: [null, "pending", "applied", "expired", "cancelled", "forfeited"],
         default: null,
       },
       discountAmount: { type: Number, default: 0 },
@@ -294,6 +313,7 @@ const NON_CAPACITY_STATUSES = [
   "rejected",
   "deleted",
   "completed",
+  "noShow",
 ];
 
 module.exports = {

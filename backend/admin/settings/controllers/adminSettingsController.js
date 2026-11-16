@@ -284,6 +284,11 @@ const updateAdminSettings = async (req, res) => {
     invalidations.push("privacy_policy");
   }
 
+  if (req.body.sales_terms) {
+    updateData.sales_terms = req.body.sales_terms;
+    invalidations.push("sales_terms");
+  }
+
   // invalidate only touched scopes
   await Promise.all(
     [...new Set(invalidations)].map(scope =>
@@ -304,6 +309,28 @@ const updateAdminSettings = async (req, res) => {
         statusCode: 404,
         translationKey: "admin_settings_2",
       });
+    }
+
+    // Any change to a legal text must exist as an immutable version (consent log
+    // points at it). Publish one for each legal field whose text actually changed.
+    const legalService = require("../../../commonModules/legal/legalService");
+    const legalFields = {
+      terms_and_conditions: "partner_terms",
+      customer_terms_and_conditions: "terms_of_use",
+      privacy_policy: "privacy_policy",
+      sales_terms: "sales_terms",
+    };
+    for (const [field, type] of Object.entries(legalFields)) {
+      if (!req.body[field]) continue;
+      const latest = await legalService.getLatestDocument(type);
+      if (latest?.content !== req.body[field]) {
+        await legalService.publishDocument({
+          type,
+          content: req.body[field],
+          summary: req.body.summary || "",
+          publishedBy: req.user?._id,
+        });
+      }
     }
 
     if (req.body.terms_and_conditions) {
@@ -374,7 +401,62 @@ const getCustomerTermsAndConditions = async (req, res) => {
 };
 
 
+// ── Compliance settings (P5): read by the guest app at checkout, so behaviour changes
+//    by changing the setting, with no new delivery. Cached briefly, busted on update.
+const COMPLIANCE_CACHE_KEY = `${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:compliance`;
+const AGE_NOTICE_MODES = ["notice", "confirmation"];
+const DEFAULT_ORDERING_TITLE = "In place Offer";
+
+const getComplianceSettings = async (req, res) => {
+  try {
+    const data = await cache({
+      namespace: COMPLIANCE_CACHE_KEY,
+      ttl: 300,
+      fetchFn: async () => {
+        const s = await AdminSettings.findOne({}, "age_notice_mode ordering_screen_title").lean();
+        return {
+          ageNoticeMode: AGE_NOTICE_MODES.includes(s?.age_notice_mode) ? s.age_notice_mode : "notice",
+          orderingScreenTitle: (s?.ordering_screen_title || "").trim() || DEFAULT_ORDERING_TITLE,
+        };
+      },
+    });
+    return sendResponse({ res, statusCode: 200, translationKey: "compliance_settings_fetched", data });
+  } catch (error) {
+    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+  }
+};
+
+const updateComplianceSettings = async (req, res) => {
+  const { ageNoticeMode, orderingScreenTitle } = req.body || {};
+  const $set = {};
+  if (ageNoticeMode !== undefined) {
+    if (!AGE_NOTICE_MODES.includes(ageNoticeMode)) {
+      return sendResponse({ res, statusCode: 400, translationKey: "invalid_age_notice_mode" });
+    }
+    $set.age_notice_mode = ageNoticeMode;
+  }
+  if (orderingScreenTitle !== undefined) {
+    const title = String(orderingScreenTitle).trim();
+    if (!title || title.length > 40) {
+      return sendResponse({ res, statusCode: 400, translationKey: "ordering_screen_title_must_be_1_to_40_characters" });
+    }
+    $set.ordering_screen_title = title;
+  }
+  if (!Object.keys($set).length) {
+    return sendResponse({ res, statusCode: 400, translationKey: "nothing_to_update" });
+  }
+  try {
+    await AdminSettings.updateOne({}, { $set }, { upsert: true });
+    await invalidate(COMPLIANCE_CACHE_KEY);
+    return sendResponse({ res, statusCode: 200, translationKey: "compliance_settings_updated", data: req.body });
+  } catch (error) {
+    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+  }
+};
+
 module.exports = {
+  getComplianceSettings,
+  updateComplianceSettings,
   getTermsAndConditions,
   getAboutUs,
   getPrivacyPolicy,

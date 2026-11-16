@@ -9,9 +9,12 @@ const Organization = require("@OrganizationModel");
 const {Events} = require("@EventsModel");
 const Venues = require("@VenuesModel");
 const {User} = require("@UsersModel");
+const { createCode, withLinks } = require("../../commonModules/qrCode/qrLinks");
+
 const createQr = async (data) => {
-  let Qr = await QrRepo.createQr(data);
-  return Qr;
+  const Qr = await createCode(data, { source: "generator" });
+  const [withLink] = await withLinks([Qr.toObject()]);
+  return formatqr(withLink);
 };
 const getQrs = async ({ organization,userId, page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
@@ -19,6 +22,8 @@ const getQrs = async ({ organization,userId, page, limit, keyword, status, date,
   // Build query object
   const query = {
     creator:new mongoose.Types.ObjectId(userId), // Ensure userId is treated as an ObjectId
+    // Links issued by the app's share button are not printable codes (#83).
+    source: { $ne: "share" },
   };
 
   if (status) query.status = status;
@@ -31,11 +36,12 @@ const getQrs = async ({ organization,userId, page, limit, keyword, status, date,
   }
 
   if (keyword) {
-    Object.assign(query, buildKeywordQueryFromModels([{ schema: Qr.schema }], keyword));
+    Object.assign(query, buildKeywordQueryFromModels([{ schema: GlobalQr.schema }], keyword));
   }
 
   // Get Qrs with filters
-  const Qrs = await QrRepo.getQrsWithFilters(query, skip, limit);
+  // Every code carries its deep link (#59); older codes get their token here.
+  const Qrs = await withLinks(await QrRepo.getQrsWithFilters(query, skip, limit));
 
   // Loop through Qrs and populate fields based on presence of IDs
   const populatedQrs = await Promise.all(

@@ -80,6 +80,7 @@ const adminRoutes = require("./admin/routes");
 const organizerRoutes = require("./organizer/routes");
 const appRoutes = require("./routes/appRoutes");
 const staffRoutes = require("./routes/staffRoutes");
+const qrLinks = require("./commonModules/qrCode/qrLinkRoutes");
 const webhooksRoutes =
   require("./commonModules/paymentsIntegrations/paymentsWebhook/routes/webhookRoutes");
 
@@ -164,6 +165,11 @@ app.use(textModerationMiddleware);
  * Routes
  * =======================================================
  */
+// QR / share deep links on the link domain root, and the files that let
+// Android and iOS open them in the app (#59, #82, #84).
+app.use(qrLinks.wellKnownRouter);
+app.use("/q", qrLinks.qrLinkRouter);
+
 app.use("/api/v1/app", appRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/organizer", organizerRoutes);

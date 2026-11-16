@@ -14,6 +14,7 @@ const NON_CANCELLABLE_STATUSES = new Set([
   "rejected",
   "completed",
   "checkedIn",
+  "noShow",
   "deleted",
 ]);
 

@@ -125,6 +125,12 @@ const ticketingsSchema = new mongoose.Schema(
       }
     },
 
+    // 18+ statutory age restriction (Legal spec section 3). Drives the 18+ badge and
+    // the order-screen notice; such items can never be offered for takeaway/delivery.
+    ageRestricted: {
+      type: Boolean,
+      default: false,
+    },
     requiresReservation: {
       enabled: {
         type: Boolean,

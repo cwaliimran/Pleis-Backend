@@ -39,7 +39,18 @@ const createMenuItem = async (req, res) => {
     isRecommended,
     isTogo,
     isRequiresOrderConfirmation,
+    ageRestricted,
   } = req.body;
+  if (
+    (ageRestricted === true || ageRestricted === "true") &&
+    (isTogo === true || isTogo === "true")
+  ) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "age_restricted_item_cannot_be_togo",
+    });
+  }
 
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
@@ -104,6 +115,7 @@ const createMenuItem = async (req, res) => {
     upSellItem,
     isTogo,
     isRequiresOrderConfirmation,
+    ageRestricted,
   };
 
   if (startTime) {
@@ -350,7 +362,18 @@ const updateMenuItem = async (req, res) => {
     isRecommended,
     isTogo,
     isRequiresOrderConfirmation,
+    ageRestricted,
   } = req.body;
+  if (
+    (ageRestricted === true || ageRestricted === "true") &&
+    (isTogo === true || isTogo === "true")
+  ) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "age_restricted_item_cannot_be_togo",
+    });
+  }
   if (availabilityType === "preOrdersEvent" && !event) {
     return sendResponse({
       res,
@@ -452,6 +475,7 @@ const updateMenuItem = async (req, res) => {
     isRecommended,
     isTogo,
     isRequiresOrderConfirmation,
+    ageRestricted,
   };
 
   try {

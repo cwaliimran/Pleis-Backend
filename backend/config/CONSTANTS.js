@@ -33,10 +33,9 @@ const PLEIS_WEB = "https://pleis.hr";
 const PLEIS_SUPPORT_EMAIL = "support@pleis.hr";
 const PLEIS_MAIL_DOMAIN = "pleis.ai";
 const PLEIS_APP_SCHEME = "com.pleis";
-const PLEIS_IOS_STORE_URL =
-  "https://apps.apple.com/app/pleisapp/id1234567890";
+const PLEIS_IOS_STORE_URL = "https://apps.apple.com/app/id6538720292";
 const PLEIS_ANDROID_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.pleis";
+  "https://play.google.com/store/apps/details?id=com.Efuria.org";
 const MAILGUN_API_BASE = "https://api.mailgun.net";
 const FIREBASE_DATABASE_URL = "https://pleis-4fb7b.firebaseio.com";
 
@@ -82,6 +81,54 @@ function resolvePleisIosStoreUrl() {
 
 function resolvePleisAndroidStoreUrl() {
   return envOr("PLEIS_ANDROID_STORE_URL", PLEIS_ANDROID_STORE_URL);
+}
+
+// App identity used for verified links (Android App Links / iOS Universal
+// Links) and for the Android "open app or store" intent (#82, #84).
+const PLEIS_ANDROID_PACKAGE = "com.Efuria.org";
+const PLEIS_IOS_APP_IDS = "BUKST6P34T.com.Efuria.org";
+
+/**
+ * Base of every public link the app hands out — QR / share deep links
+ * (#59, #82, #83), referral share links and the "open in app" link in
+ * confirmation emails. PLEIS_LINK_BASE_URL is the server root that serves
+ * them (e.g. https://go.pleis.hr/); until it is set the API base is used.
+ */
+function resolvePleisLinkBase() {
+  const base = envOr("PLEIS_LINK_BASE_URL", envOr("API_BASE_URL", ""));
+  if (!base) return "";
+  return base.endsWith("/") ? base : `${base}/`;
+}
+
+/**
+ * The one place public links are built: `<link base><path>`.
+ * `path` is relative to the server root, e.g. `q/<token>` or
+ * `api/v1/app/global-referral/share?id=…`. Empty when no base is configured.
+ */
+function buildPleisLink(path) {
+  const base = resolvePleisLinkBase();
+  if (!base) return "";
+  return `${base}${String(path || "").replace(/^\/+/, "")}`;
+}
+
+function resolvePleisAndroidPackage() {
+  return envOr("PLEIS_ANDROID_PACKAGE", PLEIS_ANDROID_PACKAGE);
+}
+
+/** SHA-256 fingerprints of the app signing certificates (Play Console → App signing), comma separated. */
+function resolvePleisAndroidCertFingerprints() {
+  return envOr("PLEIS_ANDROID_SHA256_FINGERPRINTS", "")
+    .split(",")
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+/** "<TEAM_ID>.<bundle id>" entries, comma separated. */
+function resolvePleisIosAppIds() {
+  return envOr("PLEIS_IOS_APP_IDS", PLEIS_IOS_APP_IDS)
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 function resolveMailgunApiBase() {
@@ -151,6 +198,11 @@ module.exports = {
   resolvePleisAppScheme,
   resolvePleisIosStoreUrl,
   resolvePleisAndroidStoreUrl,
+  resolvePleisLinkBase,
+  buildPleisLink,
+  resolvePleisAndroidPackage,
+  resolvePleisAndroidCertFingerprints,
+  resolvePleisIosAppIds,
   resolveMailgunApiBase,
   resolveFirebaseDatabaseUrl,
   resolveMailFrom,

@@ -72,6 +72,8 @@ const applyFields = (doc, data, options = { futureMode: false }) => {
   });
   if (data.resaleProtection !== undefined) doc.resaleProtection = data.resaleProtection;
   if(data.transferFee !== undefined) doc.transferFee = data.transferFee;
+  // Legal spec 3: 18+ flag
+  if (data.ageRestricted !== undefined) doc.ageRestricted = !!data.ageRestricted;
 
   if (data.event !== undefined) doc.event = data.event;
 

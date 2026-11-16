@@ -73,7 +73,7 @@ const getPublicActiveCategories = async (filter = {}) => {
 
 const findPublicActiveCategories = (filter = {}) =>
   Categories.find({ status: "active", ...filter })
-    .sort({ order: 1 })
+    .sort({ order: 1, createdAt: 1, _id: 1 })
     .select("title image order")
     .lean();
 
@@ -158,7 +158,7 @@ const updateMany = async (filter, data) => {
  * ============================
  */
 const normalizeOrders = async () => {
-  const docs = await Categories.find({ status: { $ne: "deleted" } }).sort("order");
+  const docs = await Categories.find({ status: { $ne: "deleted" } }).sort({ order: 1, createdAt: 1, _id: 1 });
 
   const ops = docs.map((doc, i) => ({
     updateOne: {

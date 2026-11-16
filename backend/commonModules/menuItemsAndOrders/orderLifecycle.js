@@ -7,6 +7,8 @@
  * Storage: "delivered" is the doc name; legacy "completed" is accepted as alias.
  */
 
+const { isPleisMethod } = require("./paymentMethods");
+
 const TERMINAL_FULFILMENT = new Set([
   "cancelled",
   "rejected",
@@ -168,7 +170,7 @@ const isPaymentSettledOrClosed = (paymentStatus) =>
  * before or after Delivered. Gateway pay-now settlement is separate.
  * Once paid or unpaidClosed, payment is locked.
  */
-const assertPaymentTransition = (order, nextPaymentStatus) => {
+const assertPaymentTransition = (order, nextPaymentStatus, { paymentMethod } = {}) => {
   if (nextPaymentStatus == null) return;
   if (nextPaymentStatus === order.paymentStatus) return;
 
@@ -180,6 +182,15 @@ const assertPaymentTransition = (order, nextPaymentStatus) => {
 
   if (nextPaymentStatus !== "paid" && nextPaymentStatus !== "unpaidClosed") {
     return;
+  }
+
+  // #89 / Monri v1.4 §8: Mark as Paid / Mark as Unpaid exist only where the venue
+  // collects the money (cash, venue terminal, Other). A Pleis payment is set Paid
+  // from the Monri result, never by hand.
+  if (isPleisMethod(paymentMethod || order.paymentMethod)) {
+    const err = new Error("payment_status_set_by_monri");
+    err.statusCode = 409;
+    throw err;
   }
 
   // Pending still awaiting Confirm/Reject — settle payment after acceptance.
@@ -201,6 +212,8 @@ const assertPaymentTransition = (order, nextPaymentStatus) => {
 const resolveStaffNextActions = (order = {}) => {
   const fulfilment = normalizeFulfilmentStatus(order.status);
   const unpaid = !isPaymentSettledOrClosed(order.paymentStatus);
+  // #89: Mark as Paid / Mark as Unpaid only where the venue collects the money.
+  const paymentActions = unpaid && !isPleisMethod(order.paymentMethod) ? ["mark_paid", "mark_unpaid"] : [];
   const pickup = isPickupStyle(order);
   const actions = [];
 
@@ -209,12 +222,12 @@ const resolveStaffNextActions = (order = {}) => {
   } else if (fulfilment === "confirmed") {
     if (pickup) actions.push("ready");
     else actions.push("delivered");
-    if (unpaid) actions.push("mark_paid", "mark_unpaid", "cancel");
+    if (unpaid) actions.push(...paymentActions, "cancel");
   } else if (fulfilment === "ready") {
     actions.push("delivered");
-    if (unpaid) actions.push("mark_paid", "mark_unpaid", "cancel");
+    if (unpaid) actions.push(...paymentActions, "cancel");
   } else if (fulfilment === "delivered" && unpaid) {
-    actions.push("mark_paid", "mark_unpaid", "cancel");
+    actions.push(...paymentActions, "cancel");
   }
 
   return actions;

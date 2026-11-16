@@ -356,10 +356,7 @@ const updateOrganization = async ({ id, data, timezone }) => {
             existingSettings?.deliveryMethods?.tableDelivery ??
             false,
 
-          toGo:
-            inAppOrderingSettings?.deliveryMethods?.toGo ??
-            existingSettings?.deliveryMethods?.toGo ??
-            false,
+          toGo: false, // #146: never a delivery destination
         },
       };
       organization.markModified("inAppOrderingSettings");

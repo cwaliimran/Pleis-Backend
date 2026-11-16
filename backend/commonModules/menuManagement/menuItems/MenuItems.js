@@ -173,6 +173,12 @@ const menuItemsSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // 18+ statutory age restriction (Legal spec section 3). Drives the 18+ badge and
+    // the order-screen notice; such items can never be offered for takeaway/delivery.
+    ageRestricted: {
+      type: Boolean,
+      default: false,
+    },
     isRequiresOrderConfirmation: {
       type: Boolean,
       default: false,
@@ -182,6 +188,22 @@ const menuItemsSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+// Age-restricted items cannot be offered for takeaway / delivery.
+menuItemsSchema.pre("validate", function (next) {
+  if (this.ageRestricted) this.isTogo = false;
+  next();
+});
+menuItemsSchema.pre(["findOneAndUpdate", "updateOne", "updateMany"], function (next) {
+  const u = this.getUpdate() || {};
+  const set = u.$set || u;
+  if (set.ageRestricted === true) {
+    if (u.$set) u.$set.isTogo = false;
+    else u.isTogo = false;
+    this.setUpdate(u);
+  }
+  next();
+});
 
 const MenuItems = mongoose.model("MenuItems", menuItemsSchema);
 

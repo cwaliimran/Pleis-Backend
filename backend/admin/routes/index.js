@@ -5,6 +5,7 @@ const router = express.Router();
 router.use("/", require("../../routes/index"));
 router.use(auth, roleMiddleware(["admin"]));
 router.use("/settings", require("../settings/adminSettingsRoutes"));
+router.use("/legal-documents", require("../../commonModules/legal/legalAdminRoutes"));
 router.use("/suppliers", require("../suppliers/suppliersRoutes"));
 router.use("/tags-types", require("../tagTypes/tagTypesRoutes"));
 router.use("/tags", require("../tags/tagsRoutes"));
@@ -64,6 +65,8 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 // transactions
 router.use("/transactions", require("../transactions/routes/unifiedTransactionsRoutes"));
+// Money transactions: one row per captured payment, from the ledger (#10, #8)
+router.use("/transaction-ledger", require("../../commonModules/paymentsIntegrations/ledger/transactionList/transactionListRoutes"));
 // thirdPParty
 router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
 // thirdPParty

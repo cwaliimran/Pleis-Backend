@@ -114,6 +114,7 @@ const getReservationTypesSummary = async ({
         conditionType: 1,
         minimumSpend: 1,
         occasionRequired: 1,
+        ageRestricted: 1,
 
         availableTables: {
           $subtract: [

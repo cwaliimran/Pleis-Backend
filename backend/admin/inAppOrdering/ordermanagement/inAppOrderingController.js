@@ -94,9 +94,13 @@ const updateOrders = async (req, res) => {
     reasonForCancellation,
     noteForRejection,
     noteForCancellation,
-    updateBy: req.user._id,
+    updateBy: req.user.originalUserId || req.user._id,
     paymentMethod,
     deliveredCombo,
+    // #89: who received an off-app payment / closed a walk-away.
+    via: "web_admin_app",
+    byRole: req.user.originalUserId ? "manager" : req.user.accountState?.userType || req.user.role || "",
+    byName: `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim(),
   };
 
   try {

@@ -8,87 +8,29 @@ const {
 const mongoose = require("mongoose");
 const QrService = require("./qrService");
 
+const REQUIRED_TARGET_FIELDS = {
+  organization: ["organizationId"],
+  event: ["eventId"],
+  loyalty: ["loyaltyId"],
+  checkInOrder: ["venueId"],
+  checkInTableID: ["venueId", "deliveryOptionId"],
+};
+
+// #59: the server issues the code's token and link; the target is checked and
+// the organization / venue / table label are stored next to it (qrLinks).
 const createQr = async (req, res) => {
-req.body.creator = req.user?._id;
-  // Initialize variables
-  var dateFields = {};
-  var rawData = ["label", "globalQrType"];
-  var objectIdFields = []; // Removed companyOrganizer
-
-  // Handle organization type
-  if (req.body.globalQrType === "organization") {
-        if (!req.body.organizationId) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "organizationId_is_required",
-    });
+  const { globalQrType } = req.body || {};
+  const required = REQUIRED_TARGET_FIELDS[globalQrType];
+  if (!required) {
+    return sendResponse({ res, statusCode: 400, translationKey: "invalid_type" });
   }
-    rawData.push("organizationId");
-    objectIdFields.push("organizationId");
-    req.body.organizationId = new mongoose.Types.ObjectId(req.body.organizationId);
-  }
-
-  // Handle event type
-  if (req.body.globalQrType === "event") {
-    if (!req.body.eventId) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "eventId_is_required",
-    });
-  }
-    rawData.push("eventId");
-    objectIdFields.push("eventId");
-    req.body.eventId = new mongoose.Types.ObjectId(req.body.eventId);
-
-  }
-    if (req.body.globalQrType === "loyalty") {
-    if (!req.body.loyaltyId) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "loyaltyId_is_required",
-    });
-  }
-    rawData.push("loyaltyId");
-    objectIdFields.push("loyaltyId");
-    req.body.loyaltyId = new mongoose.Types.ObjectId(req.body.loyaltyId);
-
-  }
-      if (req.body.globalQrType === "checkInOrder") {
-    if (!req.body.venueId) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "venueId_is_required",
-    });
-  }
-    rawData.push("venueId");
-    objectIdFields.push("venueId");
-    req.body.venueId = new mongoose.Types.ObjectId(req.body.venueId);
-
-  }
-        if (req.body.globalQrType === "checkInTableID") {
-    if (!req.body.venueId||!req.body.tableNo) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "venueId_is_required",
-    });
-  }
-    rawData.push("venueId");
-    objectIdFields.push("venueId");
-    req.body.venueId = new mongoose.Types.ObjectId(req.body.venueId);
-    req.body.tableNo = req.body.tableNo;
-
+  const missing = required.find((field) => !req.body[field] || !mongoose.isValidObjectId(req.body[field]));
+  if (missing) {
+    return sendResponse({ res, statusCode: 400, translationKey: `${missing}_is_required` });
   }
 
   try {
-
-
-    // Create Qr
-    const Qr = await QrService.createQr(req.body);
+    const Qr = await QrService.createQr({ ...req.body, creator: req.user?._id });
 
     return sendResponse({
       res,
@@ -97,6 +39,9 @@ req.body.creator = req.user?._id;
       data: Qr,
     });
   } catch (error) {
+    if (error?.statusCode) {
+      return sendResponse({ res, statusCode: error.statusCode, translationKey: error.message, error });
+    }
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
