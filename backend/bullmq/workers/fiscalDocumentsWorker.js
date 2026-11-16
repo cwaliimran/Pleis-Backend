@@ -1,4 +1,4 @@
-const { Worker } = require("bullmq");
+const { Worker, UnrecoverableError } = require("bullmq");
 const connection = require("../connection");
 const { QUEUE_NAMES } = require("../queues");
 const {
@@ -7,6 +7,9 @@ const {
 const {
   billkoErrorDetails,
 } = require("../../commonModules/paymentsIntegrations/billko/billkoClient");
+const {
+  isPermanentFailure,
+} = require("../../commonModules/fiscalDocuments/jobs/documentSweeper");
 
 function summarizeFiscalResult(result) {
   if (!result) return { skipped: true };
@@ -31,7 +34,17 @@ function summarizeFiscalResult(result) {
 const fiscalDocumentsWorker = new Worker(
   QUEUE_NAMES.FISCAL_DOCUMENTS,
   async (job) => {
-    const result = await handleSuccessfulPayment(job.data);
+    let result;
+    try {
+      result = await handleSuccessfulPayment(job.data);
+    } catch (err) {
+      // Order gone / invalid job: retrying cannot help, so stop now; the
+      // sweeper leaves these for a person. Everything else keeps retrying.
+      if (!(err instanceof UnrecoverableError) && isPermanentFailure(err?.message)) {
+        throw new UnrecoverableError(err.message);
+      }
+      throw err;
+    }
     return summarizeFiscalResult(result);
   },
   {

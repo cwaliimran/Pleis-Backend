@@ -7,6 +7,9 @@ const {
 const {
   runDocumentReconciliation,
 } = require("../../commonModules/paymentsIntegrations/ledger/documentReconciliationService");
+const {
+  sweepFiscalDocuments,
+} = require("../../commonModules/fiscalDocuments/jobs/documentSweeper");
 
 const { runRecurringEventsCron } = require("./events/recurringEvents.core");
 const { runEventReminderCron } = require("./events/eventReminder.cron");
@@ -84,6 +87,25 @@ const startCrons = () => {
           console.warn("[payment-reconcile] restarting job now");
         }
       }
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+  /* ======================================================
+     📄 Document sweeper (every 15 minutes)
+     Retries failed confirmation / invoice jobs and queues the
+     ones missing for captured payments, so no document stays
+     stuck after an outage. Redis lock: one server per run.
+     ====================================================== */
+  cron.schedule("7,22,37,52 * * * *", async () => {
+    const lockKey = "cron:document-sweeper";
+    const lock = await acquireLock(lockKey, 600);
+    if (!lock) return;
+    try {
+      await sweepFiscalDocuments();
+    } catch (err) {
+      console.error("[document-sweeper] run failed:", err.message);
     } finally {
       await releaseLock(lockKey, lock);
     }
