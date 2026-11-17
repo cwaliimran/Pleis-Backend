@@ -90,7 +90,7 @@ const registrationViaLinkEmailTemplate = (verificationLink) => `
             Verify Email
           </a>
         </p>
-        <p>If you didn't initiate this request, please ignore this email.</p>
+        <p>This link is valid for 48 hours. If you didn't initiate this request, please ignore this email.</p>
       </div>
       <div class="footer">
         &copy; ${currentYear} ${APP_NAME}. All rights reserved.

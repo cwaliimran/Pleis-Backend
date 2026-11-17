@@ -487,24 +487,31 @@ const getOrganizationsGroupedByTagsService = async ({
   const {
     TAG_ORGS_SCAN,
     TAG_LIMIT_PER_GROUP,
+    TAG_GROUP_MIN_ITEMS,
     TAG_GROUPS_MAX,
   } = require("../home/utils/homeFeedLimits");
 
-  // Discover which tag groups to show (cheap scan), then fill each with the
-  // same primary-tag query used by global/search see-all — so lists match.
+  // Discover which tags have enough venues nearby (every tag of a venue
+  // counts), then fill each with the same query global/search see-all uses —
+  // so the section and its see-all list match.
   const discovered = await getOrganizationsGroupedByTagsRepo({
     userLocation,
     radiusKm,
-    limitPerTag: 1,
     maxOrgsScan: TAG_ORGS_SCAN,
-    maxTagGroups: TAG_GROUPS_MAX,
+    minOrgsPerTag: TAG_GROUP_MIN_ITEMS,
     category
   });
 
   if (!Array.isArray(discovered) || !discovered.length) return [];
 
+  // Variety: a random TAG_GROUPS_MAX of the eligible tags (the feed shuffles
+  // their order again), not always the biggest ones.
+  const picked = [...discovered]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, TAG_GROUPS_MAX);
+
   const groups = await Promise.all(
-    discovered.map(async (group) => {
+    picked.map(async (group) => {
       const tagId = group.tagId;
       if (!tagId) return null;
 
@@ -520,7 +527,8 @@ const getOrganizationsGroupedByTagsService = async ({
         category,
       });
 
-      if (!organizations?.length) return null;
+      // No 1-card sections
+      if (!organizations || organizations.length < TAG_GROUP_MIN_ITEMS) return null;
 
       return {
         key: "customCategoryByTags",

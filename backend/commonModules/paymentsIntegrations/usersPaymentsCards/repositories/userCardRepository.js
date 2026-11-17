@@ -3,10 +3,16 @@ const UserCard = require("./UserCard.model");
 
 const toId = (id) => new mongoose.Types.ObjectId(String(id));
 
-// Only Monri-tokenized cards can be paid with; legacy client-side rows are hidden.
-const usableFilter = (userId) => ({
+// Cards the guest sees: Monri-tokenized only; legacy client-side rows are hidden.
+// Expired ones are listed as Expired (Monri v1.4 §5.1) so the guest can delete them.
+const listedFilter = (userId) => ({
   user: toId(userId),
   source: "monri",
+});
+
+// Cards that can be paid with: listed and not expired.
+const usableFilter = (userId) => ({
+  ...listedFilter(userId),
   expired: { $ne: true },
 });
 
@@ -14,15 +20,16 @@ const createCard = async (data) => {
   return UserCard.create(data);
 };
 
-/** Cards shown to the guest: brand + masked number only, never the token. */
+/** Cards shown to the guest: brand + masked number only, never the token. Usable first. */
 const getUserCards = async (userId) => {
-  return UserCard.find(usableFilter(userId))
+  return UserCard.find(listedFilter(userId))
     .select("-panToken -panTokenEncrypted")
-    .sort({ isDefault: -1, lastUsedAt: -1, createdAt: -1 })
+    .sort({ expired: 1, isDefault: -1, lastUsedAt: -1, createdAt: -1 })
     .lean();
 };
 
-const countUserCards = async (userId) => UserCard.countDocuments(usableFilter(userId));
+// §5.1 limit of 5: every saved card counts, an expired one too, until the guest deletes it.
+const countUserCards = async (userId) => UserCard.countDocuments(listedFilter(userId));
 
 const getCardById = async (cardId, userId) => {
   return UserCard.findOne({ _id: toId(cardId), user: toId(userId) });

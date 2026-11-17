@@ -106,6 +106,7 @@ async function searchOrganizations(ctx) {
       .map((id) => new mongoose.Types.ObjectId(id));
 
   const categoryObjectIds = toObjectIds(categories);
+  // The app sends the selected tags as advanceFilters.genre (tag ids).
   const tagObjectIds = toObjectIds(genre);
   const venueTypeObjectIds = toObjectIds(venueTypes);
 
@@ -138,10 +139,10 @@ async function searchOrganizations(ctx) {
     filter["otherInfo.categories"] = { $in: categoryObjectIds };
 
   //
-  // TAG FILTER
+  // TAG FILTER — the organization must carry every selected tag
   //
   if (tagObjectIds.length)
-    filter["otherInfo.tags"] = { $in: tagObjectIds };
+    filter["otherInfo.tags"] = { $all: tagObjectIds };
 
   // Only apply maxDistance when the client sets advanceFilters.distanceTo.
   // Do NOT default to radiusKm — keyword search (org name / venue title) is global;

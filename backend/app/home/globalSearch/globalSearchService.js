@@ -766,7 +766,7 @@ async function fetchFilterKeyPayload({
           "tagId required: use home section.filterKey (tag id) as ?filterKey=, or pass body.tagId"
         );
       }
-      // Same primary-tag + distance query as home customCategoryByTags sections
+      // Same query as the home customCategoryByTags sections: orgs carrying the tag, closest first
       const { organizations, totalCount } =
         await getOrganizationsByPrimaryTagService({
           tagId: tagIds[0],

@@ -1059,9 +1059,14 @@ const updateReservationData = async (Reservation, data) => {
   return await Reservation.save();
 };
 
-// Delete
+// Delete exactly the given reservation (a document or its id). Never an
+// unfiltered deleteOne(): that removes whichever reservation comes first.
 const deleteReservationById = async (Reservation) => {
-  return await UserReservations.deleteOne();
+  const id = Reservation?._id ?? Reservation;
+  if (!id || !mongoose.Types.ObjectId.isValid(String(id))) {
+    throw new Error("deleteReservationById: reservation id required");
+  }
+  return await UserReservations.deleteOne({ _id: new mongoose.Types.ObjectId(String(id)) });
 };
 
 //findByIdAndUpdate

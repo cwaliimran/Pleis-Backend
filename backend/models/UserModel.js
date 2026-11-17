@@ -781,8 +781,9 @@ userSchema.methods.generateEmailVerificationToken = function (
 
   const { rawToken, hashedToken } = generateSecureToken();
 
-  // 3. Set expiry (e.g. 10 minutes)
-  const expiresAt = moment.tz(now, timezone).add(10, "minutes").valueOf();
+  // 3. Set expiry: the activation link stays valid for 48 hours
+  // (keep in sync with the wording in registrationViaLinkEmailTemplate)
+  const expiresAt = moment.tz(now, timezone).add(48, "hours").valueOf();
 
   user.emailVerification = {
     tokenHash: hashedToken,

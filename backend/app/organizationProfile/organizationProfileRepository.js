@@ -2291,17 +2291,23 @@ const getNewlyListedOrganizationsRepo = async ({
 
 
 
+/**
+ * Which tags get a Browser section (home customCategoryByTags).
+ *
+ * Counts every tag carried by the `maxOrgsScan` nearest active orgs (a venue
+ * counts for each of its tags, not only its first) and returns the tags with
+ * at least `minOrgsPerTag` of them, most venues first: { tagId, title, count }.
+ * The sections themselves are filled by getOrganizationsByPrimaryTagRepo.
+ */
 const getOrganizationsGroupedByTagsRepo = async ({
   userLocation,
   radiusKm,
-  limitPerTag = 10,
   maxOrgsScan = 150,
-  maxTagGroups = 12,
+  minOrgsPerTag = 1,
   category
 }) => {
   const orgsScan = Math.max(1, Number(maxOrgsScan) || 150);
-  const perTag = Math.max(1, Number(limitPerTag) || 10);
-  const tagGroupsCap = Math.max(1, Number(maxTagGroups) || 12);
+  const minPerTag = Math.max(1, Number(minOrgsPerTag) || 1);
   const radiusMeters = (radiusKm || 0) * 1000;
 
   const categoryObjectId = category
@@ -2322,11 +2328,7 @@ const getOrganizationsGroupedByTagsRepo = async ({
 
   const pipeline = [];
 
-  /**
-   * -------------------------------------
-   * 1️⃣ GEO (optional)
-   * -------------------------------------
-   */
+  // 1. Nearest orgs (or all, without a location)
   if (userLocation) {
     pipeline.push({
       $geoNear: {
@@ -2340,172 +2342,48 @@ const getOrganizationsGroupedByTagsRepo = async ({
     });
   } else {
     pipeline.push({ $match: baseMatch });
-
-    pipeline.push({
-      $addFields: { distance: null }
-    });
   }
 
   if (effectiveVenueTypeIds.length) {
     pipeline.push(...primaryVenueTypeMatchStages(effectiveVenueTypeIds));
   }
 
-  /**
-   * Cap orgs BEFORE lookups/group so global mode cannot scan the full collection.
-   * Sort closest-first when distance exists; otherwise keep natural order.
-   */
+  // Cap orgs BEFORE grouping so global mode cannot scan the full collection.
   if (userLocation) {
     pipeline.push({ $sort: { distance: 1 } });
   }
   pipeline.push({ $limit: orgsScan });
 
-  /**
-   * -------------------------------------
-   * 2️⃣ PRIMARY TAG
-   * -------------------------------------
-   */
+  // 2. Every tag of each org, counted once per org
   pipeline.push(
-    {
-      $addFields: {
-        primaryTag: { $arrayElemAt: ["$otherInfo.tags", 0] }
-      }
-    },
-    { $match: { primaryTag: { $ne: null } } },
+    { $project: { tags: { $setUnion: [{ $ifNull: ["$otherInfo.tags", []] }, []] } } },
+    { $unwind: "$tags" },
+    { $group: { _id: "$tags", count: { $sum: 1 } } },
+    { $match: { count: { $gte: minPerTag } } },
 
-    /**
-     * -------------------------------------
-     * 3️⃣ BASE PROJECTION
-     * -------------------------------------
-     */
-    {
-      $project: {
-        _id: 1,
-        distance: 1,
-        basicInfo: 1,
-        primaryTag: 1
-      }
-    }
-  );
-
-  /**
-   * -------------------------------------
-   * 4️⃣ PRIMARY VENUE + VENUE TYPE
-   * -------------------------------------
-   */
-  pipeline.push(
-    {
-      $lookup: {
-        from: "venues",
-        let: { orgId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $eq: ["$organization", "$$orgId"] },
-              isPrimary: true,
-              status: "active"
-            }
-          },
-
-          // Populate venueType (array)
-          {
-            $lookup: {
-              from: "venuetypes",
-              localField: "venueType",
-              foreignField: "_id",
-              as: "venueType"
-            }
-          },
-
-          {
-            $project: {
-              venueType: {
-                _id: 1,
-                title: 1
-              }
-            }
-          }
-        ],
-        as: "primaryVenue"
-      }
-    },
-    {
-      $unwind: {
-        path: "$primaryVenue",
-        preserveNullAndEmptyArrays: true
-      }
-    }
-  );
-
-  /**
-   * -------------------------------------
-   * 5️⃣ TAG LOOKUP
-   * -------------------------------------
-   */
-  pipeline.push(
+    // 3. Tag title
     {
       $lookup: {
         from: "tags",
-        localField: "primaryTag",
+        localField: "_id",
         foreignField: "_id",
-        as: "tag"
+        as: "tag",
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
       }
     },
-    { $unwind: "$tag" }
+    { $unwind: "$tag" },
+    { $sort: { count: -1, "tag.title": 1 } },
+    { $project: { _id: 0, tagId: "$_id", title: "$tag.title", count: 1 } }
   );
-
-  /**
-   * -------------------------------------
-   * 6️⃣ GROUP BY TAG
-   * -------------------------------------
-   */
-  pipeline.push({
-    $group: {
-      _id: "$tag._id",
-      title: { $first: "$tag.title" },
-
-      objects: {
-        $push: {
-          _id: "$_id",
-          basicInfo: "$basicInfo",
-
-          venue: {
-            venueType: { $ifNull: ["$primaryVenue.venueType", []] }
-          },
-
-          tags: [
-            {
-              _id: "$tag._id",
-              title: "$tag.title"
-            }
-          ],
-
-          type: { $literal: "Organizations" }
-        }
-      }
-    }
-  });
-
-  /**
-   * -------------------------------------
-   * 7️⃣ LIMIT PER TAG + TAG GROUPS
-   * -------------------------------------
-   */
-  pipeline.push({
-    $project: {
-      _id: 0,
-      tagId: "$_id",
-      title: 1,
-      objects: { $slice: ["$objects", perTag] }
-    }
-  });
-  pipeline.push({ $limit: tagGroupsCap });
 
   return Organizations.aggregate(pipeline).allowDiskUse(true);
 };
 
 /**
- * Paginated orgs whose PRIMARY tag (otherInfo.tags[0]) is `tagId`.
- * Same membership rule as home customCategoryByTags sections — distance ASC.
+ * Paginated orgs that carry `tagId` (any of their tags), distance ASC.
+ * Fills the Browser tag sections (home customCategoryByTags) and their
+ * global/search "see all" (filterKey tag:<id>), so both lists match.
+ * (Name kept from when only the first tag counted.)
  */
 const getOrganizationsByPrimaryTagRepo = async ({
   tagId,
@@ -2538,10 +2416,10 @@ const getOrganizationsByPrimaryTagRepo = async ({
     return { organizations: [], totalCount: 0 };
   }
 
-  // Primary tag only — matches home customCategoryByTags grouping
+  // Any tag of the org — same rule as the home tag sections
   const geoQuery = {
     status: "active",
-    "otherInfo.tags.0": tagObjectId,
+    "otherInfo.tags": tagObjectId,
   };
 
   const pipeline = [];
@@ -2600,7 +2478,8 @@ const getOrganizationsByPrimaryTagRepo = async ({
     {
       $lookup: {
         from: "tags",
-        let: { tid: { $arrayElemAt: ["$otherInfo.tags", 0] } },
+        // The card shows the section's tag
+        let: { tid: tagObjectId },
         pipeline: [
           {
             $match: {

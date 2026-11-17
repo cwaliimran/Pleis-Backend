@@ -3,8 +3,9 @@ const mongoose = require("mongoose");
 /**
  * Guest saved card (Monri v1.4 §5.1, §9.3 saved_payment_method).
  *
- * A card is saved only from a Monri-approved payment where the guest ticked
- * Monri's own "save card" box (tokenize_pan_offered). Pleis keeps the Monri
+ * A card is saved from a Monri-approved payment where the guest ticked
+ * Monri's own "save card" box (tokenize_pan_offered), or from Profile >
+ * Payment methods > Add card (scenario add_payment_method). Pleis keeps the Monri
  * pan_token (encrypted at rest), brand and masked number — never the card
  * number or CVV. The token is never returned to any client.
  */
@@ -50,8 +51,19 @@ const userCardSchema = new mongoose.Schema(
       default: "legacy",
     },
 
-    // When the guest ticked Monri's save box on an approved payment.
+    // Card expiry as Monri reports it (Profile > Add card returns it; the
+    // checkout redirect may not). Shown to the guest, never sent to Monri.
+    expiryMonth: { type: Number, min: 1, max: 12, default: null },
+    expiryYear: { type: Number, default: null },
+
+    // §9.3 created_via: saved while paying (Monri's save box) or from
+    // Profile > Payment methods > Add card.
+    createdVia: { type: String, enum: ["checkout", "profile"], default: "checkout" },
+
+    // When the guest ticked Monri's save box on an approved payment, or
+    // confirmed Add card, and which consent text they saw (§5.1, §9.3).
     consentAt: { type: Date, default: null },
+    consentTextVersion: { type: String, default: null },
     savedFromOrderNumber: { type: String, default: null },
 
     // Monri reported the token invalid (§5.1 edge case): not offered again.

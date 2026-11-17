@@ -174,12 +174,13 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
     const userAgg = userReservationsAgg[0] || {};
 
     const userReservationsStats = {
-      totalConfirmedReservations:(userAgg.totalConfirmedReservations || 0).toFixed(2),
+      // Counts: whole numbers (a reservation or a seat is never fractional).
+      totalConfirmedReservations: Math.round(userAgg.totalConfirmedReservations || 0),
       totalRevenue: (userAgg.totalRevenue || 0).toFixed(2),
       totalPrepayReservations: (userAgg.totalPrepayReservations || 0).toFixed(2),
 
       averageGroupSize:(userAgg.avgGroupSize || 0).toFixed(2),
-      totalCapacityReserved: (userAgg.totalPartySize || 0).toFixed(2),
+      totalCapacityReserved: Math.round(userAgg.totalPartySize || 0),
 
       averageReservationValue: (userAgg.averageReservationValue || 0).toFixed(2),
 

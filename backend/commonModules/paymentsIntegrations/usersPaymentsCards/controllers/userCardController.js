@@ -116,10 +116,74 @@ const chargeSavedCard = async (req, res) => {
 };
 
 
+/** URL of the cards router as the client reached it (…/api/v1/app/payments/cards). */
+const cardsBaseUrl = (req) => `${req.protocol}://${req.get("host")}${req.baseUrl}`;
+
+/** Profile > Payment methods > Add card: start a Monri add_payment_method run. */
+const startAddCard = async (req, res) => {
+    try {
+        const { startAddCard: start } = require("../services/userCardAddService");
+        const data = await start({ userId: req.user._id, pageBaseUrl: cardsBaseUrl(req) });
+        return res.json({ page_url: data.page_url });
+    } catch (error) {
+        const readableError = getReadableErrorMessage(error);
+        return sendResponse({
+            res,
+            statusCode: readableError.statusCode,
+            translationKey: readableError.message,
+            error
+        });
+    }
+};
+
+/** The hosted Add card page (opened in the app's WebView; reached by its page token). */
+const addCardPage = async (req, res) => {
+    try {
+        const { renderAddCardPage } = require("../services/userCardAddService");
+        const { status, html, csp } = await renderAddCardPage({
+            attemptId: req.params.attemptId,
+            pageToken: req.query.t,
+            pageBaseUrl: cardsBaseUrl(req),
+        });
+        res.set("Cache-Control", "no-store");
+        if (csp) res.set("Content-Security-Policy", csp);
+        return res.status(status).type("html").send(html);
+    } catch (error) {
+        console.error("[add-card] page:", error.message);
+        return res.status(500).type("html").send("<p>The page could not be loaded.</p>");
+    }
+};
+
+/** Monri's result from the Add card page. Answers { status, code }. */
+const completeAddCard = async (req, res) => {
+    try {
+        const { completeAddCard: complete } = require("../services/userCardAddService");
+        const result = await complete({
+            attemptId: req.params.attemptId,
+            pageToken: req.body?.t,
+            result: req.body?.result,
+        });
+        return res.json(result);
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ status: "failed", code: error.message });
+    }
+};
+
+/** Last page of the Add card WebView; the app closes on this URL. */
+const addCardResult = (req, res) => {
+    const { resultHtml } = require("../services/userCardAddService");
+    return res.type("html").send(resultHtml(req.query.status));
+};
+
+
 module.exports = {
     saveUserCard,
     getUserCards,
     deleteUserCard,
     setDefaultCard,
-    chargeSavedCard
+    chargeSavedCard,
+    startAddCard,
+    addCardPage,
+    completeAddCard,
+    addCardResult
 };
