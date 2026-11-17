@@ -55,7 +55,9 @@ Guest taps Pay
 | Unpaid order expiry | `backend/commonModules/menuItemsAndOrders/unpaidOrderExpiryService.js` |
 | Order refund | `backend/commonModules/menuItemsAndOrders/orderRefundService.js` |
 | Voucher give-back | `backend/commonModules/menuItemsAndOrders/orderVoucherRelease.js` |
-| Saved cards | `backend/commonModules/paymentsIntegrations/usersPaymentsCards/` |
+| Saved cards | `backend/commonModules/paymentsIntegrations/usersPaymentsCards/` (Add card: `services/userCardAddService.js`) |
+| App: Profile > Payment methods | Pleis-Mobile-Apps `src/pages/paymentMethods/PaymentMethods.js` |
+| App: default method | Pleis-Mobile-Apps `src/utils/checkout/defaultPaymentMethod.js`, `src/hooks/usePreselectSavedCard.js` |
 | Cron jobs | `backend/config/cron/index.js` |
 | App: payment page | Pleis-Mobile-Apps `src/pages/webPayment/WebPayment.js` |
 | App: session URL | Pleis-Mobile-Apps `src/utils/checkout/monriPaymentUtils.js` |
@@ -196,8 +198,10 @@ Not built yet (on hold): the reverse ledger row and the 2 % refund cost row
 
 ### Saving a card
 
-The guest never types a card number into the app. Cards are saved on Monri's
-own payment page:
+The guest never types a card number into the app. A card is saved in one of
+two ways, both on Monri's own pages.
+
+**While paying**
 
 1. A guest paying with a new card sees Monri's **"save card"** checkbox on the
    payment page, unticked. The backend asks for it with
@@ -208,6 +212,39 @@ own payment page:
    account.
 3. The same card saved again (same brand and masked number) updates the
    existing card. Its token is refreshed.
+
+**From the Profile: Profile > Payment methods > Add card**
+
+```
+App      POST /cards/add-session              → { page_url }
+Backend  POST {MONRI_BASE_URL}/v2/payment/new
+           scenario add_payment_method, transaction_type authorize, 100 cents
+App      opens page_url in the payment WebView
+Page     Monri card component (3-D Secure inside it) → confirmPayment
+Page     POST /cards/add-complete/:attemptId  { t, result }
+Page     → /cards/add-result?status=saved|failed   (the app closes on this URL)
+```
+
+- **No money is taken.** Monri authorizes 1.00 € to check the card and voids it
+  itself (that is what `add_payment_method` does).
+- **One attempt per tap** (`CardSaveAttempt`): it links the Monri order number
+  to the guest. The page and its result call are reached only with a random
+  page token. The token is stored hashed, is single use and expires after
+  30 min.
+- **Monri sends the result to the page, not to our backend**, so the backend
+  accepts it only for that guest's own attempt. A forged token couldn't be paid
+  with: Monri refuses it on the payment form and the card is marked expired.
+- **The page has its own Content-Security-Policy.** Our script runs with a
+  nonce, and Monri's script, card iframe and API calls are allowed. The
+  app-wide policy would block them.
+- **Stored with the card:** the expiry (from Monri), `createdVia: profile` and
+  `consentTextVersion: pleis-add-card-v1` (the text shown on the page).
+- **Turned off:** while `MONRI_TOKENIZATION_ENABLED` is off, or Monri refuses
+  tokenization, the app shows *"Saving cards is not available yet."*
+
+**Limit:** 5 cards per guest. An expired card counts until the guest deletes
+it. At 5, both Monri's save box and Add card are switched off, and the screen
+says *"You can save up to 5 cards. Delete a card to add a new one."*
 
 How the token is kept:
 
@@ -230,15 +267,25 @@ The guest sees only the brand and the last 4 digits.
 A card is never charged without the guest on the payment page.
 
 If Monri says the token is no longer valid, the backend marks the card
-`expired` and answers 409 `saved_card_invalid`. The card disappears from the
-sheet, and the guest pays with the card number again.
+`expired` and answers 409 `saved_card_invalid`. From then on the card is shown
+as **Expired** and can't be selected (§5.1). The guest deletes it, or adds the
+card again.
+
+**Default method** (§4.1, §4.2): the first usable saved card is preselected.
+Without one, the default is Apple Pay on iPhone and Google Pay on Android.
+Apple Pay is never offered on Android, and Google Pay never on iPhone. The
+guest's own choice always wins.
 
 ### Card endpoints (`/api/v1/app/payments/cards`)
 
 | Method | Path | Result |
 |---|---|---|
-| GET | `/` | The guest's usable cards (Monri-saved, not expired), without tokens |
+| GET | `/` | The guest's Monri-saved cards, usable first, expired ones flagged `expired: true`; never the token |
 | DELETE | `/:cardId` | Removes the card |
+| POST | `/add-session` | Starts Add card: `{ page_url }`. 409 `card_saving_unavailable` or `max_saved_cards` |
+| GET | `/add-page/:attemptId?t=` | The Add card page (no app login; reached with the page token) |
+| POST | `/add-complete/:attemptId` | The page's Monri result: `{ status: saved\|failed, code }` |
+| GET | `/add-result` | Last page of the WebView; the app closes on it |
 | PATCH | `/:cardId/default` | Sets the default card |
 | POST | `/` | 410 `card_saved_on_payment_only` (cards are saved only through Monri) |
 | POST | `/charge` | 410 `saved_card_paid_on_monri_form` |
@@ -259,6 +306,8 @@ requested, but the account does not support it"*.
 3. Set `MONRI_TOKENIZATION_ENABLED=true` and restart the service.
 4. Test: pay with the test card, tick "save card", then check that the card
    appears in the payment sheet. Pay again with it: only the CVV is asked.
+   Then Profile > Payment methods > Add card with the test card: 3-D Secure,
+   "Card saved", and the card listed with its expiry.
 
 Safety net: if the setting is on but Monri still refuses tokenization, the
 backend opens the form again without the save box, so the guest can still pay.
@@ -333,7 +382,10 @@ node backend/commonModules/fiscalDocuments/scripts/verifyPaymentRedesign.js
 | Leave an order unpaid for 10+ min | Order `expired`, voucher amount back, not in the Wallet |
 | Pay, then staff cancels the order | Monri shows a refund, order `refunded`, guest gets "Order Refunded" |
 | Cancel an order already in a statement | 409 `refund_blocked_by_statement` |
-| Pay with a saved card whose token is invalid | 409 `saved_card_invalid`, card gone from the sheet |
+| Pay with a saved card whose token is invalid | 409 `saved_card_invalid`, card shown as Expired, not selectable |
+| Profile > Payment methods > Add card (tokenization off) | "Saving cards is not available yet." |
+| Add card with 5 cards saved | Button disabled, "You can save up to 5 cards…" |
+| Android payment screen, no saved card | Google Pay selected, "Pay with Google Pay" |
 
 Verified on the Monri test host: order ORD-0JKM2G, €40, test Visa with 3DS. It
 was cancelled by staff, and the refund was approved by Monri (refund id 1364689).
@@ -344,6 +396,7 @@ was cancelled by staff, and the refund was approved by Monri (refund id 1364689)
 |---|---|---|
 | Payment page blank or error "Success url override must be HTTPS" | `SUCCESS_URL` / `CANCEL_URL` is `http://` | Use HTTPS URLs |
 | "pan tokenization has been requested, but the account does not support it" | Tokenization not enabled at Monri | Ask Monri (§10), or leave `MONRI_TOKENIZATION_ENABLED` off |
+| "Saving cards is not available yet." on Add card | `MONRI_TOKENIZATION_ENABLED` off, or tokenization not enabled at Monri | See "Turning saved cards on" |
 | No save-card box on the Monri page | Setting off, guest already has 5 cards, or tokenization refused (form opened again without it) | See "Turning saved cards on" |
 | Card paid but not saved | Monri did not send `pan_token` on the success redirect | Ask Monri to send it (§10) |
 | Buyer shows "Guest User" in the Monri portal | Payment made before the name fallback was added, or the account has no name | Fill in the account name or billing details |

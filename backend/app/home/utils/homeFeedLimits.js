@@ -32,13 +32,16 @@ module.exports = {
   /** Items per fixed home section (forYou, nearYou, events, …) */
   HOME_SECTION_LIMIT: 10,
 
-  /** Max orgs scanned before grouping by primary tag */
+  /** Nearest orgs scanned to discover which tags get a section */
   TAG_ORGS_SCAN: 150,
 
   /** Max orgs kept per tag group in the feed */
   TAG_LIMIT_PER_GROUP: 10,
 
-  /** Max tag-based sections returned to the feed builder */
+  /** A tag gets a section only with at least this many venues (no 1-card sections) */
+  TAG_GROUP_MIN_ITEMS: 4,
+
+  /** Max tag-based sections returned to the feed builder (picked at random among eligible tags) */
   TAG_GROUPS_MAX: 12,
 
   /** Max objects inside each custom category section */

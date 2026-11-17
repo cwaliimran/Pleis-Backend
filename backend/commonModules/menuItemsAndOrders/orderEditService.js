@@ -2,9 +2,11 @@
  * Edit order — before payment only (Requirement Set #129, #130; Order
  * Statuses v2.2.2 §3.2; Pleis decision of 27.10.2026).
  *
- *   - While Payment = Unpaid, whatever the fulfilment status, staff change the
- *     order in agreement with the guest: add a line, remove one, change a
- *     quantity, the table / destination, notes, and the payment method.
+ *   - Before delivery and while Payment = Unpaid, staff change the order in
+ *     agreement with the guest: add a line, remove one, change a quantity,
+ *     the table / destination, notes, and the payment method.
+ *   - Once Delivered the lines, table / destination and notes are fixed; only
+ *     the payment method can still change, until payment.
  *   - Once Paid nothing is edited; the correction is a refund (#139).
  *   - The total, the promo and the voucher draw-down are recalculated, so the
  *     order stays one order and one transaction. Loyalty points are computed
@@ -33,6 +35,7 @@ const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { buildPaymentMethodLabel, VOUCHER_METHOD, isPleisMethod } = require("./paymentMethods");
 const {
   CLOSED_FULFILMENT_STATUSES,
+  DELIVERED_STATUSES,
   normalizeFulfilmentStatus,
   resolveStaffNextActions,
   resolveGuestNextStep,
@@ -54,6 +57,54 @@ const canEditOrder = (order) =>
   Boolean(order) &&
   UNPAID.has(order.paymentStatus) &&
   !CLOSED_FULFILMENT_STATUSES.includes(normalizeFulfilmentStatus(order.status));
+
+/** Delivered (incl. legacy "completed" / "sent"): the lines were handed over. */
+const isDelivered = (order) => DELIVERED_STATUSES.includes(order?.status);
+
+/**
+ * Lines, table, destination and notes can change only before delivery. A
+ * delivered but unpaid order keeps only its payment method editable.
+ */
+const canEditOrderItems = (order) => canEditOrder(order) && !isDelivered(order);
+
+const idOf = (v) => String(v?._id || v || "");
+const addQty = (map, key, qty) => map.set(key, (map.get(key) || 0) + (Number(qty) || 0));
+const sameCounts = (a, b) =>
+  a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
+
+/**
+ * Would this input change the order's contents (lines, table, destination,
+ * notes)? Clients send the whole cart back, so compare what it describes —
+ * menu item / combo and quantity — not the raw arrays.
+ */
+function changesContents(order, input) {
+  if (Array.isArray(input.items)) {
+    const byLine = new Map((order.items || []).map((l) => [String(l._id), idOf(l.menuItem)]));
+    const before = new Map();
+    const after = new Map();
+    for (const l of order.items || []) addQty(before, idOf(l.menuItem), l.quantity);
+    for (const i of input.items) addQty(after, byLine.get(String(i.lineId)) || idOf(i.menuItem), i.quantity);
+    if (!sameCounts(before, after)) return true;
+  } else if (input.items !== undefined) return true;
+
+  if (Array.isArray(input.combos)) {
+    const keyOf = (combo, parts) => `${idOf(combo)}|${parts.map(idOf).sort().join()}`;
+    const byLine = new Map(
+      (order.combos || []).map((c) => [String(c._id), keyOf(c.combo, (c.items || []).map((x) => x.menuItem))]),
+    );
+    const before = new Map();
+    const after = new Map();
+    for (const c of order.combos || []) addQty(before, keyOf(c.combo, (c.items || []).map((x) => x.menuItem)), c.quantity);
+    for (const c of input.combos) addQty(after, byLine.get(String(c.lineId)) || keyOf(c.combo, c.items || []), c.quantity);
+    if (!sameCounts(before, after)) return true;
+  } else if (input.combos !== undefined) return true;
+
+  if (input.tableNumber !== undefined && String(input.tableNumber || "") !== String(order.tableNumber || "")) return true;
+  if (input.pickupType !== undefined && input.pickupType !== order.pickupType) return true;
+  if (input.deliveryOption != null && String(input.deliveryOption) !== idOf(order.deliveryOption)) return true;
+  if (input.notes !== undefined && String(input.notes || "") !== String(order.notes || "")) return true;
+  return false;
+}
 
 function assertEditable(order) {
   if (!UNPAID.has(order.paymentStatus)) throw httpError(409, "order_locked_after_payment");
@@ -326,21 +377,28 @@ async function editOrderBeforePayment({ orderId, actor, input = {}, timezone, as
       assertEditable(order);
       await assertNoPaymentInProgress(order);
 
+      // Once delivered the contents are fixed; only the payment method may
+      // still change, until the order is paid.
+      const contentsLocked = isDelivered(order);
+      if (contentsLocked && changesContents(order, input)) {
+        throw httpError(409, "order_items_locked_after_delivery");
+      }
+
       const previous = snapshot(order);
       changes = [];
       const organizationId = order.organization?._id || order.organization;
 
-      if (input.items !== undefined) {
+      if (!contentsLocked && input.items !== undefined) {
         order.items = await buildItems(order, input.items, timezone, organizationId);
       }
-      if (input.combos !== undefined) {
+      if (!contentsLocked && input.combos !== undefined) {
         order.combos = await buildCombos(order, input.combos, timezone);
       }
       if (!(order.items || []).length && !(order.combos || []).length) {
         throw httpError(400, "cart_empty");
       }
 
-      if (input.deliveryOption !== undefined && input.deliveryOption !== null) {
+      if (!contentsLocked && input.deliveryOption !== undefined && input.deliveryOption !== null) {
         if (!mongoose.Types.ObjectId.isValid(String(input.deliveryOption))) {
           throw httpError(400, "invalid_delivery_option");
         }
@@ -350,17 +408,19 @@ async function editOrderBeforePayment({ orderId, actor, input = {}, timezone, as
         }
         order.deliveryOption = input.deliveryOption;
       }
-      if (input.pickupType !== undefined) {
+      if (!contentsLocked && input.pickupType !== undefined) {
         if (!["counter", "tableService"].includes(input.pickupType)) {
           throw httpError(400, "invalid_pickup_type");
         }
         order.pickupType = input.pickupType;
       }
-      if (input.tableNumber !== undefined) order.tableNumber = input.tableNumber || undefined;
-      if (order.pickupType === "tableService" && !order.tableNumber) {
-        throw httpError(400, "table_number_required");
+      if (!contentsLocked) {
+        if (input.tableNumber !== undefined) order.tableNumber = input.tableNumber || undefined;
+        if (order.pickupType === "tableService" && !order.tableNumber) {
+          throw httpError(400, "table_number_required");
+        }
+        if (input.notes !== undefined) order.notes = String(input.notes || "");
       }
-      if (input.notes !== undefined) order.notes = String(input.notes || "");
 
       const totals = await recalculate(order, session);
 
@@ -449,8 +509,9 @@ async function editOrderBeforePayment({ orderId, actor, input = {}, timezone, as
   out.nextActions = resolveStaffNextActions(order);
   out.guestNextStep = resolveGuestNextStep(order);
   out.canEdit = canEditOrder(order);
+  out.canEditItems = canEditOrderItems(order);
   out.editChanges = changes;
   return out;
 }
 
-module.exports = { editOrderBeforePayment, canEditOrder, snapshot };
+module.exports = { editOrderBeforePayment, canEditOrder, canEditOrderItems, snapshot };

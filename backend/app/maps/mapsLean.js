@@ -14,6 +14,7 @@ const {
   getVenueTypeObjectIdsForMainCategories,
 } = require("../../admin/venueTypes/resolveCategoryVenueTypes");
 const Tags = require("@TagsModel");
+const { genreTagObjectIds } = require("./mapsTagFilter");
 const { getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
 
 /** Quantize bounds so tiny pans share one cache key (~110m at 3 decimals). */
@@ -136,15 +137,11 @@ async function fetchLeanPlaces({
     matchFilter["otherInfo.tags"] = { $in: tagObjIds };
   }
 
+  // genre = the tags the guest selected (tag ids, see mapsTagFilter): the
+  // place must carry all of them.
   if ((advanceFilters.genre || []).length) {
-    const genreTags = await Tags.find({
-      status: "active",
-      type: { $in: advanceFilters.genre },
-    })
-      .select("_id")
-      .lean();
     matchFilter["otherInfo.tags"] = {
-      $in: genreTags.map((t) => t._id),
+      $all: genreTagObjectIds(advanceFilters.genre),
     };
   }
 
@@ -249,6 +246,14 @@ async function fetchLeanEvents({
     .map((id) => new mongoose.Types.ObjectId(id));
   if (tagObjIds.length) {
     matchFilter["basicInfo.tags"] = { $in: tagObjIds };
+  }
+
+  // genre = the tags the guest selected (tag ids, see mapsTagFilter): the
+  // event must carry all of them.
+  if ((advanceFilters.genre || []).length) {
+    matchFilter["basicInfo.tags"] = {
+      $all: genreTagObjectIds(advanceFilters.genre),
+    };
   }
 
   if (bounds?.northEast && bounds?.southWest) {

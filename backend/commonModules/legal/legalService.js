@@ -7,6 +7,8 @@ const {
   DOCUMENT_TITLES,
   LEGACY_SETTINGS_FIELD,
   REQUIRED_DOCUMENTS_BY_USER_TYPE,
+  DIRECTLY_ACCEPTABLE_TYPES,
+  DISPLAYED_DOCUMENTS_BY_USER_TYPE,
 } = require("./legalConstants");
 const { cache, invalidate } = require("../../config/redis/redisCache");
 
@@ -23,12 +25,13 @@ const UserModel = () => require("../../models/UserModel").User;
 /**
  * First run: create version 1 of each document from the legacy AdminSettings text,
  * so existing content becomes the baseline everyone is measured against.
+ * Documents with no legacy text (PSA, DPA, DSA policy) get version 1 on their first publish.
  */
 let seeded = false;
 const ensureSeeded = async () => {
   if (seeded) return;
   const existing = await LegalDocument.distinct("type");
-  const missing = DOC_TYPES.filter((t) => !existing.includes(t));
+  const missing = DOC_TYPES.filter((t) => LEGACY_SETTINGS_FIELD[t] && !existing.includes(t));
   if (missing.length) {
     const settings = await AdminSettings().findOne({}).lean();
     for (const type of missing) {
@@ -123,12 +126,28 @@ const publishDocument = async ({ type, content, summary = "", effectiveDate, req
 
   // Keep legacy readers (/settings/terms-conditions, /settings/privacy-policy, …) in sync.
   const field = LEGACY_SETTINGS_FIELD[type];
-  await AdminSettings().updateOne({}, { $set: { [field]: doc.content } }, { upsert: true });
+  if (field) {
+    await AdminSettings().updateOne({}, { $set: { [field]: doc.content } }, { upsert: true });
+  }
   await Promise.all([
     invalidate(`${LATEST_CACHE_NS}:${type}`),
-    invalidate("adminSettings:active"),
+    field ? invalidate("adminSettings:active") : null,
   ]);
-  return toPublic(doc.toObject());
+  const published = toPublic(doc.toObject());
+
+  // Spec 1.5: every new Partner T&C version → notice + email to all partners (background).
+  if (type === LEGAL_DOCUMENT_TYPES.PARTNER_TERMS && published.requiresReacceptance) {
+    require("./legalNotices").notifyPartnersOfTermsChange(published);
+  }
+  return published;
+};
+
+/** One exact version (or the latest when `version` is empty). */
+const getDocumentVersion = async (type, version) => {
+  if (version == null || version === "") return toPublic(await findLatestDirect(type));
+  const v = Number(version);
+  if (!Number.isInteger(v) || v < 1) return null;
+  return toPublic(await LegalDocument.findOne({ type, version: v }).lean());
 };
 
 /* ------------------------------------------------------------------ */
@@ -219,12 +238,17 @@ const acceptDocuments = async ({ user, acceptances = [], source = "reacceptance"
 
   for (const item of acceptances) {
     const type = typeof item === "string" ? item : item?.type;
-    if (!DOC_TYPES.includes(type)) {
+    if (!DIRECTLY_ACCEPTABLE_TYPES.includes(type)) {
       const err = new Error("invalid_legal_document_type");
       err.statusCode = 400;
       throw err;
     }
     const latest = await findLatestDirect(type);
+    if (!latest) {
+      const err = new Error("legal_document_not_found");
+      err.statusCode = 404;
+      throw err;
+    }
     const requested = item?.version != null ? Number(item.version) : latest.version;
     if (requested !== latest.version) {
       const err = new Error("legal_document_version_outdated");
@@ -260,6 +284,35 @@ const acceptDocuments = async ({ user, acceptances = [], source = "reacceptance"
     await UserModel().updateOne({ _id: user._id }, { $set: set }, session ? { session } : undefined);
   }
   return logged;
+};
+
+/**
+ * Documents shown to the signed-in account (spec 1.5: App → Settings → Legal,
+ * Partner Dashboard → Legal), each with the version the account accepted and when.
+ * A document that has not been published yet is returned with `published: false`.
+ */
+const getMyDocuments = async (user) => {
+  const userType = user?.accountState?.userType || user?.userType;
+  const types = DISPLAYED_DOCUMENTS_BY_USER_TYPE[userType] || [];
+  if (!types.length) return { userType, documents: [] };
+
+  const fresh = await UserModel().findById(user._id).select("legalAcceptances").lean();
+  const accepted = fresh?.legalAcceptances || {};
+  const documents = await Promise.all(
+    types.map(async (type) => {
+      const latest = await getLatestDocument(type);
+      const acc = accepted?.[type];
+      return {
+        type,
+        title: DOCUMENT_TITLES[type],
+        published: !!latest,
+        ...(latest || {}),
+        acceptedVersion: acc?.version != null ? Number(acc.version) : null,
+        acceptedAt: acc?.acceptedAt || null,
+      };
+    })
+  );
+  return { userType, documents };
 };
 
 /**
@@ -317,6 +370,8 @@ module.exports = {
   getLatestDocuments,
   getMinimumAcceptableVersion,
   getDocumentHistory,
+  getDocumentVersion,
+  getMyDocuments,
   publishDocument,
   requestMeta,
   logConsent,

@@ -11,6 +11,7 @@ const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek, generateMeta } = require("../../helperUtils/responseUtil");
 const Tags = require("@TagsModel");
 const { getLeanPlacesForMap, getLeanEventsForMap } = require("./mapsLean");
+const { genreTagObjectIds } = require("./mapsTagFilter");
 
 /** Map viewport (unlimited + bounds) without heavy time modes → lean markers. */
 function canUseLeanMapPath(queryData) {
@@ -152,13 +153,9 @@ const getEvents = async (queryData) => {
   const tagObjectIds = toObjectIds(tags);
   let genreTagIds = [];
 
+  // genre = the tags the guest selected (tag ids, see mapsTagFilter).
   if (genre.length) {
-    const genreTags = await Tags.find({
-      status: "active",
-      type: { $in: genre },
-    }).select("_id");
-
-    genreTagIds = genreTags.map((t) => t._id);
+    genreTagIds = genreTagObjectIds(genre);
   }
 
   let tagFilter = {};
@@ -461,17 +458,14 @@ const getPlaces = async (queryData = {}) => {
     //
     // GENRE FILTER
     //
+    // genre = the tags the guest selected (tag ids, see mapsTagFilter): the
+    // place must carry all of them.
     if (genre.length) {
-      const genreTags = await Tags.find({
-        status: "active",
-        type: { $in: genre }
-      }).select("_id");
+      const genreTagIds = genreTagObjectIds(genre);
 
-      const genreTagIds = genreTags.map(t => t._id);
-
-      matchFilter["otherInfo.tags"] = {
-        $in: genreTagIds.length ? genreTagIds : []
-      };
+      matchFilter["otherInfo.tags"] = genreTagIds.length
+        ? { $all: genreTagIds }
+        : { $in: [] };
     }
 
     //

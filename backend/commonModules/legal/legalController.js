@@ -2,6 +2,7 @@ const { sendResponse, parsePaginationParams, generateMeta } = require("../../hel
 const legalService = require("./legalService");
 const ConsentLog = require("./ConsentLog");
 const { LEGAL_DOCUMENT_TYPES, CONSENT_TYPES } = require("./legalConstants");
+const { legalDocumentPdf, pdfFileName } = require("./legalPdf");
 
 const DOC_TYPES = Object.values(LEGAL_DOCUMENT_TYPES);
 
@@ -44,7 +45,39 @@ const getDocument = async (req, res) => {
   }
 };
 
+// GET /legal/documents/:type/pdf?version=N — PDF of a version (latest when omitted)
+const getDocumentPdf = async (req, res) => {
+  const { type } = req.params;
+  if (!DOC_TYPES.includes(type)) {
+    return sendResponse({ res, statusCode: 400, translationKey: "invalid_legal_document_type" });
+  }
+  try {
+    const doc = await legalService.getDocumentVersion(type, req.query.version);
+    if (!doc) return sendResponse({ res, statusCode: 404, translationKey: "legal_document_not_found" });
+    const pdf = await legalDocumentPdf(doc);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `${req.query.inline === "1" ? "inline" : "attachment"}; filename="${pdfFileName(doc)}"`
+    );
+    res.setHeader("Cache-Control", "private, max-age=300");
+    return res.send(pdf);
+  } catch (error) {
+    return fail(res, error);
+  }
+};
+
 /* ---------------- authenticated ---------------- */
+
+// GET /legal/my-documents — App → Settings → Legal / Partner Dashboard → Legal (spec 1.5)
+const getMyDocuments = async (req, res) => {
+  try {
+    const data = await legalService.getMyDocuments(req.user);
+    return sendResponse({ res, statusCode: 200, translationKey: "legal_documents_fetched", data });
+  } catch (error) {
+    return fail(res, error);
+  }
+};
 
 // GET /legal/status — what the signed-in account still has to (re-)accept
 const getStatus = async (req, res) => {
@@ -158,6 +191,8 @@ const adminGetConsentLogs = async (req, res) => {
 module.exports = {
   getDocuments,
   getDocument,
+  getDocumentPdf,
+  getMyDocuments,
   getStatus,
   accept,
   adminGetDocuments,
