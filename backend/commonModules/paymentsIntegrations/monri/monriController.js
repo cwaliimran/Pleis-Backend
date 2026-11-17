@@ -27,6 +27,13 @@ const {
   planMonriRefund,
 } = require("./refundService");
 const {
+  getCardTokenForPayment,
+  canSaveMoreCards,
+  saveCardFromMonriPayment,
+} = require("../usersPaymentsCards/services/userCardService");
+const { touchCard, markCardExpired } = require("../usersPaymentsCards/repositories/userCardRepository");
+const {
+  isMonriTokenizationEnabled,
   getMonriBaseUrl,
   getMonriKey,
   getMonriAuthToken,
@@ -79,11 +86,16 @@ async function assertAmountMatchesOrder(orderType, orderNumber, amountCents, use
   let owner;
   let alreadyPaid = false;
   if (orderType === "menuorders") {
-    const order = await MenuOrders.findById(orderNumber).select("totalPrice user paymentStatus").lean();
+    const order = await MenuOrders.findById(orderNumber).select("totalPrice user paymentStatus status").lean();
     if (!order) fail("order_not_found", 404);
     expected = order.totalPrice;
     owner = order.user;
     alreadyPaid = order.paymentStatus === "paid";
+    // Expired (unpaid pay-now window), cancelled or rejected orders take no new payment.
+    if (!alreadyPaid && ["expired", "cancelled", "rejected"].includes(order.status)) {
+      if (userId && owner && String(owner) !== String(userId)) fail("order_not_found", 404);
+      fail("order_not_payable", 409);
+    }
   } else if (orderType === "ticketingbookings") {
     const order = await TicketingOrders.findById(orderNumber).select("orderPricing user paymentDetails.paymentStatus").lean();
     if (!order) fail("order_not_found", 404);
@@ -164,7 +176,9 @@ function isRetryableMonriFormError(err) {
     err?.code === "ECONNRESET" ||
     err?.code === "ETIMEDOUT" ||
     err?.code === "ECONNABORTED" ||
-    err?.code === "ECONNREFUSED"
+    err?.code === "ECONNREFUSED" ||
+    // Monri / Cloudflare 5xx (e.g. 522 origin timeout): try again.
+    Number(err?.details?.status || err?.httpStatus) >= 500
   );
 }
 
@@ -201,6 +215,7 @@ async function createMonriCardPaymentUrl(sessionFields) {
 
       lastError = new Error("monri_form_failed");
       lastError.statusCode = 502;
+      lastError.httpStatus = response.status;
       lastError.details = response.data || { status: response.status };
     } catch (err) {
       lastError = err;
@@ -598,17 +613,39 @@ exports.handleSuccess = async (req, res) => {
       }
     }
 
+    // Monri v1.4 §5.1 / §8: the pan_token is stored only encrypted on the
+    // guest's saved card, never in the raw callback or in plain text.
+    const { pan_token: panTokenFromMonri, ...payloadWithoutToken } = payload;
     const update = {
-      rawCallback: payload,
+      rawCallback: payloadWithoutToken,
       ...(payload.approval_code && { approvalCode: payload.approval_code }),
       ...(payload.id != null && { monriTransactionId: String(payload.id) }),
-      ...(payload.pan_token && { panToken: payload.pan_token }),
     };
     if (tx.status !== "paid" && tx.status !== "refunded") {
       update.status = status;
     }
 
     await monriRepository.updateTransaction(orderNumber, update);
+
+    // Approved (capture confirmed above): keep the card the guest chose to
+    // save on Monri's form, or note that a saved card was used.
+    if (status === "paid" && tx.userId) {
+      try {
+        if (panTokenFromMonri && payload.masked_pan) {
+          await saveCardFromMonriPayment({
+            userId: tx.userId,
+            panToken: panTokenFromMonri,
+            maskedPan: payload.masked_pan,
+            ccType: payload.cc_type,
+            orderNumber,
+          });
+        } else if (tx.savedCardId) {
+          await touchCard(tx.savedCardId);
+        }
+      } catch (cardErr) {
+        console.error("[saved-card] could not store card:", cardErr.message);
+      }
+    }
 
     let fulfill = { handled: false, reason: "not_attempted" };
     try {
@@ -812,8 +849,14 @@ exports.createWebPaySession = async (req, res) => {
 
     // Build reusable billing fields
     const billingAddress = billing?.billingAddress || {};
+    // Buyer shown in Monri: billing record first, else the guest's own account
+    // (most guests never fill billing details). "Guest User" only if both are empty.
     const fullName =
-      `${billing?.user?.firstName || ""} ${billing?.user?.lastName || ""}`.trim() || "Guest User";
+      `${billing?.user?.firstName || ""} ${billing?.user?.lastName || ""}`.trim() ||
+      `${req.user?.firstName || ""} ${req.user?.lastName || ""}`.trim() ||
+      req.user?.username ||
+      "Guest User";
+    const buyerEmail = billing?.email || req.user?.email || "";
     const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || getMonriCountry());
 
     const digest = generateDigest({ orderNumber, amount, currency });
@@ -822,6 +865,29 @@ exports.createWebPaySession = async (req, res) => {
     // CARD — form POST (WebView redirect)
     // -----------------------------
     if (!paymentMethod || paymentMethod === "card") {
+      // Monri v1.4 §5.1 saved cards on the hosted form:
+      //   saved card → its Monri token in supported_payment_methods: Monri
+      //                shows the masked card and asks only for the CVV (+3DS);
+      //   new card   → "card" + tokenize_pan_offered: Monri's own "save card"
+      //                box (unticked); max 5 cards, so not offered at 5.
+      // The token goes server → Monri only; the app never sees it.
+      const { savedCardId } = req.query;
+      let supportedPaymentMethods = "card";
+      let tokenizeOffered = false;
+      let savedCard = null;
+      if (savedCardId) {
+        if (!mongoose.Types.ObjectId.isValid(String(savedCardId))) {
+          return sendResponse({ res, statusCode: 404, translationKey: "card_not_found" });
+        }
+        savedCard = await getCardTokenForPayment({ cardId: savedCardId, userId });
+        if (!savedCard) {
+          return sendResponse({ res, statusCode: 404, translationKey: "card_not_found" });
+        }
+        supportedPaymentMethods = savedCard.panToken;
+      } else {
+        tokenizeOffered = isMonriTokenizationEnabled() && (await canSaveMoreCards(userId));
+      }
+
       await monriRepository.createTransaction({
         orderNumber,
         amount: Number(amount),
@@ -830,6 +896,7 @@ exports.createWebPaySession = async (req, res) => {
         userId,
         status: "pending",
         paymentMethod: dbPaymentMethod,
+        savedCardId: savedCard?.cardId || null,
       });
 
       const session = {
@@ -843,18 +910,39 @@ exports.createWebPaySession = async (req, res) => {
         digest,
         success_url_override: getMonriSuccessUrl(),
         cancel_url_override: getMonriCancelUrl(),
-        supported_payment_methods: "card",
+        supported_payment_methods: supportedPaymentMethods,
+        ...(tokenizeOffered && { tokenize_pan_offered: "true" }),
         ch_full_name: fullName,
         ch_address: billingAddress.address || "",
         ch_city: billingAddress.city || "",
         ch_zip: billingAddress.postalCode || "",
         ch_country: country,
-        ch_email: billing?.email || "",
+        ch_email: buyerEmail,
         ch_phone: billing?.phone || "",
         form_action: `${getMonriBaseUrl()}/v2/form`,
       };
 
-      const payment_url = await createMonriCardPaymentUrl(session);
+      let payment_url;
+      try {
+        payment_url = await createMonriCardPaymentUrl(session);
+      } catch (formErr) {
+        // §5.1: Monri reports the saved token invalid → mark the card Expired
+        // (no longer offered) and ask the guest to pay with the card again.
+        if (savedCard && JSON.stringify(formErr?.details || "").includes("unsupported payment method")) {
+          await markCardExpired(savedCard.cardId).catch(() => {});
+          console.warn(`[saved-card] Monri refused saved card ${savedCard.cardId}; marked expired`);
+          return sendResponse({ res, statusCode: 409, translationKey: "saved_card_invalid" });
+        }
+        // Tokenization not active on the merchant account: the guest still
+        // pays, just without the save-card box.
+        const refusedTokenization = JSON.stringify(formErr?.details || "").includes(
+          "tokenization has been requested",
+        );
+        if (!session.tokenize_pan_offered || !refusedTokenization) throw formErr;
+        console.warn("[saved-card] Monri account has no tokenization; form without save box");
+        delete session.tokenize_pan_offered;
+        payment_url = await createMonriCardPaymentUrl(session);
+      }
       return res.json({ payment_url });
     }
 
@@ -923,7 +1011,7 @@ exports.createWebPaySession = async (req, res) => {
       response.ch_city = billingAddress.city || "";
       response.ch_zip = billingAddress.postalCode || "";
       response.ch_country = country;
-      response.ch_email = billing?.email || "";
+      response.ch_email = buyerEmail;
       response.ch_phone = billing?.phone || "";
     }
 
@@ -940,7 +1028,7 @@ exports.createWebPaySession = async (req, res) => {
       response.ch_city = billingAddress.city || "";
       response.ch_zip = billingAddress.postalCode || "";
       response.ch_country = country;
-      response.ch_email = billing?.email || "";
+      response.ch_email = buyerEmail;
       response.ch_phone = billing?.phone || "";
     }
 
@@ -1206,8 +1294,16 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
   }
 };
 
+/**
+ * Manual refund (Monri v1.4 §6.2–6.3): superadmin only, always the full
+ * captured amount (no partial refunds). Menu orders go through the order
+ * refund service (voucher part, storno, payout guard, idempotent).
+ */
 exports.refundPayment = async (req, res) => {
   try {
+    if (req.user?.userType !== "admin") {
+      return sendResponse({ res, statusCode: 403, translationKey: "refund_not_allowed" });
+    }
     if (!isLiveRefundEnabled()) {
       return sendResponse({
         res,
@@ -1216,9 +1312,20 @@ exports.refundPayment = async (req, res) => {
       });
     }
 
-    const { orderNumber, amount } = req.body;
+    const { orderNumber } = req.body;
     const tx = await monriRepository.findByOrderNumber(orderNumber);
-    const plan = planMonriRefund({ tx, amount });
+
+    if (tx?.orderType === "menuorders") {
+      const { refundPaidMenuOrder } = require("../../menuItemsAndOrders/orderRefundService");
+      const result = await refundPaidMenuOrder({
+        orderId: tx.orderNumber,
+        reasonCode: "admin_refund",
+        requestedBy: req.user._id,
+      });
+      return res.status(result.status === "refunded" ? 200 : 409).json(result);
+    }
+
+    const plan = planMonriRefund({ tx, amount: tx?.amount });
     if (!plan.ok) {
       return sendResponse({
         res,
@@ -1229,10 +1336,13 @@ exports.refundPayment = async (req, res) => {
     }
 
     const result = await refundViaMonri({
-      transactionId: tx.monriTransactionId,
-      amount: plan.refundAmount,
-      currency: tx.currency,
+      orderNumber: tx.orderNumber,
+      amountCents: tx.amount,
+      currency: tx.currency || "EUR",
     });
+    if (result.outcome !== "approved") {
+      return res.status(409).json({ status: "failed", monri: result.response });
+    }
 
     await monriRepository.updateTransaction(orderNumber, {
       status: plan.nextStatus,
@@ -1258,9 +1368,9 @@ exports.refundPayment = async (req, res) => {
         })
       : null;
     if (original) {
+      // No amount: the storno repeats the original's full amount (EUR).
       await issueCancellationConfirmation(original, {
         transactionId: tx.monriTransactionId,
-        amount: plan.refundAmount,
       });
     }
 
@@ -1282,11 +1392,11 @@ exports.refundPayment = async (req, res) => {
       // execute:true = attempt live; still gated by BILLKO_STORNO_ENABLED (default off).
       await stornoTicketingInvoices(tx.orderNumber, {
         execute: true,
-        refundAmount: plan.refundAmount,
+        refundAmount: null, // full refund
       });
     }
 
-    res.json(result);
+    res.json({ status: "refunded", monri: result.response });
   } catch (err) {
     console.error("Refund error:", err);
     return sendResponse({

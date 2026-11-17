@@ -50,6 +50,8 @@
   "menu_order_confirmed_pay_body": "Your order {orderNumber} has been confirmed. Please pay in wallet.",
   "menu_order_cancelled_title": "Order Cancelled",
   "menu_order_cancelled_body": "Your order {orderNumber} has been cancelled.",
+  "menu_order_refunded_title": "Order Refunded",
+  "menu_order_refunded_body": "Your payment for order {orderNumber} has been refunded in full.",
   "menu_order_sent_title": "Order Sent",
   "menu_order_sent_body": "Your order {orderNumber} is on the way.",
   "menu_order_completed_title": "Order Completed",

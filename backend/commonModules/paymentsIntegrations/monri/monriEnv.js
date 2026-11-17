@@ -59,7 +59,17 @@ function getMonriWebhookSecret() {
   return requiredEnv("MONRI_WEBHOOK_SECRET");
 }
 
+/**
+ * Saved cards (Monri v1.4 §5.1) need tokenization ("secure vault") switched on
+ * for the merchant account by Monri (§10). Until then Monri refuses any form
+ * with tokenize_pan_offered, so the save box is offered only when this is "true".
+ */
+function isMonriTokenizationEnabled() {
+  return process.env.MONRI_TOKENIZATION_ENABLED === "true";
+}
+
 module.exports = {
+  isMonriTokenizationEnabled,
   getMonriBaseUrl,
   getMonriKey,
   getMonriAuthToken,

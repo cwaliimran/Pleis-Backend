@@ -18,7 +18,7 @@ router.post("/charge", auth, chargeSavedCard);
 
 router.get("/", auth, getUserCards);
 
-router.delete("/:id", auth, deleteUserCard);
+router.delete("/:cardId", auth, deleteUserCard);
 
 router.patch("/:cardId/default", auth, setDefaultCard);
 

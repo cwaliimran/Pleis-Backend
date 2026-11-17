@@ -37,6 +37,14 @@ const MENU_NOTIFICATION_MAP = {
     bodyValues: (order) => ({ orderNumber: order.orderNumber }),
   },
 
+  // Monri v1.4 §6: the whole payment went back to the guest.
+  MENU_ORDER_REFUNDED: {
+    type: NotificationTypes.MENU_ORDER_REFUNDED,
+    titleKey: "menu_order_refunded_title",
+    bodyKey: "menu_order_refunded_body",
+    bodyValues: (order) => ({ orderNumber: order.orderNumber }),
+  },
+
   MENU_ORDER_SENT: {
     type: NotificationTypes.MENU_ORDER_SENT,
     titleKey: "menu_order_sent_title",

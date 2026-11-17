@@ -1,5 +1,4 @@
 const {
-    saveUserCardService,
     getUserCardsService,
     deleteUserCardService,
     setDefaultCardService
@@ -7,41 +6,18 @@ const {
 
 const { sendResponse, getReadableErrorMessage } =
     require("../../../../helperUtils/responseUtil");
-const { getCardById } = require("../repositories/userCardRepository");
-const { default: axios } = require("axios");
-const { UserBillingInformation } = require("../../../transactions/UserBillingInformation");
-const { getMonriBaseUrl, getMonriAuthToken, getMonriCurrency } = require("../../monri/monriEnv");
 
-
+/**
+ * Monri v1.4 §5.1: a card is saved only by Monri, when the guest ticks the
+ * save box on Monri's payment form and the payment is approved
+ * (see monriController success). The app never sends card data or tokens.
+ */
 const saveUserCard = async (req, res) => {
-    try {
-
-        const { _id: userId } = req.user;
-        const { panToken, maskedPan, brand } = req.body;
-
-        const card = await saveUserCardService({
-            userId,
-            panToken,
-            maskedPan,
-            brand
-        });
-
-        return sendResponse({
-            res,
-            statusCode: 200,
-            translationKey: "card_saved_successfully",
-            data: card
-        });
-
-    } catch (error) {
-        const readableError = getReadableErrorMessage(error);
-        return sendResponse({
-            res,
-            statusCode: readableError.statusCode,
-            translationKey: readableError.message,
-            error
-        });
-    }
+    return sendResponse({
+        res,
+        statusCode: 410,
+        translationKey: "card_saved_on_payment_only",
+    });
 };
 
 
@@ -75,8 +51,9 @@ const deleteUserCard = async (req, res) => {
     try {
 
         const { _id: userId } = req.user;
-        const { cardId } = req.params;
+        const cardId = req.params.cardId || req.params.id;
 
+        // The token is erased with the row; the card disappears from every checkout.
         await deleteUserCardService({ cardId, userId });
 
         return sendResponse({
@@ -124,89 +101,18 @@ const setDefaultCard = async (req, res) => {
 };
 
 
-
+/**
+ * Monri v1.4 §5.1: "A saved guest card is charged only with the guest present
+ * and confirming that payment … Pleis never charges a guest card on its own
+ * initiative." A saved card is paid on Monri's form (CVV + 3DS) through
+ * /payments/monri/web-pay-session?savedCardId=…; there is no server-side charge.
+ */
 const chargeSavedCard = async (req, res) => {
-    try {
-        const { cardId, amount, orderNumber, billingId } = req.body;
-        const { _id: userId } = req.user;
-
-        // 1) Validate card belongs to user
-        const card = await getCardById(cardId, userId);
-        if (!card) {
-            return sendResponse({
-                res,
-                statusCode: 404,
-                translationKey: "card_not_found",
-            });
-        }
-
-        // 2) Validate billing belongs to user
-        const billing = await UserBillingInformation.findOne({
-            _id: billingId,
-        });
-
-        if (!billing) {
-            return sendResponse({
-                res,
-                statusCode: 404,
-                translationKey: "billing_information_not_found",
-            });
-        }
-
-        // 3) Get client IP (works behind proxies if trust proxy enabled)
-        const ip =
-            req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
-            req.socket?.remoteAddress ||
-            "127.0.0.1";
-
-        // 4) Build Monri payload
-        const payload = {
-            transaction: {
-                transaction_type: "purchase",
-                amount: Number(amount), // minor units (e.g., 500 = €5.00)
-                currency: getMonriCurrency(),
-                order_number: orderNumber,
-
-                pan_token: card.panToken,
-                moto: true,
-
-                ip,
-
-                ch_full_name: `${billing.firstName} ${billing.lastName}`,
-                ch_email: billing.email,
-
-                ch_address: billing.billingAddress.address,
-                ch_city: billing.billingAddress.city,
-                ch_zip: billing.billingAddress.postalCode,
-                ch_country: billing.billingAddress.country,
-
-                // If you have it, include phone
-                // ch_phone: billing.phone || "+000000000"
-            },
-        };
-
-        const response = await axios.post(
-            `${getMonriBaseUrl()}/v2/transaction`,
-            payload,
-            {
-                headers: {
-                    Authorization: `key-${getMonriAuthToken()}`,
-                    "Content-Type": "application/json",
-                },
-            }
-        );
-
-        return res.json(response.data);
-    } catch (err) {
-        console.error("Monri charge error:", err.response?.data || err.message);
-
-        return sendResponse({
-            res,
-            statusCode: err.response?.status || 500,
-            translationKey: "payment_failed",
-            error: err.response?.data || err.message,
-        });
-    }
+    return sendResponse({
+        res,
+        statusCode: 410,
+        translationKey: "saved_card_paid_on_monri_form",
+    });
 };
 
 

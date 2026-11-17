@@ -50,7 +50,11 @@ const monriTransactionSchema = new mongoose.Schema(
     monriTransactionId: { type: String, index: true },
 
     // Saved card token
+    // Legacy: no longer written. Tokens live encrypted on UserCard only (§5.1, §8).
     panToken: { type: String, index: true },
+
+    // The guest's saved card this attempt was paid with (Monri v1.4 §9.1).
+    savedCardId: { type: mongoose.Schema.Types.ObjectId, ref: "UserCard", default: null },
 
     // refund info
     refundedAmount: { type: Number, default: 0 },

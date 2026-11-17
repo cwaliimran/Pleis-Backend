@@ -28,6 +28,9 @@ const {
   maybeEnqueueOrderingConfirmation,
 } = require("../../../fiscalDocuments/fiscalTiming");
 const { hasMenuOrderBaseEarn } = require("./menuOrderLoyalty");
+const {
+  releaseOrderVoucher,
+} = require("../../../menuItemsAndOrders/orderVoucherRelease");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -38,6 +41,9 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   let companyPoints = null;
   let globalPoints = null;
   let loyaltyOnlyFulfillment = false;
+  let expiredBeforeDecline = false;
+  let closedOnPaid = false;
+  let lateCapture = false;
 
   try {
     session.startTransaction();
@@ -67,7 +73,23 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     /* ==========================
        ✅ PAYMENT SUCCESS
     ========================== */
-    if (result.status === "paid") {
+    const closedOrder = ["expired", "cancelled", "rejected"].includes(menuOrder.status);
+    if (result.status === "paid" && (closedOrder || menuOrder.paymentStatus === "refunded")) {
+      // Late capture (Monri v1.4 §3.3, §6.4): the money arrived after the order
+      // was closed. Record it, never fulfil it (no NEW_ORDER, points, staff
+      // alert or confirmation) and refund it in full after commit.
+      closedOnPaid = true;
+      if (["pending", "failed"].includes(menuOrder.paymentStatus)) {
+        menuOrder.paymentStatus = "paid";
+        menuOrder.paidAt = new Date();
+        menuOrder.transactionId = result.transactionId || null;
+        await menuOrder.save({ session });
+        await syncMonriTransactionStatus(menuOrderId, "paid", {
+          ...(result.transactionId && { monriTransactionId: String(result.transactionId) }),
+        }).catch((err) => console.error("[monri-sync] late capture:", err.message));
+        lateCapture = true;
+      }
+    } else if (result.status === "paid") {
       const alreadyPaid = menuOrder.paymentStatus === "paid";
       const alreadyEarned = await hasMenuOrderBaseEarn(menuOrderId, session);
 
@@ -148,10 +170,22 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     /* ==========================
        ❌ PAYMENT FAILED
     ========================== */
-    if (result.status === "failed") {
+    if (result.status === "failed" && menuOrder.status === "expired") {
+      // Already closed by the unpaid-order job (voucher released, hidden from
+      // staff). A late decline changes nothing.
+      expiredBeforeDecline = true;
+    } else if (result.status === "failed") {
+      // A pay-now order dying unpaid gives back the voucher it drew.
+      const wasAwaitingPayment =
+        menuOrder.hideUntilPaid === true &&
+        menuOrder.paymentStatus === "pending" &&
+        ["pending", "pendingPayment"].includes(menuOrder.status);
       menuOrder.status = "cancelled";
       menuOrder.paymentStatus = "failed";
       await menuOrder.save({ session });
+      if (wasAwaitingPayment) {
+        await releaseOrderVoucher({ order: menuOrder, session });
+      }
       await syncMonriTransactionStatus(menuOrderId, "failed").catch((err) =>
         console.error("[monri-sync] menu failed:", err.message),
       );
@@ -171,7 +205,18 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   /* =====================================================
    🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
 ===================================================== */
-  if (committed && menuOrder) {
+  if (committed && lateCapture) {
+    console.error(
+      `[late_capture] menu order ${menuOrderId} was ${menuOrder.status} when Monri captured it — refunding`,
+    );
+    const { refundPaidMenuOrder } = require("../../../menuItemsAndOrders/orderRefundService");
+    fireAndForget(
+      refundPaidMenuOrder({ orderId: menuOrderId, reasonCode: "late_capture" }),
+      "MENU_ORDER_LATE_CAPTURE_REFUND",
+    );
+  }
+
+  if (committed && menuOrder && !expiredBeforeDecline && !closedOnPaid) {
     /**
      * 📡 Sockets first so UI updates even if FCM/email later fails.
      * ORDER_UPDATE is immediate; NEW_ORDER follows with formatted user payload.

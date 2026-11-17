@@ -173,14 +173,26 @@ const processPaymentWebhook = async ({
     }
   }
 
-  await emitPaymentOrderSockets({
-    orderType,
-    orderId,
-    status: result.status,
-    includeNewOrder: !event,
-  });
+  // Late capture on a closed menu order: the finalizer refunds it. No staff
+  // socket, no ledger capture, no ordering confirmation (Monri v1.4 §3.3).
+  let lateCaptureOnClosedOrder = false;
+  if (orderType === "menuorders" && result.status === "paid") {
+    const closed = await MenuOrders.findById(orderId).select("status paymentStatus").lean();
+    lateCaptureOnClosedOrder =
+      ["expired", "cancelled", "rejected"].includes(closed?.status) ||
+      closed?.paymentStatus === "refunded";
+  }
 
-  if (result.status === "paid") {
+  if (!lateCaptureOnClosedOrder) {
+    await emitPaymentOrderSockets({
+      orderType,
+      orderId,
+      status: result.status,
+      includeNewOrder: !event,
+    });
+  }
+
+  if (result.status === "paid" && !lateCaptureOnClosedOrder) {
     // Idempotent payout ledger row (orderId+module). Finalizers also write;
     // duplicate webhook / redirect fulfill is safe.
     if (

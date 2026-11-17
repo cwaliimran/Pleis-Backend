@@ -123,12 +123,39 @@ const OrdersSchema = new mongoose.Schema(
     paymentStatus: {
       type: String,
       // unpaidClosed = doc §7.8 walk-away (Delivered + Mark as Unpaid)
-      enum: ["pending", "paid", "failed", "unpaidClosed"],
+      // refunded = Monri v1.4 §6: the whole captured amount went back to the guest
+      enum: ["pending", "paid", "failed", "unpaidClosed", "refunded"],
       default: "pending",
     },
     paidAt: {
       type: Date,
       default: null,
+    },
+    /**
+     * Refund of a paid in-app order (Monri v1.4 §6). Full amount only, once.
+     * status: pending (claimed / Monri answer unknown / live refunds off),
+     *         refunded, failed (Monri declined; retried once after 24 h).
+     */
+    refund: {
+      status: {
+        type: String,
+        enum: [null, "pending", "refunded", "failed"],
+        default: null,
+      },
+      // order_rejected_after_capture | late_capture | admin_refund
+      reasonCode: { type: String, default: null },
+      channel: { type: String, enum: [null, "monri", "voucher"], default: null },
+      amountCents: { type: Number, default: 0 }, // card part sent to Monri
+      voucherReleased: { type: Number, default: 0 }, // EUR back on the voucher
+      requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      requestedAt: { type: Date, default: null },
+      refundedAt: { type: Date, default: null },
+      attempts: { type: Number, default: 0 },
+      nextRetryAt: { type: Date, default: null },
+      // true when Monri's answer is unknown (timeout): never retried blind
+      needsOperations: { type: Boolean, default: false },
+      lastError: { type: String, default: null },
+      monriResponse: { type: mongoose.Schema.Types.Mixed, default: null },
     },
     // Set when a plain (non-fiscal) €0 confirmation email is sent
     plainConfirmationEmailSentAt: {

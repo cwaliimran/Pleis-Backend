@@ -35,5 +35,14 @@
   "loyalty_club_not_found": "Club de fidelidad no encontrado",
   "deliveryOptionId_is_required": "Elige una mesa.",
   "payment_amount_mismatch": "El importe a pagar ya no coincide con tu pedido. Vuelve a abrir el pedido e inténtalo de nuevo.",
-  "order_already_paid": "Este pedido ya está pagado."
+  "order_already_paid": "Este pedido ya está pagado.",
+  "order_not_payable": "Este pedido ya no se puede pagar. Haz un nuevo pedido.",
+  "refund_not_allowed": "Solo un superadministrador puede reembolsar un pago.",
+  "order_not_refundable": "Este pedido no se pagó a través de Pleis, así que no hay nada que reembolsar.",
+  "refund_blocked_by_statement": "Este pedido está en un extracto de pago. Cancela primero el extracto y luego reembolsa.",
+  "refund_after_payout_organizer_refunds": "Este pedido ya se liquidó. El organizador reembolsa al cliente directamente.",
+  "card_saved_on_payment_only": "Las tarjetas se guardan en la página de pago: marca “Guardar tarjeta” al pagar.",
+  "saved_card_paid_on_monri_form": "Paga con una tarjeta guardada en la página de pago.",
+  "card_not_found": "Tarjeta no encontrada.",
+  "saved_card_invalid": "Esta tarjeta guardada ya no se puede usar. Paga de nuevo con la tarjeta."
 }
