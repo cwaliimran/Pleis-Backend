@@ -31,7 +31,8 @@ const CLOSED_FULFILMENT_STATUSES = ["cancelled", "rejected", "expired"];
 const activeOnOrderBoardMatch = {
   $and: [
     { status: { $nin: CLOSED_FULFILMENT_STATUSES } },
-    { paymentStatus: { $ne: "unpaidClosed" } },
+    // refunded: the payment went back to the guest (Monri v1.4 §6) — Past.
+    { paymentStatus: { $nin: ["unpaidClosed", "refunded"] } },
     {
       $nor: [
         {
@@ -47,7 +48,7 @@ const activeOnOrderBoardMatch = {
 const pastOnOrderBoardMatch = {
   $or: [
     { status: { $in: CLOSED_FULFILMENT_STATUSES } },
-    { paymentStatus: "unpaidClosed" },
+    { paymentStatus: { $in: ["unpaidClosed", "refunded"] } },
     {
       status: { $in: DELIVERED_STATUSES },
       paymentStatus: "paid",
@@ -163,7 +164,7 @@ const assertFulfilmentTransition = (order, nextRaw) => {
 
 /** Payment axis terminal (Past when combined with Delivered). */
 const isPaymentSettledOrClosed = (paymentStatus) =>
-  paymentStatus === "paid" || paymentStatus === "unpaidClosed";
+  paymentStatus === "paid" || paymentStatus === "unpaidClosed" || paymentStatus === "refunded";
 
 /**
  * Staff may Mark as Paid / Mark as Unpaid while payment is still open —
@@ -216,6 +217,11 @@ const resolveStaffNextActions = (order = {}) => {
   const paymentActions = unpaid && !isPleisMethod(order.paymentMethod) ? ["mark_paid", "mark_unpaid"] : [];
   const pickup = isPickupStyle(order);
   const actions = [];
+  // Paid through Pleis (gateway or voucher): Cancel refunds the guest in full
+  // (Monri v1.4 §6.4). Paid at the venue: nothing to refund, no Cancel.
+  const refundOnCancel =
+    order.paymentStatus === "paid" &&
+    (isPleisMethod(order.paymentMethod) || order.paymentMethod === "voucher");
 
   if (fulfilment === "pending") {
     actions.push("confirm", "reject");
@@ -223,11 +229,15 @@ const resolveStaffNextActions = (order = {}) => {
     if (pickup) actions.push("ready");
     else actions.push("delivered");
     if (unpaid) actions.push(...paymentActions, "cancel");
+    else if (refundOnCancel) actions.push("cancel");
   } else if (fulfilment === "ready") {
     actions.push("delivered");
     if (unpaid) actions.push(...paymentActions, "cancel");
+    else if (refundOnCancel) actions.push("cancel");
   } else if (fulfilment === "delivered" && unpaid) {
     actions.push(...paymentActions, "cancel");
+  } else if (fulfilment === "delivered" && refundOnCancel) {
+    actions.push("cancel");
   }
 
   return actions;
@@ -244,6 +254,7 @@ const resolveGuestNextStep = (order = {}) => {
   if (
     fulfilment === "rejected" ||
     fulfilment === "cancelled" ||
+    fulfilment === "expired" ||
     order.paymentStatus === "unpaidClosed"
   ) {
     return { key: "terminal", payInWallet: false };

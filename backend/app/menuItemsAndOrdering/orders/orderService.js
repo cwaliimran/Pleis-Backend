@@ -70,6 +70,7 @@ const {
 } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 const {
   isAwaitingInAppPayment,
+  visibleOnOrderBoardMatch,
 } = require("../../../commonModules/menuItemsAndOrders/orderVisibilityFilter");
 const {
   resolvePostOrderFlow,
@@ -762,8 +763,15 @@ const updateOrder = async ({
     }
 
     // #129: once Paid nothing on the order is edited; the correction is a refund.
-    if (existingOrder.paymentStatus === "paid" || existingOrder.paymentStatus === "unpaidClosed") {
+    if (["paid", "unpaidClosed", "refunded"].includes(existingOrder.paymentStatus)) {
       const err = new Error("order_locked_after_payment");
+      err.statusCode = 409;
+      throw err;
+    }
+    // An expired (unpaid pay-now), cancelled or rejected order is closed: the
+    // guest places a new order instead of reviving it.
+    if (["expired", "cancelled", "rejected"].includes(existingOrder.status)) {
+      const err = new Error("order_closed_for_edit");
       err.statusCode = 409;
       throw err;
     }
@@ -1123,6 +1131,10 @@ const updateOrder = async ({
 
       ...(paymentMethod !== undefined && {
         paymentMethod,
+        paymentMethodLabel: buildPaymentMethodLabel({
+          paymentMethod,
+          voucherAmount: voucherDiscount,
+        }),
       }),
 
       ...(pickupType !== undefined && {
@@ -1201,7 +1213,20 @@ const updateOrder = async ({
     // 1️⃣1️⃣ SOCKET EVENT
     // =========================================================
 
-    emitOrderUpdate(updatedOrder, ["order"]);
+    if (isAwaitingInAppPayment(updatedOrder)) {
+      // Pay now order still hidden from staff (guest retrying payment): guest only.
+      emitOrderEvent({
+        io: global.io,
+        eventName: "ORDER_UPDATE",
+        orderId: updatedOrder._id,
+        organizationId: null,
+        userId: updatedOrder.user,
+        data: updatedOrder,
+        updateTypes: ["order"],
+      });
+    } else {
+      emitOrderUpdate(updatedOrder, ["order"]);
+    }
 
     // Voucher fully settled a previously pending order — same PC path as placeOrder.
     const becamePaidViaVoucher =
@@ -1427,9 +1452,13 @@ const getOrderDetails = async (orderId, timezone) => {
 
 // 3️⃣ Get all orders for user
 const getUserOrders = async (userId, page, limit) => {
+  // Pay now with automatic acceptance: the order exists only after a
+  // successful payment (Legal §1, D-05). Until Monri captures it (or once it
+  // expired unpaid) it is not listed in the guest's Wallet, same as on the
+  // staff boards. The order screen still reads it by id while paying.
   let [orders, counts] = await Promise.all([
-    orderRepo.getOrdersByUser(userId, page, limit),
-    orderRepo.getCounts({ user: userId }),
+    orderRepo.getOrdersByUser(userId, page, limit, visibleOnOrderBoardMatch),
+    orderRepo.getCounts({ user: userId, ...visibleOnOrderBoardMatch }),
   ]);
   let formattedOrders = orders.map((order) => menuItemOrderFormatter(order));
 

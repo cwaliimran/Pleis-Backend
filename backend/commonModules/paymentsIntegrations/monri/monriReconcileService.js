@@ -56,7 +56,6 @@ function applyRemoteFields(remote) {
     rawCallback: remote,
     ...(remote.approval_code && { approvalCode: remote.approval_code }),
     ...(remote.id != null && { monriTransactionId: String(remote.id) }),
-    ...(remote.pan_token && { panToken: remote.pan_token }),
   };
 }
 
@@ -203,4 +202,6 @@ async function reconcileOrderNumber(orderNumber) {
 module.exports = {
   reconcilePendingMonriPayments,
   reconcileOrderNumber,
+  reconcileOne,
+  isMonriBadResponse,
 };

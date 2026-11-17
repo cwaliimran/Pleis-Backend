@@ -946,5 +946,13 @@
   "loyalty_club_not_found": "Loyalty club not found",
   "deliveryOptionId_is_required": "Choose a table.",
   "payment_amount_mismatch": "The amount to pay no longer matches your order. Please reopen the order and try again.",
-  "order_already_paid": "This order is already paid."
+  "order_already_paid": "This order is already paid.",
+  "order_not_payable": "This order can no longer be paid. Please place a new order.",
+  "refund_not_allowed": "Only a superadmin can refund a payment.",
+  "order_not_refundable": "This order wasn't paid through Pleis, so there is nothing to refund.",
+  "refund_blocked_by_statement": "This order is in a payout statement. Cancel the statement first, then refund.",
+  "refund_after_payout_organizer_refunds": "This order was already paid out. The organizer refunds the guest directly.",
+  "card_saved_on_payment_only": "Cards are saved on the payment page: tick “Save card” when you pay.",
+  "saved_card_paid_on_monri_form": "Pay with a saved card on the payment page.",
+  "saved_card_invalid": "This saved card can no longer be used. Please pay with the card again."
 }

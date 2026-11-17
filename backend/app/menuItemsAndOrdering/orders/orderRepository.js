@@ -120,7 +120,8 @@ const getOrderById = async (id) => {
 const getOrdersByUser = async (userId, page, limit, query = {}) => {
   // query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
   return Orders.find({ user: userId, ...query })
-    .select("orderNumber createdAt status paymentMethod paymentStatus priceBreakdown")
+    // updatedAt: the app keeps a live socket snapshot only when it isn't older.
+    .select("orderNumber createdAt updatedAt status paymentMethod paymentStatus priceBreakdown")
     .populate("deliveryOption", "title deliveryMethod")
     .populate("organization", "basicInfo.name basicInfo.media.logo")
     .sort({ createdAt: -1 })

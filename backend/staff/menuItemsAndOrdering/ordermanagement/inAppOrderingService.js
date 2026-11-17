@@ -17,6 +17,11 @@ const {
 const {
   menuOrderFinalizerService,
 } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
+const {
+  refundPaidMenuOrder,
+  isRefundableThroughPleis,
+  assertRefundablePayoutState,
+} = require("../../../commonModules/menuItemsAndOrders/orderRefundService");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -37,8 +42,22 @@ const updateOrders = async (staffId, id, data) => {
     return { error: "Orders_not_found" };
   }
 
-  // ❌ Cannot cancel a paid / unpaid-closed order
-  if (
+  // Rejecting / cancelling an order already paid through Pleis refunds it in
+  // full (Monri v1.4 §6.4, order_rejected_after_capture). Paid at the venue
+  // (cash, terminal, other) or walk-away: Pleis holds no money, still blocked.
+  const closing =
+    data.status !== undefined &&
+    data.status !== order.status &&
+    (data.status === "cancelled" || normalizeFulfilmentStatus(data.status) === "rejected");
+  let refundAfterSave = false;
+  if (closing && order.paymentStatus === "paid" && isRefundableThroughPleis(order)) {
+    try {
+      await assertRefundablePayoutState(order._id);
+    } catch (e) {
+      return { error: e.message };
+    }
+    refundAfterSave = true;
+  } else if (
     (order.paymentStatus === "paid" || order.paymentStatus === "unpaidClosed") &&
     data.status === "cancelled"
   ) {
@@ -188,7 +207,27 @@ const updateOrders = async (staffId, id, data) => {
 
   await order.save();
 
-  if (order.paymentStatus === "paid" && !markPaidViaFinalizer) {
+  let refund = null;
+  if (refundAfterSave) {
+    try {
+      refund = await refundPaidMenuOrder({
+        orderId: order._id,
+        reasonCode: "order_rejected_after_capture",
+        requestedBy: staffId,
+        skipPayoutCheck: true, // checked above, before the status change
+      });
+    } catch (e) {
+      refund = { status: "failed", error: e.message };
+    }
+    const refreshed = await OrdersRepo.findOrdersById(id);
+    if (refreshed) {
+      order.paymentStatus = refreshed.paymentStatus;
+      order.refund = refreshed.refund;
+    }
+    updateTypes.push("refund");
+  }
+
+  if (order.paymentStatus === "paid" && !markPaidViaFinalizer && !refundAfterSave) {
     maybeEnqueueOrderingConfirmation(order);
   }
 
@@ -265,6 +304,7 @@ const updateOrders = async (staffId, id, data) => {
   if (plain.status === "completed" || plain.status === "sent") plain.status = "delivered";
   plain.nextActions = resolveStaffNextActions(order);
   plain.guestNextStep = guestNextStep;
+  if (refund) plain.refundResult = refund;
   return plain;
 };
 

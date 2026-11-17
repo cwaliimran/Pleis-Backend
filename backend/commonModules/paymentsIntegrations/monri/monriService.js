@@ -184,4 +184,6 @@ module.exports = {
   verifyTransaction,
   createTransactionMonriOrder,
   getMonriBaseUrl,
+  parseMonriOrderXml,
+  escapeXml,
 };

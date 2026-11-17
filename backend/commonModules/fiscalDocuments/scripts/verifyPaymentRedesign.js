@@ -667,7 +667,7 @@ function stepRefundAndFields() {
   );
   assert(
     monriRefund.includes("stornoTicketingInvoices") &&
-      monriRefund.includes("refundAmount: plan.refundAmount") &&
+      monriRefund.includes("refundAmount: null") && // full refund only (Monri v1.4 §6.3)
       monriRefund.includes("execute: true"),
     "Monri ticketing refund attempts Billko storno (still env-gated inside)",
   );

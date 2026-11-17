@@ -10,6 +10,12 @@ const {
 const {
   sweepFiscalDocuments,
 } = require("../../commonModules/fiscalDocuments/jobs/documentSweeper");
+const {
+  expireUnpaidPayNowOrders,
+} = require("../../commonModules/menuItemsAndOrders/unpaidOrderExpiryService");
+const {
+  retryDueMenuOrderRefunds,
+} = require("../../commonModules/menuItemsAndOrders/orderRefundService");
 
 const { runRecurringEventsCron } = require("./events/recurringEvents.core");
 const { runEventReminderCron } = require("./events/eventReminder.cron");
@@ -87,6 +93,33 @@ const startCrons = () => {
           console.warn("[payment-reconcile] restarting job now");
         }
       }
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+  /* ======================================================
+     ⏱️ Unpaid pay-now orders (every 5 minutes)
+     Expires auto-accept + Pay now menu orders the guest never
+     paid once lockUntil has passed, and gives back the voucher
+     they drew. A started Monri attempt is checked first.
+     Redis lock: one server per run.
+     ====================================================== */
+  cron.schedule("2-59/5 * * * *", async () => {
+    const lockKey = "cron:expire-unpaid-paynow-orders";
+    const lock = await acquireLock(lockKey, 240);
+    if (!lock) return;
+    try {
+      await expireUnpaidPayNowOrders();
+    } catch (err) {
+      console.error("[order-expiry] run failed:", err.message);
+    }
+    // Refunds Monri declined (retried once after 24 h) or that waited for
+    // MONRI_LIVE_REFUND_ENABLED. Unknown Monri answers are left to operations.
+    try {
+      await retryDueMenuOrderRefunds();
+    } catch (err) {
+      console.error("[order-refund] retry run failed:", err.message);
     } finally {
       await releaseLock(lockKey, lock);
     }

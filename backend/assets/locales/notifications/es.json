@@ -50,6 +50,8 @@
   "menu_order_confirmed_pay_body": "Tu pedido {orderNumber} ha sido confirmado. Por favor, paga en la cartera.",
   "menu_order_cancelled_title": "Pedido cancelado",
   "menu_order_cancelled_body": "Tu pedido {orderNumber} ha sido cancelado.",
+  "menu_order_refunded_title": "Pedido reembolsado",
+  "menu_order_refunded_body": "El pago de tu pedido {orderNumber} se ha reembolsado por completo.",
   "menu_order_sent_title": "Pedido enviado",
   "menu_order_sent_body": "Tu pedido {orderNumber} está en camino.",
   "menu_order_completed_title": "Pedido completado",

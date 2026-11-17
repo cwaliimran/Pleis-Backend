@@ -34,11 +34,13 @@ const findByOrderNumber = async (orderNumber) => {
 };
 
 const updateTransaction = async (orderNumber, data) => {
-  return MonriTransaction.findOneAndUpdate(
-    { orderNumber },
-    data,
-    { new: true }
-  );
+  const filter = { orderNumber };
+  // Never move a refunded attempt back to paid: a late capture is refunded
+  // right after the finalizer, before the success / reconcile path writes paid.
+  if (data?.status === "paid" || data?.$set?.status === "paid") {
+    filter.status = { $ne: "refunded" };
+  }
+  return MonriTransaction.findOneAndUpdate(filter, data, { new: true });
 };
 
 /**
