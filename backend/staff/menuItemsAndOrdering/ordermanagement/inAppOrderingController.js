@@ -10,6 +10,7 @@ const {
   getOrdersService,
   updateOrderDetailsService,
 } = require("../../../admin/inAppOrdering/ordermanagement/inAppOrderingService");
+const { orderScopeCheck } = require("../../../commonModules/menuItemsAndOrders/orderScope");
 
 const getOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -112,7 +113,7 @@ const updateOrders = async (req, res) => {
   };
 
   try {
-    const updated = await updateOrderDetailsService({ orderId: id, data });
+    const updated = await updateOrderDetailsService({ orderId: id, data, assertScope: orderScopeCheck(req) });
     if (updated && updated.error) {
       return sendResponse({
         res,

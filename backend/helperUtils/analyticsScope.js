@@ -59,6 +59,11 @@ const resolveAnalyticsScope = async (req) => {
     return { companyOrganizer, organizations };
   }
 
+  // Anyone else (guest app user, staff) gets nothing, never the global view.
+  if (userType !== "admin") {
+    return { companyOrganizer: undefined, organizations: [] };
+  }
+
   // Super admin: global unless a company and/or organizations are chosen.
   const companyOrganizer =
     qCompany && mongoose.Types.ObjectId.isValid(String(qCompany)) ? String(qCompany) : undefined;

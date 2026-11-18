@@ -774,7 +774,7 @@ const createReservation = async (data, session) => {
     // Auto-accepted paid path: collect payment before confirming.
     if (
       BYPASS_RESERVATION_PAYMENT ||
-      ["card", "applePay"].includes(resolvedPaymentMethod)
+      ["card", "applePay", "googlePay"].includes(resolvedPaymentMethod)
     ) {
       data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
       data.status = "pendingPayment";

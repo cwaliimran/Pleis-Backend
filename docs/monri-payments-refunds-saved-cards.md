@@ -38,6 +38,11 @@ Guest taps Pay
   so the backend asks Monri (`/orders/show`, digest `SHA1(key + order_number)`)
   whether the money was captured. When Monri doesn't confirm, the transaction
   stays pending and the reconcile job settles it.
+- **A declined card fails the attempt, never the order** (Monri v1.4 §3.1).
+  The order keeps its status and stays unpaid, so the guest can pay again:
+  a delivered pay-later order stays *Waiting for payment*. No "order
+  cancelled" notice is sent. An unpaid pay-now order that is never paid is
+  closed by the expiry job when its lock runs out.
 - **Buyer name in Monri** is taken from the guest's billing details. When there
   are none, it uses the account's first and last name, then the username. Email
   works the same way. "Guest User" appears only when all of these are empty.
@@ -83,7 +88,7 @@ passed and the order is still unpaid, the job decides by the Monri transaction:
 |---|---|
 | None (Monri never opened) | Order expired |
 | Failed, cancelled or invalid | Order expired |
-| Pending | Asks Monri first. Captured: the order is paid, never expired. Declined: the order is cancelled as a failed payment. No answer: expired only 30 min after the last attempt, so a guest still on the 3DS page isn't cut off |
+| Pending | Asks Monri first. Captured: the order is paid, never expired. Declined: the attempt is failed and the order expires. No answer: expired only 30 min after the last attempt, so a guest still on the 3DS page isn't cut off |
 | Paid or refunded | Left alone |
 
 When an order expires:

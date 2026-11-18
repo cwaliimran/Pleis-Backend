@@ -8,6 +8,7 @@ const {
 const mongoose = require("mongoose"); // Import mongoose
 
 const Orderservice = require("./inAppOrderingService");
+const { orderScopeCheck } = require("../../../commonModules/menuItemsAndOrders/orderScope");
 const getOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let {
@@ -107,6 +108,7 @@ const updateOrders = async (req, res) => {
     const updated = await Orderservice.updateOrderDetailsService({
       orderId: id,
       data,
+      assertScope: orderScopeCheck(req),
     });
     if (updated && updated.error) {
       return sendResponse({

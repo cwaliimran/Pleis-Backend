@@ -27,6 +27,7 @@ const Reservations = require("@ReservationsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const WebhookTransactionsEventModel = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/WebhookTransactionsEvent.model");
 const { generateMeta } = require("@utils/responseUtil");
+const { salesMatch } = require("./orderAnalyticsMetrics");
 const {
   buildUserReservationPaymentsQA,
 } = require("./utils/buildUserReservationPaymentsQA");
@@ -34,220 +35,6 @@ const { buildUserChangeLogs } = require("./utils/buildUserChangeLogs");
 const MenuOrders = require("../../../commonModules/menuItemsAndOrders/Orders");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const MenuItemSubCategories = require("@MenuItemSubCategoriesModel");
-
-const orderStatsRaw = async ({ organizations, dateFilter, timezone }) => {
-  const ranges = getDateRanges({ dateFilter, timezone }); // Get the date ranges for
-  const baseMatch = {
-    ...(organizations && {
-      organization: { $in: organizations }, // Directly use the organizations array
-    }),
-  };
-
-  const RevenueCurrent = await MenuOrders.aggregate([
-    {
-      $match: {
-        ...baseMatch,
-        status: "completed", // Only completed orders
-        ...(ranges && { createdAt: { $gte: ranges.start, $lt: ranges.end } }), // Filter by date range
-      },
-    },
-    {
-      $group: {
-        _id: null, // No grouping, just sum everything
-        totalRevenue: { $sum: "$totalPrice" }, // Sum the totalPrice
-        totalRevenueCommission: { $sum: { $multiply: ["$totalPrice", 0.06] } }, // Calculate 6% commission for each order
-      },
-    },
-  ]);
-  const RevenueCommission = await MenuOrders.aggregate([
-    {
-      $match: {
-        ...baseMatch,
-        status: "completed", // Only completed orders
-      },
-    },
-    {
-      $group: {
-        _id: null, // No grouping, just sum everything
-        totalRevenueCommission: { $sum: { $multiply: ["$totalPrice", 0.06] } }, // Calculate 6% commission for each order
-      },
-    },
-  ]);
-  const limitedTimeItem = await MenuOrders.aggregate([
-    {
-      $match: {
-        ...baseMatch,
-        status: "completed", // Only completed orders
-      },
-    },
-    {
-      $unwind: "$items", // Unwind the items array to work with individual items
-    },
-    {
-      $match: {
-        "items.isLimitedTimeOffer": true, // Only include items marked as limited time offers
-      },
-    },
-    {
-      $group: {
-        _id: null, // No grouping, just count everything
-        totalLimitedTimeItems: { $sum: 1 }, // Count the number of limited time items
-      },
-    },
-  ]);
-
-  const totalLimitedTimeItems = limitedTimeItem[0]?.totalLimitedTimeItems || 0;
-
-  const totalRevenueCurrent = RevenueCurrent[0]?.totalRevenue || 0; // Extract the totalRevenue
-  const totalRevenueCommission =
-    RevenueCommission[0]?.totalRevenueCommission || 0;
-
-  const ItemsSoldCurrent = await MenuOrders.aggregate([
-    {
-      $match: {
-        ...baseMatch,
-        status: "completed", // Only count items from completed orders
-      },
-    },
-    {
-      $unwind: "$items", // Unwind the items array
-    },
-    {
-      $group: {
-        _id: null, // Group everything into one document
-        totalItemsSold: { $sum: "$items.quantity" }, // Sum the quantity of all items
-      },
-    },
-  ]);
-  const ordersCurrent = await MenuOrders.aggregate([
-    {
-      $match: {
-        ...baseMatch,
-        ...(ranges && { createdAt: { $gte: ranges.start, $lt: ranges.end } }), // Filter by the given date range
-      },
-    },
-    {
-      $count: "totalOrders", // Count the number of documents
-    },
-  ]);
-  const ordersPrevious = await MenuOrders.aggregate([
-    {
-      $match: {
-        ...baseMatch,
-        ...(ranges && {
-          createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd },
-        }), // Filter by the previous date range
-      },
-    },
-    {
-      $count: "totalOrders", // Count the number of documents
-    },
-  ]);
-  const totalOrdersCurrent = ordersCurrent[0]?.totalOrders || 0; // Extract the totalOrders value
-  const totalOrdersPrevious = ordersPrevious[0]?.totalOrders || 0; // Extract the totalOrders value
-
-  // Extract the totalItemsSold value
-  const totalItemsSold = ItemsSoldCurrent[0]?.totalItemsSold || 0;
-
-  const averageOrderValue = totalRevenueCurrent / totalItemsSold;
-
-  const RevenuePrevious = await MenuOrders.aggregate([
-    {
-      $match: {
-        ...baseMatch,
-        status: "completed", // Only completed orders
-        ...(ranges && {
-          createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd },
-        }), // Filter by previous date range
-      },
-    },
-    {
-      $group: {
-        _id: null, // No grouping, just sum everything
-        totalRevenue: { $sum: "$totalPrice" }, // Sum the totalPrice
-      },
-    },
-  ]);
-  const totalRevenuePrevious = RevenuePrevious[0]?.totalRevenue || 0; // Extract the totalRevenue
-
-  const orderFrequencyCurrent = await MenuOrders.aggregate([
-    { $match: baseMatch },
-    {
-      $project: {
-        orderFrequency: {
-          $cond: {
-            if: { $eq: [{ $hour: "$createdAt" }, 0] }, // Check if the hour is 0 (midnight)
-            then: 1, // Return 1 to avoid division by zero
-            else: { $divide: [1, { $hour: "$createdAt" }] }, // Otherwise, calculate the frequency
-          },
-        },
-      },
-    },
-  ]);
-
-  // =========================
-  // 🚀 MOST ORDERED CATEGORY (from menuItemSnapShot)
-  // =========================
-const mostOrderedCategoryData = await MenuOrders.aggregate([
-  { $match: baseMatch },
-  { $unwind: "$items" },
-  {
-    $lookup: {
-      from: "menuitems",
-      localField: "items.menuItem",
-      foreignField: "_id",
-      as: "menuItemDetails",
-    },
-  },
-  { $unwind: { path: "$menuItemDetails", preserveNullAndEmptyArrays: true } },
-  { $match: { "menuItemDetails.subCategory": { $ne: null } } }, // skip items with no subcategory
-  {
-    $group: {
-      _id: "$menuItemDetails.subCategory",
-      totalItemsSoldInCategory: { $sum: "$items.quantity" },
-    },
-  },
-  { $sort: { totalItemsSoldInCategory: -1 } },
-  { $limit: 1 },
-  {
-    $lookup: {
-      from: "menusubcategories",
-      localField: "_id",
-      foreignField: "_id",
-      as: "categoryDetails",
-    },
-  },
-  { $unwind: { path: "$categoryDetails", preserveNullAndEmptyArrays: true } },
-  {
-    $project: {
-      _id: 1,
-      mostOrderedCategory: { $ifNull: ["$categoryDetails.title", "Uncategorized"] },
-      totalItemsSoldInCategory: 1,
-    },
-  },
-]);
-  // Returning the results
-  return {
-    totalOrdersCurrent: parseInt(totalOrdersCurrent.toFixed(2)),
-    totalOrdersPrevious: parseInt(totalOrdersPrevious.toFixed(2)),
-    totalRevenueCurrent: parseInt(totalRevenueCurrent.toFixed(2)),
-    revenueAfterCommission: parseInt(
-      (totalRevenueCurrent - totalRevenueCommission).toFixed(2),
-    ),
-    totalRevenueCommission: parseInt(totalRevenueCommission.toFixed(2)),
-    totalItemsSold: parseInt(totalItemsSold.toFixed(2)),
-    averageOrderValue: parseInt(averageOrderValue.toFixed(2)),
-    totalRevenuePrevious: parseInt(totalRevenuePrevious.toFixed(2)),
-    orderFrequencyPerHour: orderFrequencyCurrent.length
-      ? parseInt(orderFrequencyCurrent[0].orderFrequency.toFixed(2))
-      : 0,
-    mostOrderedCategory:
-      mostOrderedCategoryData[0]?.mostOrderedCategory || "N/A",
-    totalLimitedTimeItems: parseInt(totalLimitedTimeItems.toFixed(2)),
-  };
-};
-
-// ---------------- USERS ----------------
 
 const getUserSingleMetric = async ({ match, range }) => {
   const finalMatch = {
@@ -348,80 +135,6 @@ const getOrganizerPerformanceByMonth = async ({
   return rows;
 };
 
-const getReservationsOverTimeRaw = async (organizations) => {
-  const year = new Date().getFullYear();
-  const start = new Date(`${year}-01-01T00:00:00.000Z`);
-  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
-  return MenuOrders.aggregate([
-    {
-      $match: {
-        ...(organizations && {
-          organization: { $in: organizations },
-        }),
-        createdAt: { $gte: start, $lt: end },
-      },
-    },
-    {
-      $project: {
-        month: { $month: "$createdAt" },
-      },
-    },
-    {
-      $group: {
-        _id: "$month",
-        totalReservations: { $sum: 1 },
-      },
-    },
-    {
-      $sort: { _id: 1 }, // Jan → Dec
-    },
-  ]);
-};
-const getAverageOrderValueOverTimeRaw = async (organizations) => {
-  const year = new Date().getFullYear();
-  const start = new Date(`${year}-01-01T00:00:00.000Z`);
-  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
-
-  return MenuOrders.aggregate([
-    {
-      $match: {
-        ...(organizations && {
-          organization: { $in: organizations },
-        }),
-        createdAt: { $gte: start, $lt: end },
-      },
-    },
-    {
-      $project: {
-        month: { $month: "$createdAt" },
-        totalPrice: 1, // Include totalPrice for each order
-      },
-    },
-    {
-      $group: {
-        _id: "$month",
-        totalPriceSum: { $sum: "$totalPrice" }, // Sum of totalPrice for the month
-        totalCount: { $sum: 1 }, // Count of orders in the month
-      },
-    },
-    {
-      $project: {
-        month: "$_id",
-        totalReservations: {
-          $cond: [
-            { $eq: ["$totalCount", 0] }, // Avoid division by zero
-            0,
-            { $divide: ["$totalPriceSum", "$totalCount"] }, // Calculate average order value
-          ],
-        },
-      },
-    },
-    {
-      $sort: { _id: 1 }, // Jan → Dec
-    },
-  ]);
-};
-
 const getRawGlobalLoyaltyPointsDistributed = async () => {
   return UnifiedWalletTransactions.aggregate([
     {
@@ -440,346 +153,6 @@ const getRawGlobalLoyaltyPointsDistributed = async () => {
       $sort: { count: -1 },
     },
   ]);
-};
-
-const getRevenueOverTimeRaw = async (organizations) => {
-  const year = new Date().getFullYear();
-  const start = new Date(`${year}-01-01T00:00:00.000Z`);
-  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
-
-  return MenuOrders.aggregate([
-    {
-      $match: {
-        ...(organizations && {
-          organization: { $in: organizations },
-        }),
-        createdAt: { $gte: start, $lt: end },
-        status: "completed", // Only completed orders
-      },
-    },
-    {
-      $project: {
-        month: { $month: "$createdAt" },
-        totalPrice: { $ifNull: ["$totalPrice", 0] },
-      },
-    },
-    {
-      $group: {
-        _id: {
-          month: "$month",
-        },
-        totalRevenue: { $sum: "$totalPrice" },
-        netIncome: { $sum: { $multiply: ["$totalPrice", 0.06] } }, // 6% of each order's totalPrice
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        month: "$_id.month",
-        totalRevenue: 1,
-        netIncome: 1,
-      },
-    },
-    {
-      $sort: { month: 1 },
-    },
-  ]);
-};
-const getMostOrderedCategoryData = async (organizations) => {
-  const baseMatch = {
-    ...(organizations && {
-      organization: { $in: organizations },
-    }),
-  };
-
-  const mostOrderedCategoryData = await MenuOrders.aggregate([
-    { $match: baseMatch },
-    { $unwind: "$items" },
-    {
-      $lookup: {
-        from: "menuitems", // Lookup menu item details
-        localField: "items.menuItem",
-        foreignField: "_id",
-        as: "menuItemDetails",
-      },
-    },
-    { $unwind: "$menuItemDetails" },
-    {
-      $group: {
-        _id: "$menuItemDetails.category", // Group by category
-        totalItemsSoldInCategory: { $sum: "$items.quantity" }, // Count of items in each category
-      },
-    },
-    { $sort: { totalItemsSoldInCategory: -1 } }, // Sort by total items sold in descending order
-    {
-      $lookup: {
-        from: "menuitemcategories", // Lookup category details
-        localField: "_id",
-        foreignField: "_id",
-        as: "categoryDetails",
-      },
-    },
-    { $unwind: "$categoryDetails" },
-    {
-      $group: {
-        _id: null,
-        categories: {
-          $push: {
-            category: "$categoryDetails.title",
-            count: "$totalItemsSoldInCategory",
-          },
-        },
-        totalItemsSold: { $sum: "$totalItemsSoldInCategory" },
-      },
-    },
-    {
-      $project: {
-        categories: 1,
-        totalItemsSold: 1,
-        categoriesWithPercent: {
-          $map: {
-            input: "$categories",
-            as: "category",
-            in: {
-              categoryName: "$$category.category",
-              count: "$$category.count",
-              percent: {
-                $multiply: [
-                  { $divide: ["$$category.count", "$totalItemsSold"] },
-                  100,
-                ],
-              }, // Calculate percentage
-            },
-          },
-        },
-      },
-    },
-    { $unwind: "$categoriesWithPercent" }, // Unwind the categories to make them individual documents
-    {
-      $project: {
-        _id: 0,
-        categoryName: "$categoriesWithPercent.categoryName",
-        count: "$categoriesWithPercent.count",
-        percent: "$categoriesWithPercent.percent",
-      },
-    },
-  ]);
-
-  return mostOrderedCategoryData;
-};
-
-const getReservationsByHourRaw = async (organizations) => {
-  const year = new Date().getFullYear();
-  const start = new Date(`${year}-01-01T00:00:00.000Z`);
-  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
-
-  return MenuOrders.aggregate([
-    {
-      $match: {
-        ...(organizations && {
-          organization: { $in: organizations },
-        }),
-        createdAt: { $gte: start, $lt: end },
-      },
-    },
-
-    // extract hour from startTime (0–23)
-    {
-      $project: {
-        hour: {
-          $hour: "$createdAt",
-        },
-      },
-    },
-    {
-      $group: {
-        _id: "$hour",
-        count: { $sum: 1 },
-      },
-    },
-
-    {
-      $sort: { _id: 1 },
-    },
-  ]);
-};
-
-const getUserLevelStatsRaw = async (organizations) => {
-  const result = await MenuOrders.aggregate([
-    {
-      $match: {
-        user: { $ne: null },
-        ...(organizations && {
-          organization: { $in: organizations },
-        }),
-      },
-    },
-
-    // Unwind items array to work with individual items
-    {
-      $unwind: "$items",
-    },
-
-    // Group by userId and calculate counts for regular, upsell, and limited-time items
-    {
-      $group: {
-        _id: "$userId",
-        totalRegularItems: { $sum: 1 }, // Count each item as 1
-        totalUpsellItems: {
-          $sum: {
-            $cond: [
-              { $eq: ["$items.menuItemSnapShot.upSellItem", true] },
-              1,
-              0,
-            ],
-          },
-        },
-        totalLimitedItems: {
-          $sum: {
-            $cond: [
-              { $eq: ["$items.menuItemSnapShot.isLimitedTimeOffer", true] },
-              1,
-              0,
-            ],
-          },
-        },
-      },
-    },
-
-    // Debug: Project values to check totals and conditions
-    {
-      $project: {
-        userId: "$_id",
-        totalRegularItems: 1,
-        totalUpsellItems: 1,
-        totalLimitedItems: 1,
-        totalItems: {
-          $add: [
-            "$totalRegularItems",
-            "$totalUpsellItems",
-            "$totalLimitedItems",
-          ], // Total count of all items
-        },
-      },
-    },
-
-    // Debug: Add fields to check totalItems and percentages before final calculation
-    {
-      $project: {
-        userId: 1,
-        totalRegularItems: 1,
-        totalUpsellItems: 1,
-        totalLimitedItems: 1,
-        totalItems: 1,
-        regularPercent: {
-          $cond: [
-            { $eq: ["$totalItems", 0] }, // Check for totalItems being 0
-            0, // If totalItems is 0, set percentage to 0
-            {
-              $round: [
-                {
-                  $multiply: [
-                    { $divide: ["$totalRegularItems", "$totalItems"] },
-                    100,
-                  ],
-                },
-                2,
-              ], // Regular item percentage
-            },
-          ],
-        },
-        upsellPercent: {
-          $cond: [
-            { $eq: ["$totalItems", 0] }, // Check for totalItems being 0
-            0, // If totalItems is 0, set percentage to 0
-            {
-              $round: [
-                {
-                  $multiply: [
-                    { $divide: ["$totalUpsellItems", "$totalItems"] },
-                    100,
-                  ],
-                },
-                2,
-              ], // Upsell item percentage
-            },
-          ],
-        },
-        limitedPercent: {
-          $cond: [
-            { $eq: ["$totalItems", 0] }, // Check for totalItems being 0
-            0, // If totalItems is 0, set percentage to 0
-            {
-              $round: [
-                {
-                  $multiply: [
-                    { $divide: ["$totalLimitedItems", "$totalItems"] },
-                    100,
-                  ],
-                },
-                2,
-              ], // Limited-time item percentage
-            },
-          ],
-        },
-      },
-    },
-
-    // Debugging: Project out the fields for inspection
-    {
-      $project: {
-        userId: 1,
-        totalRegularItems: 1,
-        totalUpsellItems: 1,
-        totalLimitedItems: 1,
-        totalItems: 1,
-        regularPercent: 1,
-        upsellPercent: 1,
-        limitedPercent: 1,
-      },
-    },
-    {
-      $project: {
-        reservationData: [
-          {
-            reservationType: "Regular",
-            count: "$totalRegularItems",
-            percent: "$regularPercent",
-          },
-          {
-            reservationType: "Upsell",
-            count: "$totalUpsellItems",
-            percent: "$upsellPercent",
-          },
-          {
-            reservationType: "Limited",
-            count: "$totalLimitedItems",
-            percent: "$limitedPercent",
-          },
-        ],
-      },
-    },
-
-    // Unwind the reservationData array
-    {
-      $unwind: "$reservationData",
-    },
-    {
-      $project: {
-        _id: 0,
-        reservationType: "$reservationData.reservationType",
-        count: "$reservationData.count",
-        percent: "$reservationData.percent",
-      },
-    },
-
-    // Sort by reservation type (optional)
-    {
-      $sort: { reservationType: 1 },
-    },
-  ]);
-
-  return result;
 };
 
 const getUserReservationPaymentsQA = async ({
@@ -980,14 +353,10 @@ const getUserReservationChangeLogs = async ({
  */
 const getLoyaltyImpactRaw = async ({ organizations, dateFilter, timezone }) => {
   const ranges = getDateRanges({ dateFilter, timezone });
+  // Paid orders only (spend), in scope; an empty organization list matches nothing.
   const baseMatch = {
     user: { $ne: null },
-    ...(organizations?.length && {
-      organization: { $in: organizations },
-    }),
-    ...(ranges && {
-      createdAt: { $gte: ranges.start, $lt: ranges.end },
-    }),
+    ...salesMatch(organizations, ranges?.start, ranges?.end),
   };
 
   const result = await MenuOrders.aggregate([
@@ -1141,13 +510,8 @@ const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
     // Step 1: Aggregate data to calculate sales count and final price per menu item
     const salesData = await MenuOrders.aggregate([
       // Match based on organizations if provided
-      {
-        $match: {
-          ...(organizations?.length && {
-            organization: { $in: organizations },
-          }),
-        },
-      },
+      // Items sold: paid orders in scope (an empty organization list matches nothing).
+      { $match: salesMatch(organizations) },
 
       // Unwind the items array to process each menu item
       { $unwind: "$items" },
@@ -1191,6 +555,9 @@ const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
         },
       },
 
+      // Best sellers first; stable order for paging
+      { $sort: { salesCount: -1, itemName: 1, _id: 1 } },
+
       // Apply skip and limit for pagination
       { $skip: skip },
       { $limit: limit },
@@ -1223,11 +590,7 @@ const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
 
     // Get the total filtered count for pagination metadata
     const totalFiltered = await MenuOrders.aggregate([
-      {
-        $match: {
-          ...(organizations?.length && { organization: { $in: organizations } }),
-        },
-      },
+      { $match: salesMatch(organizations) },
       { $unwind: "$items" },
       { $group: { _id: "$items.menuItem" } },
       { $count: "totalUniqueItems" },
@@ -1246,21 +609,14 @@ const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
 };
 
 module.exports = {
-  orderStatsRaw,
 
   getOrganizerPerformanceByMonth,
   getUserSingleMetric,
   getEventSingleMetric,
   getTicketSingleMetric,
-  getReservationsOverTimeRaw,
   getRawGlobalLoyaltyPointsDistributed,
-  getRevenueOverTimeRaw,
-  getMostOrderedCategoryData,
-  getReservationsByHourRaw,
-  getUserLevelStatsRaw,
   getUserReservationPaymentsQA,
   getUserReservationChangeLogs,
-  getAverageOrderValueOverTimeRaw,
   getMenuItemSalesData,
   getLoyaltyImpactRaw,
 };

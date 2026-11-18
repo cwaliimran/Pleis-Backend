@@ -307,6 +307,8 @@ function documentsOf(entry, ctx, isSuperAdmin) {
       label: inv.kind === "commission" ? "Commission eRačun" : "Invoice",
       subtitle: inv.invoiceNumber || inv.status,
       number: inv.invoiceNumber || null,
+      // View / Download: GET …/fiscal-documents/invoices/:id
+      id: String(inv._id),
       kind: inv.kind,
       status: inv.status,
     });

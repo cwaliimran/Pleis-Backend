@@ -1,5 +1,6 @@
 // repositories/venueRepository.js
 const Venues = require("@VenuesModel");
+const { syncOrganizationLocation } = require("../../commonModules/organizations/syncOrganizationLocation");
 const mongoose = require("mongoose");
 const Organizations = require("@OrganizationModel");
 const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../../admin/organizations/organizationService");
@@ -18,26 +19,23 @@ const createVenue = async (data) => {
 
     await session.withTransaction(async () => {
 
-      if (data.organization) {
+      // Same as admin: only demote existing primaries when explicitly creating
+      // as primary; otherwise the new venue is a regular one.
+      if (data.organization && data.isPrimary) {
         await Venues.updateMany(
           { organization: data.organization, isPrimary: true },
           { isPrimary: false },
           { session }
         );
-
-        data.isPrimary = true;
       }
 
       venue = await Venues.create([data], { session })
         .then(res => res[0]);
 
-      // 🔒 Keep this INSIDE transaction for atomicity
+      // 🔒 Inside the transaction: the organization's location is its primary
+      // venue's location (changes only when the new venue is the primary one).
       if (data.organization) {
-        await Organizations.updateOne(
-          { _id: data.organization },
-          { $set: { location: data.location } },
-          { session }
-        );
+        await syncOrganizationLocation(data.organization, { session });
       }
 
     });

@@ -6,6 +6,7 @@ const { sendResponse } = require("../../../helperUtils/responseUtil");
 const monriRepository = require("./monriRepository");
 const { confirmMonriCapture } = require("./monriCaptureCheck");
 const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
+const { checkPaymentStatusNow } = require("./monriReconcileService");
 const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
 const { SubscriptionTypes } = require("../../../models/UserModel");
 const {
@@ -180,6 +181,52 @@ function isRetryableMonriFormError(err) {
     // Monri / Cloudflare 5xx (e.g. 522 origin timeout): try again.
     Number(err?.details?.status || err?.httpStatus) >= 500
   );
+}
+
+/**
+ * Apple Pay / Google Pay: open a Monri payment (client_secret + trx_token).
+ * Same 3 tries as the card form: Monri's host randomly answers Cloudflare 522.
+ * The Authorization header holds a timestamp, so it is rebuilt for every try.
+ */
+async function createMonriWalletPayment(payload) {
+  const body = JSON.stringify(payload);
+  const maxTries = 3;
+  let lastError;
+  for (let attempt = 1; attempt <= maxTries; attempt++) {
+    try {
+      const response = await axios.post(`${getMonriBaseUrl()}/v2/payment/new`, body, {
+        headers: {
+          Authorization: buildAuthorizationHeader({ body }),
+          "Content-Type": "application/json",
+        },
+        timeout: 20000,
+        family: 4,
+      });
+      if (response.data?.client_secret) return response.data;
+      lastError = new Error("monri_form_failed");
+      lastError.details = response.data || { status: response.status };
+    } catch (err) {
+      lastError = err;
+      if (err?.response?.status) lastError.httpStatus = err.response.status;
+    }
+
+    console.warn(
+      `[monri-wallet] try ${attempt}/${maxTries} failed:`,
+      lastError?.code || lastError?.message,
+      lastError?.httpStatus || "",
+    );
+    if (attempt < maxTries && isRetryableMonriFormError(lastError)) {
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+      continue;
+    }
+    break;
+  }
+
+  // 502 → "failed_to_open_monri_card_form" in the session handlers.
+  const error = new Error("monri_form_failed");
+  error.statusCode = 502;
+  error.cause = lastError;
+  throw error;
 }
 
 async function createMonriCardPaymentUrl(sessionFields) {
@@ -689,6 +736,35 @@ exports.handleSuccess = async (req, res) => {
 
 
 
+/**
+ * GET /app/payments/monri/status/:orderNumber
+ * The app calls this only when the guest leaves the payment WebView without
+ * our success/cancel redirect (back button). Pending → Monri is asked now;
+ * an approved capture is fulfilled. Only the payer can query their payment.
+ */
+exports.getPaymentStatus = async (req, res) => {
+  try {
+    const { orderNumber } = req.params;
+    const tx = await monriRepository.findByOrderNumber(String(orderNumber || ""));
+    if (!tx || String(tx.userId) !== String(req.user._id)) {
+      return sendResponse({ res, statusCode: 404, translationKey: "transaction_not_found" });
+    }
+
+    const plain = typeof tx.toObject === "function" ? tx.toObject() : tx;
+    const status = await checkPaymentStatusNow(plain);
+
+    return res.status(200).json({
+      orderNumber: plain.orderNumber,
+      orderType: plain.orderType,
+      status,
+      paid: status === "paid",
+    });
+  } catch (err) {
+    console.error("Monri status check error:", err);
+    return sendResponse({ res, statusCode: 500, translationKey: "processing_failed", error: err });
+  }
+};
+
 exports.handleCancel = async (req, res) => {
   try {
     const payload = getMonriCallbackPayload(req);
@@ -959,22 +1035,10 @@ exports.createWebPaySession = async (req, res) => {
       scenario: "charge",
     };
 
-    const body = JSON.stringify(payload);
-    const authorization = buildAuthorizationHeader({ body });
+    const monriPayment = await createMonriWalletPayment(payload);
 
-    const monriApiResponse = await axios.post(
-      `${getMonriBaseUrl()}/v2/payment/new`,
-      body,
-      {
-        headers: {
-          Authorization: authorization,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const clientSecret = monriApiResponse.data.client_secret;
-    const trx_token = monriApiResponse.data.id;
+    const clientSecret = monriPayment.client_secret;
+    const trx_token = monriPayment.id;
 
     await monriRepository.createTransaction({
       orderNumber,
@@ -996,6 +1060,11 @@ exports.createWebPaySession = async (req, res) => {
       amount,
       currency,
       digest,
+      // The app POSTs these fields to Monri's form in a WebView and closes it
+      // on our success/cancel URL. Without the overrides Monri sends wallet
+      // payments to the merchant-dashboard default and the WebView never closes.
+      success_url_override: getMonriSuccessUrl(),
+      cancel_url_override: getMonriCancelUrl(),
     };
 
     // -----------------------------
@@ -1224,29 +1293,21 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
       scenario: "charge",
     };
 
-    const body = JSON.stringify(payload);
-    const authorization = buildAuthorizationHeader({ body });
-
-    const monriApiResponse = await axios.post(
-      `${getMonriBaseUrl()}/v2/payment/new`,
-      body,
-      {
-        headers: {
-          Authorization: authorization,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const monriPayment = await createMonriWalletPayment(payload);
 
     const environment = getMonriComponentsEnv();
     const response = {
       authenticity_token: getMonriAuthToken(),
-      clientSecret: monriApiResponse.data.client_secret,
-      trx_token: monriApiResponse.data.id,
+      clientSecret: monriPayment.client_secret,
+      trx_token: monriPayment.id,
       order_number: orderNumber,
       amount: amountStr,
       currency,
       digest,
+      // Same as /web-pay-session: return to our success/cancel URL, not the
+      // merchant-dashboard default, so the app's WebView can close.
+      success_url_override: getMonriSuccessUrl(),
+      cancel_url_override: getMonriCancelUrl(),
       ...customerFields,
     };
 

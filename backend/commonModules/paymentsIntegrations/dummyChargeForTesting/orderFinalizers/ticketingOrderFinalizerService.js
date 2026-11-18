@@ -57,6 +57,10 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
           status: result.status === "paid" ? "paid" : "cancelled",
           "paymentDetails.paymentStatus": result.status,
           "paymentDetails.transactionId": result.transactionId || null,
+          // The method Monri used (Google Pay was stored as card before, Q&A #19).
+          ...(result.status === "paid" && result.paymentMethod && {
+            "paymentDetails.paymentMethod": result.paymentMethod,
+          }),
         },
       },
       {
@@ -292,6 +296,7 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
           user: order.user,
           amount: order.orderPricing?.total,
           paymentStatus: "paid",
+          paymentMethod: result.paymentMethod || order.paymentDetails?.paymentMethod || undefined,
           providerTransactionId: result.transactionId,
         }),
         "LEDGER_TICKETING_CAPTURE",

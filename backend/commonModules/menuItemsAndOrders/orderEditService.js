@@ -32,7 +32,8 @@ const { calculatePromoDiscount } = require("../../app/promoCode/promoCodeReposit
 const { getOrgCompanyOrganizer } = require("../../app/organizationProfile/organizationProfileRepository");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { fireAndForget } = require("../../helperUtils/responseUtil");
-const { buildPaymentMethodLabel, VOUCHER_METHOD, isPleisMethod } = require("./paymentMethods");
+const { buildPaymentMethodLabel, VOUCHER_METHOD, enabledMethodsFor } = require("./paymentMethods");
+const { assertNoPaymentInProgress } = require("./paymentInProgress");
 const {
   CLOSED_FULFILMENT_STATUSES,
   DELIVERED_STATUSES,
@@ -42,7 +43,6 @@ const {
 } = require("./orderLifecycle");
 
 const UNPAID = new Set(["pending", "failed"]);
-const PAYMENT_IN_PROGRESS_MS = 15 * 60 * 1000;
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const httpError = (statusCode, message) => {
@@ -113,16 +113,6 @@ function assertEditable(order) {
   }
 }
 
-/** A guest checkout through Pleis started minutes ago must not change under them. */
-async function assertNoPaymentInProgress(order) {
-  if (!isPleisMethod(order.paymentMethod)) return;
-  const recent = await mongoose.connection.db.collection("monritransactions").findOne({
-    orderNumber: String(order._id),
-    status: "pending",
-    createdAt: { $gte: new Date(Date.now() - PAYMENT_IN_PROGRESS_MS) },
-  });
-  if (recent) throw httpError(409, "payment_in_progress");
-}
 
 function snapshot(order) {
   const o = plain(order);
@@ -433,7 +423,18 @@ async function editOrderBeforePayment({ orderId, actor, input = {}, timezone, as
         throw httpError(400, input.paymentMethod === VOUCHER_METHOD ? "voucher_does_not_cover_order" : "payment_method_required");
       } else {
         const setting = await getSetttings({ organization: organizationId });
-        orderService.assertPaymentMethodAllowed(setting, method, order.paymentTiming);
+        if (method !== order.paymentMethod) {
+          // #130: staff switch the method on a placed, unpaid order when the guest
+          // asks, also between Pay over Pleis and the venue's own methods. The
+          // method must be one the venue has enabled; the guest's Pay now / Pay
+          // later rule is for placing an order, so the order now settles later
+          // and stays on the board.
+          if (!enabledMethodsFor(setting).includes(method)) throw httpError(400, "payment_method_not_available");
+          order.paymentTiming = "payLater";
+          order.hideUntilPaid = false;
+        } else {
+          orderService.assertPaymentMethodAllowed(setting, method, order.paymentTiming);
+        }
       }
       order.paymentMethod = method;
       order.paymentMethodLabel = buildPaymentMethodLabel({

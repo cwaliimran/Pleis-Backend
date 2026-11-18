@@ -10,7 +10,7 @@
  *   - Monri attempt failed / cancelled     → expire once lockUntil has passed
  *   - Monri attempt still pending          → ask Monri first:
  *       captured → fulfil as paid (never expire)
- *       declined → payment-failed path (order cancelled, voucher released)
+ *       declined → the attempt fails (order untouched), then the order expires here
  *       nothing  → expire only after ATTEMPT_GRACE_MS since the last attempt,
  *                  so a guest still on the 3DS form is not cut off
  *   - Monri attempt already paid           → never expire (left to reconcile)
@@ -141,18 +141,19 @@ async function expireUnpaidPayNowOrders({ now = new Date(), match = {} } = {}) {
           continue;
         }
         if (outcome === "declined") {
+          // The decline failed the attempt only (order untouched); the lock has
+          // run out, so close the order now and give the voucher back.
           summary.declinedAtMonri += 1;
-          continue;
-        }
-        if (outcome !== "pending") {
+        } else if (outcome !== "pending") {
           // Amount / currency mismatch or fulfil error: leave it for operations.
           summary.errors += 1;
           continue;
-        }
-        const lastActivity = new Date(tx.updatedAt || tx.createdAt).getTime();
-        if (Date.now() - lastActivity < ATTEMPT_GRACE_MS) {
-          summary.waitingOnAttempt += 1;
-          continue;
+        } else {
+          const lastActivity = new Date(tx.updatedAt || tx.createdAt).getTime();
+          if (Date.now() - lastActivity < ATTEMPT_GRACE_MS) {
+            summary.waitingOnAttempt += 1;
+            continue;
+          }
         }
       }
 

@@ -2,7 +2,9 @@ const {
   buildPaymentMethodLabel,
   enabledMethodsFor,
   OFF_APP_METHODS,
+  PLEIS_METHODS,
 } = require("../../../commonModules/menuItemsAndOrders/paymentMethods");
+const { assertNoPaymentInProgress } = require("../../../commonModules/menuItemsAndOrders/paymentInProgress");
 const { getSetttings } = require("../settings/setting/settingService");
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const OrdersRepo = require("./inAppOrderingRepository");
@@ -126,13 +128,18 @@ const getOrdersService = async ({
   return { Orderss, meta };
 };
 
-const updateOrderDetailsService = async ({ orderId, data }) => {
+/**
+ * @param {Function} [assertScope] async (order) => void; throws 403 when the
+ *   caller may not touch this order. Optional so internal callers keep working.
+ */
+const updateOrderDetailsService = async ({ orderId, data, assertScope }) => {
   const order = await OrdersRepo.findOrdersById(orderId);
   const updateBy = data.updateBy;
 
   if (!order) {
     return { error: "Orders_not_found" };
   }
+  if (assertScope) await assertScope(order);
   /* ===============================
      🚫 Guards
   =============================== */
@@ -244,15 +251,21 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
       err.statusCode = 409;
       throw err;
     }
-    // #89 / #24: staff record a way the venue collected the money itself, and only
-    // one the venue has switched on. A Pleis payment is never set by hand.
-    if (!OFF_APP_METHODS.includes(data.paymentMethod)) {
+    // #130 / #24: while unpaid, staff switch the method when the guest asks: to a
+    // way the venue collects the money itself, or to Pay over Pleis (the guest then
+    // pays in the app). Only methods the venue has switched on. Never while the
+    // guest is paying through Pleis right now.
+    if (![...OFF_APP_METHODS, ...PLEIS_METHODS].includes(data.paymentMethod)) {
       return { error: "payment_method_not_available" };
     }
     const venueSetting = await getSetttings({ organization: order.organization });
     if (!enabledMethodsFor(venueSetting).includes(data.paymentMethod)) {
       return { error: "payment_method_not_available" };
     }
+    await assertNoPaymentInProgress(order);
+    // A placed order that changes method settles later and stays on the board.
+    order.paymentTiming = "payLater";
+    order.hideUntilPaid = false;
     const previousMethod = {
       paymentMethod: order.paymentMethod,
       paymentMethodLabel: order.paymentMethodLabel || "",

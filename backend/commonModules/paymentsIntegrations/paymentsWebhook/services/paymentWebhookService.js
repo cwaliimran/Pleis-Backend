@@ -22,6 +22,7 @@ const {
 
 function toWebhookPaymentMethod(method) {
   if (method === "applePay") return "applePay";
+  if (method === "googlePay") return "googlePay";
   if (method === "cash") return "cash";
   return "card";
 }
@@ -137,6 +138,9 @@ const processPaymentWebhook = async ({
   const result = {
     status: payload.transaction.status,
     transactionId: payload.transaction.id,
+    // What the guest actually paid with on Monri (card / applePay / googlePay),
+    // recorded on tickets and reservations and on their ledger entries (#66, Q&A #19).
+    paymentMethod: paymentMethod === "cash" ? null : paymentMethod,
   };
 
   if (event) {

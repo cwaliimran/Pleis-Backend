@@ -761,6 +761,13 @@ const updateOrder = async ({
     if (!existingOrder) {
       throw new Error("Order not found");
     }
+    // Guest-side update (PUT /app/menu/orders/:id): only the order's own
+    // guest. Venue staff edit through /in-app-ordering/:id/edit.
+    if (String(existingOrder.user?._id || existingOrder.user) !== String(userId)) {
+      const err = new Error("forbidden");
+      err.statusCode = 403;
+      throw err;
+    }
 
     // #129: once Paid nothing on the order is edited; the correction is a refund.
     if (["paid", "unpaidClosed", "refunded"].includes(existingOrder.paymentStatus)) {
@@ -1331,6 +1338,12 @@ const addMoreItemsToOrder = async ({
   // 1️⃣ Fetch existing order
   const order = await orderRepo.getOrderById(orderId);
   if (!order) throw new Error("Order not found");
+  // Only the order's own guest adds to their open bill.
+  if (String(order.user?._id || order.user) !== String(userId)) {
+    const err = new Error("forbidden");
+    err.statusCode = 403;
+    throw err;
+  }
 
   if (order.status === "cancelled")
     throw new Error("Cannot add items to a cancelled order");
@@ -1419,9 +1432,14 @@ const getOrderLoyaltyEarned = async (orderId) => {
 };
 
 // 2️⃣ Get order by ID
-const getOrderDetails = async (orderId, timezone) => {
+/**
+ * @param {Function} [assertAccess] async (order) => void; throws 403 when the
+ *   caller may not read this order. Runs before the owner's wallet is loaded.
+ */
+const getOrderDetails = async (orderId, timezone, assertAccess) => {
   let order = await orderRepo.getOrderById(orderId);
   if (!order) return null;
+  if (assertAccess) await assertAccess(order);
   const userID = order.user._id;
   const organizationID = order.organization._id;
 
@@ -1447,6 +1465,10 @@ const getOrderDetails = async (orderId, timezone) => {
     };
   }
   formattedOrder.loyaltyEarned = await getOrderLoyaltyEarned(order._id);
+  // #130: the methods the venue has switched on, so the staff app offers only
+  // those when the guest asks to change how they pay.
+  const setting = await getSetttings({ organization: organizationID });
+  formattedOrder.availablePaymentMethods = enabledMethodsFor(setting);
   return { order: formattedOrder };
 };
 

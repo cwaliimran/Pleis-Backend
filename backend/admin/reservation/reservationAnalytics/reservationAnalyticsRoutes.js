@@ -12,7 +12,11 @@ const roleMiddleware = require("../../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
-router.use(auth);
+// Mounted under /admin and /organizer; the organizer mount has no role check
+// of its own. Scope per role is enforced by resolveAnalyticsScope.
+router.use(auth, roleMiddleware(["admin", "organizer"]));
+// Platform-wide figures (no company scope): super admin only.
+const superAdminOnly = roleMiddleware(["admin"]);
 
 // Create a rate limiter for ReservationAnalyticss
 const apiRateLimiter = createRateLimiter("ReservationAnalyticss");
@@ -21,8 +25,8 @@ const apiRateLimiter = createRateLimiter("ReservationAnalyticss");
 router.get("/", apiRateLimiter, getReservationAnalytics);
 router.get("/analytics-transsections", apiRateLimiter, getReservationTransactions);
 router.get("/change-logs", apiRateLimiter, getReservationChnageLogs);
-router.get("/value", apiRateLimiter, getReservationAnalyticsValue);
-router.get("/stats", apiRateLimiter, getReservationAnalyticsStats);
+router.get("/value", superAdminOnly, apiRateLimiter, getReservationAnalyticsValue);
+router.get("/stats", superAdminOnly, apiRateLimiter, getReservationAnalyticsStats);
 
 
 module.exports = router;
