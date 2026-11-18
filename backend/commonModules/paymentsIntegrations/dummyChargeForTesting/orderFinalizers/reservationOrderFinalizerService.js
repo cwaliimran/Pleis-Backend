@@ -92,6 +92,8 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
             status: "confirmed",
             "paymentDetails.paymentStatus": "paid",
             "paymentDetails.transactionId": result.transactionId,
+            // The method Monri used (Google Pay was stored as card before, Q&A #19).
+            ...(result.paymentMethod && { "paymentDetails.paymentMethod": result.paymentMethod }),
             paidAt: new Date(),
             ...voucherSet,
           },
@@ -282,6 +284,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           user: userReservation.userId,
           amount: userReservation.amount,
           paymentStatus: "paid",
+          paymentMethod: result.paymentMethod || userReservation.paymentDetails?.paymentMethod || undefined,
           providerTransactionId: result.transactionId,
         }),
         "LEDGER_RESERVATION_CAPTURE",

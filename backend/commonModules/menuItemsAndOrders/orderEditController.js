@@ -10,30 +10,7 @@
  */
 const { sendResponse, getReadableErrorMessage } = require("@utils/responseUtil");
 const { editOrderBeforePayment } = require("./orderEditService");
-const { resolveAnalyticsScope } = require("../../helperUtils/analyticsScope");
-
-const httpError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
-
-/** The order must belong to a venue the caller works for. */
-function scopeCheckFor(req) {
-  return async (order) => {
-    const orgId = String(order.organization?._id || order.organization);
-    const userType = req.user?.userType;
-    if (userType === "admin") return;
-    if (userType === "staff") {
-      const { getOrganizationsAsStaff } = require("../../staff/organizations/organizationService");
-      const orgs = (await getOrganizationsAsStaff(req.user._id)) || [];
-      if (orgs.some((o) => String(o._id || o) === orgId)) return;
-      throw httpError(403, "forbidden");
-    }
-    if (userType === "organizer") {
-      const scope = await resolveAnalyticsScope({ user: req.user, query: {} });
-      if ((scope.organizations || []).some((id) => String(id) === orgId)) return;
-      throw httpError(403, "forbidden");
-    }
-    throw httpError(403, "forbidden");
-  };
-}
+const { orderScopeCheck: scopeCheckFor } = require("./orderScope");
 
 const editOrder = (via) => async (req, res) => {
   const { items, combos, tableNumber, pickupType, deliveryOption, notes, paymentMethod } = req.body || {};

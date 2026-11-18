@@ -1,5 +1,6 @@
 // services/venueService.js
 const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
+const { syncOrganizationLocation } = require("../../commonModules/organizations/syncOrganizationLocation");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const { formatOrganization } = require("../organizations/formatter/formatOrganization");
 const Organizations = require("@OrganizationModel");
@@ -238,46 +239,47 @@ const updateVenue = async (id, data) => {
     organizationChanged = true;
   }
 
-  // Step 1: Update venue fields
-  Object.assign(venue, updateData);
-  await venue.save();
+  const previousOrganization = venue.organization;
 
-  // Step 2: If isPrimary = true
-  if (updateData.isPrimary) {
-    // Ensure only one primary per organization
-    await Venues.updateMany(
-      {
-        organization: venue.organization,
-        _id: { $ne: venue._id },
-        isPrimary: true
-      },
-      { $set: { isPrimary: false } }
-    );
+  // One transaction: the venue, the single primary per organization, and the
+  // organization's location (always its primary venue's location).
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      // Step 1: Update venue fields
+      Object.assign(venue, updateData);
+      await venue.save({ session });
+
+      // Step 2: One primary per organization
+      if (updateData.isPrimary) {
+        await Venues.updateMany(
+          {
+            organization: venue.organization,
+            _id: { $ne: venue._id },
+            isPrimary: true,
+          },
+          { $set: { isPrimary: false } },
+          { session }
+        );
+      }
+
+      // Step 3: Organization location = primary venue location. Editing a
+      // non-primary venue leaves it as it is. A venue moved away is no longer
+      // the previous organization's primary.
+      if (venue.organization) {
+        await syncOrganizationLocation(venue.organization, { session });
+      }
+      if (organizationChanged && previousOrganization) {
+        await syncOrganizationLocation(previousOrganization, { session });
+      }
+    });
+  } finally {
+    await session.endSession();
   }
 
-  // Step 3: If organization changed and isPrimary = true, double-check previous organization
-  if (organizationChanged && updateData.isPrimary) {
-    // Just to make sure previous org doesn't keep old primary (edge case)
-    await Venues.updateMany(
-      {
-        organization: data.organization, // old org
-        isPrimary: true
-      },
-      { $set: { isPrimary: false } }
-    );
-  }
-
-
-  // Update organization location if both changed
-  if (updateData.organization) {
-    await Organizations.updateOne(
-      { _id: updateData.organization },
-      { $set: { location: updateData.location } }
-    );
-
-    await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
-    await invalidateDiscoveryCaches();
-  }
+  // Organization location / venue may have changed: refresh discovery caches.
+  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+  await invalidateDiscoveryCaches();
 
   //get updated venue with venueDetails
   venue = await getVenueDetails(venue._id);

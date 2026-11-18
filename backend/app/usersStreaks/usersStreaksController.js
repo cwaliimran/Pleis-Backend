@@ -25,6 +25,15 @@ const createUsersStreak = async (req, res) => {
       user: req.user._id,
     });
 
+    // Q&A #10: checking in at the venue also checks in the guest's Confirmed
+    // reservation there for around now. Never fails the venue check-in.
+    try {
+      const { checkInGuestReservation } = require("../../commonModules/reservations/guestReservationCheckIn");
+      await checkInGuestReservation({ userId: req.user._id, organization });
+    } catch (error) {
+      console.error("[checkin] reservation check-in failed:", error.message);
+    }
+
     return sendResponse({
       res,
       statusCode: 201,

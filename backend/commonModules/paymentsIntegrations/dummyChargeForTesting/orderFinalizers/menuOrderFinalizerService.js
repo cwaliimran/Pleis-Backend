@@ -28,9 +28,6 @@ const {
   maybeEnqueueOrderingConfirmation,
 } = require("../../../fiscalDocuments/fiscalTiming");
 const { hasMenuOrderBaseEarn } = require("./menuOrderLoyalty");
-const {
-  releaseOrderVoucher,
-} = require("../../../menuItemsAndOrders/orderVoucherRelease");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -42,6 +39,8 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   let globalPoints = null;
   let loyaltyOnlyFulfillment = false;
   let expiredBeforeDecline = false;
+  // A declined Monri attempt: the order itself is left exactly as it was.
+  let declinedAttemptOnly = false;
   let closedOnPaid = false;
   let lateCapture = false;
 
@@ -175,17 +174,13 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       // staff). A late decline changes nothing.
       expiredBeforeDecline = true;
     } else if (result.status === "failed") {
-      // A pay-now order dying unpaid gives back the voucher it drew.
-      const wasAwaitingPayment =
-        menuOrder.hideUntilPaid === true &&
-        menuOrder.paymentStatus === "pending" &&
-        ["pending", "pendingPayment"].includes(menuOrder.status);
-      menuOrder.status = "cancelled";
-      menuOrder.paymentStatus = "failed";
-      await menuOrder.save({ session });
-      if (wasAwaitingPayment) {
-        await releaseOrderVoucher({ order: menuOrder, session });
-      }
+      // Monri v1.4 §3.1: a decline fails the payment ATTEMPT, not the order —
+      // "nothing is generated; the payer can retry". The order keeps its
+      // status and stays unpaid (a delivered pay-later order stays Waiting for
+      // payment), so the guest can pay again. An unpaid pay-now order that is
+      // never paid is closed by the unpaid-order job when its lock expires,
+      // which also gives back the voucher it drew.
+      declinedAttemptOnly = true;
       await syncMonriTransactionStatus(menuOrderId, "failed").catch((err) =>
         console.error("[monri-sync] menu failed:", err.message),
       );
@@ -216,7 +211,8 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     );
   }
 
-  if (committed && menuOrder && !expiredBeforeDecline && !closedOnPaid) {
+  // A decline changed nothing on the order: no socket, no notification, no badge.
+  if (committed && menuOrder && !expiredBeforeDecline && !closedOnPaid && !declinedAttemptOnly) {
     /**
      * 📡 Sockets first so UI updates even if FCM/email later fails.
      * ORDER_UPDATE is immediate; NEW_ORDER follows with formatted user payload.

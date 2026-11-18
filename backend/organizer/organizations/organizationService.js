@@ -1,5 +1,6 @@
 // services/organizationService.js
 const { buildKeywordQueryFromModel } = require("../../helperUtils/dbUtils/queryUtil");
+const { primaryVenueLocation } = require("../../commonModules/organizations/syncOrganizationLocation");
 const Venues = require("@VenuesModel");
 const Organizations = require("@OrganizationModel");
 const organizationRepo = require("./organizationRepository");
@@ -398,6 +399,11 @@ const updateOrganization = async ({ id, data }) => {
       await existingVenue.save();
     }
   }
+
+  // The organization's location is always its primary venue's location, not a
+  // value from the form (a stale one there moved Staklenik to Lahore).
+  const primaryLocation = await primaryVenueLocation(organization._id);
+  if (primaryLocation) organization.location = primaryLocation;
 
   await organization.save();
 

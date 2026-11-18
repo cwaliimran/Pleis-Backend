@@ -71,7 +71,10 @@ async function fulfillIfSupported(tx, remote, status) {
   });
 }
 
-async function reconcileOne(tx) {
+// settleDeclines=false: only an approved capture is acted on (app status
+// check). A guest who just backed out must not have the order failed — they
+// may still pay it another way; the cron settles real declines later.
+async function reconcileOne(tx, { settleDeclines = true } = {}) {
   // Ask Monri. null = no capture yet (user still on form, or abandoned).
   const remote = await verifyTransaction(tx.orderNumber);
   if (!remote) {
@@ -111,6 +114,7 @@ async function reconcileOne(tx) {
   }
 
   if (isDeclinedMonriResponse(remote)) {
+    if (!settleDeclines) return "declined";
     const fulfill = await fulfillIfSupported(tx, remote, "failed").catch((err) => {
       console.error(`[payment-reconcile] decline fulfill ${tx.orderNumber}:`, err.message);
       return { handled: false };
@@ -199,7 +203,43 @@ async function reconcileOrderNumber(orderNumber) {
   return { outcome, localStatus: plain.status };
 }
 
+// One app status check per order per window, so repeated back presses
+// don't hammer Monri. Per instance; good enough as a brake.
+const STATUS_CHECK_COOLDOWN_MS = 5000;
+const lastStatusCheck = new Map();
+
+/**
+ * The guest left the payment WebView without our success/cancel redirect
+ * (e.g. back button after Apple Pay). Ask Monri now instead of waiting for
+ * the 15-minute cron; an approved capture is fulfilled through the same path.
+ * Returns the MonriTransaction status: "paid" | "pending" | "failed" | ...
+ */
+async function checkPaymentStatusNow(tx) {
+  if (tx.status !== "pending") return tx.status;
+
+  const now = Date.now();
+  const last = lastStatusCheck.get(tx.orderNumber) || 0;
+  if (now - last < STATUS_CHECK_COOLDOWN_MS) return "pending";
+  lastStatusCheck.set(tx.orderNumber, now);
+  if (lastStatusCheck.size > 1000) {
+    for (const [key, at] of lastStatusCheck) {
+      if (now - at > STATUS_CHECK_COOLDOWN_MS) lastStatusCheck.delete(key);
+    }
+  }
+
+  try {
+    const outcome = await reconcileOne(tx, { settleDeclines: false });
+    console.log(`[payment-status] ${tx.orderNumber} outcome=${outcome}`);
+    return outcome === "fulfilled" ? "paid" : "pending";
+  } catch (err) {
+    // Monri unreachable: report pending; the cron keeps trying.
+    console.error(`[payment-status] ${tx.orderNumber} check failed:`, err.message);
+    return "pending";
+  }
+}
+
 module.exports = {
+  checkPaymentStatusNow,
   reconcilePendingMonriPayments,
   reconcileOrderNumber,
   reconcileOne,

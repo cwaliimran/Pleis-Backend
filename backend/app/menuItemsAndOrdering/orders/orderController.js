@@ -1,4 +1,5 @@
 const orderService = require("./orderService");
+const { orderScopeCheck } = require("../../../commonModules/menuItemsAndOrders/orderScope");
 const { sendResponse, getReadableErrorMessage, validateParams, parsePaginationParams } = require("@utils/responseUtil");
 
 const placeOrder = async (req, res) => {
@@ -16,9 +17,12 @@ const placeOrder = async (req, res) => {
     tip,
     reservationId,
   } = req.body;
+  // Only staff place orders for someone else (scanned customer or walk-up,
+  // via /app/staff/menu/orders). Everyone else orders as themselves.
+  const orderUserId = req.user?.userType === "staff" && userId ? userId : req.user._id;
   try {
     console.log("[placeOrder] payload", JSON.stringify({
-      userId: userId || req.user?._id,
+      userId: orderUserId,
       paymentMethod,
       paymentTiming,
       pickupType,
@@ -54,7 +58,7 @@ const placeOrder = async (req, res) => {
     if (!validateParams(req, res, validateData)) return;
 
     const { order } = await orderService.placeOrder({
-      userId: userId || req.user._id,
+      userId: orderUserId,
       timezone: req.user.timezone,
       items,
       combos,
@@ -119,7 +123,6 @@ const updateOrderDetails = async (req, res) => {
     promoCode,
     tip,
     reservationId,
-    userId,
   } = req.body;
 
   const { id: orderId } = req.params;
@@ -160,9 +163,11 @@ const updateOrderDetails = async (req, res) => {
       throw new Error("Order ID is required");
     }
 
+    // Always the logged-in user: the service only lets the order's owner update
+    // it, and promo / reservation voucher are applied to this user.
     const { order } = await orderService.updateOrder({
       orderId,
-      userId: userId || req.user._id,
+      userId: req.user._id,
       timezone: req.user.timezone,
 
       // Keep these undefined if not supplied.
@@ -237,7 +242,12 @@ const getOrderDetails = async (req, res) => {
   const timezone = req.user.timezone || "Asia/Kolkata";
 
   try {
-    const result = await orderService.getOrderDetails(id, timezone);
+    // The order's own guest, or staff / organizer of its venue, or admin
+    // (the staff app reads orders through /app/staff/menu/orders/:id).
+    const result = await orderService.getOrderDetails(id, timezone, async (order) => {
+      if (String(order.user?._id || order.user) === String(req.user._id)) return;
+      await orderScopeCheck(req)(order);
+    });
     if (!result || !result.order) {
       return sendResponse({ res, statusCode: 404, translationKey: "order_not_found" });
     }

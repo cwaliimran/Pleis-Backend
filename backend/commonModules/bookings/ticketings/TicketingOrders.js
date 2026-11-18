@@ -56,7 +56,7 @@ const ticketingOrderSchema = new mongoose.Schema(
             transactionId: { type: String, default: null }, // gateway ref
             paymentMethod: {
                 type: String,
-                enum: ["applePay", "card", "cash"],
+                enum: ["applePay", "googlePay", "card", "cash"],
                 default: null,
             },
             paymentStatus: {

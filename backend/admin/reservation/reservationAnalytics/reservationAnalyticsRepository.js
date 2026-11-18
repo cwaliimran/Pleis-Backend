@@ -28,6 +28,19 @@ const { buildUserChangeLogs } = require("./utils/buildUserChangeLogs");
 
 
 
+/**
+ * Reservation lifecycle for the figures (#128, Q&A):
+ *   Confirmed  confirmed, plus those later marked Show (checkedIn) or No-show,
+ *              and legacy completed.
+ *   Revenue    confirmed (as above) AND paid; cancelled, rejected, refunded and
+ *              unpaid reservations bring no money.
+ */
+const CONFIRMED_STATUSES = ["confirmed", "checkedIn", "noShow", "completed"];
+const REVENUE_MATCH = {
+  status: { $in: CONFIRMED_STATUSES },
+  "paymentDetails.paymentStatus": "paid",
+};
+
 // ---------------- USERS ----------------
 const getReservationsStats = async ({ companyOrganizer, organizations }) => {
   try {
@@ -35,7 +48,9 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
       ? { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }
       : {};
 
-    if (organizations && organizations.length > 0) {
+    // An empty list means "no organizations in scope" (e.g. a manager with no
+    // venues assigned) and must match nothing, like the other queries here.
+    if (organizations) {
       organizerMatch.organizationId = { $in: organizations.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
@@ -95,20 +110,39 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
         $group: {
           _id: null,
 
+          // Confirmed, including those later marked Show (checkedIn) or No-show.
           totalConfirmedReservations: {
             $sum: {
-              $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0],
+              $cond: [{ $in: ["$status", CONFIRMED_STATUSES] }, 1, 0],
             },
           },
 
+          // Money kept: paid and not cancelled, rejected or refunded.
           totalRevenue: {
-            $sum: { $ifNull: ["$amount", 0] },
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $in: ["$status", CONFIRMED_STATUSES] },
+                    { $eq: ["$paymentDetails.paymentStatus", "paid"] },
+                  ],
+                },
+                { $ifNull: ["$amount", 0] },
+                0,
+              ],
+            },
           },
 
+          // Prepayments kept: same rule as revenue (no cancelled / rejected).
           totalPrepayReservations: {
             $sum: {
               $cond: [
-                { $eq: ["$paymentDetails.paymentStatus", "paid"] },
+                {
+                  $and: [
+                    { $in: ["$status", CONFIRMED_STATUSES] },
+                    { $eq: ["$paymentDetails.paymentStatus", "paid"] },
+                  ],
+                },
                 { $ifNull: ["$amount", 0] },
                 0,
               ],
@@ -415,6 +449,7 @@ const getRevenueOverTimeRaw = async (companyOrganizer, organizations) => {
         }),
         ...(organizations && { organizationId: { $in: organizations } }),  // Directly using the ObjectId array
         createdAt: { $gte: start, $lt: end },
+        ...REVENUE_MATCH,
       },
     },
     {

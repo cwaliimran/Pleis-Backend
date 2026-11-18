@@ -2,115 +2,88 @@ const AnalyticsRepo = require("./analyticsRepository");
 const { calculateGrowth } = require("./utils/analyticsDate.utils");
 const { Analytics_KEYS, withSubFilters } = require("./utils/analyticsKeyMap");
 const { buildUserStatusAnalytics } = require("./utils/buildUserStatusAnalytics");
-const { buildReservationsOverTime } = require("./utils/buildReservationsOverTime");
 const { buildGlobalLoyaltyPointsPertWalletType } = require("./utils/buildGlobalLoyaltyPointsPertWalletType ");
-const { buildRevenueOverTime } = require("./utils/buildRevenueOverTime");
-const { buildReservationsByHour } = require("./utils/buildReservationsByHour");
-const { getOrganizationIdsByCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
+const OrderMetrics = require("./orderAnalyticsMetrics");
 
 /**
  * Analytics – Load all cards at once
  */
-const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizations }) => {
-  if(companyOrganizer){
-   organizations = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-  }
-  const promises = [
-    AnalyticsRepo.orderStatsRaw({ dateFilter, timezone, organizations }),
-    getReservationsOverTimeRaw(organizations),
-    getRevenueOverTimeRaw(organizations),
-    AnalyticsRepo.getMostOrderedCategoryData(organizations),
-    getReservationsByHourRaw(organizations),
-    AnalyticsRepo.getUserLevelStatsRaw(organizations),
-    getAverageOrderValueOverTimeRaw(organizations),
+const getAnalytics = async ({ dateFilter, timezone, organizations }) => {
+  // organizations comes from resolveAnalyticsScope: undefined = global (super
+  // admin), otherwise exactly the organizations in scope (possibly none).
+  const rates = await OrderMetrics.loadCommissionRates();
+  const [stats, series, orderedCategories, salesSourceBreakDown, loyaltyImpactRaw] = await Promise.all([
+    OrderMetrics.orderStats({ organizations, dateFilter, timezone, rates }),
+    OrderMetrics.monthlySeries({ organizations, timezone, rates }),
+    OrderMetrics.categoryBreakdown({ organizations, dateFilter, timezone }),
+    OrderMetrics.salesSourceBreakdown({ organizations, dateFilter, timezone }),
     AnalyticsRepo.getLoyaltyImpactRaw({ dateFilter, timezone, organizations }),
-  ];
-
-  const [
-    orderStats, // used
-    reservationsOverTime,// used
-    revenueOverTime, // used
-    orderedCategories,
-    reservationsByHour,
-    userLevelStats, // used
-    averageOrderValueOverTime, // used
-    loyaltyImpactRaw,
-  ] = await Promise.all(promises);
+  ]);
 
   return {
     stats: [
-      {    // used 
+      {
         key: "totalOrders",
         title: Analytics_KEYS.totalOrders.title,
-        value: orderStats.totalOrdersCurrent || 0,
-        growth: calculateGrowth(
-          orderStats.totalOrdersCurrent,
-          orderStats.totalOrdersPrevious
-        ),
+        value: stats.totalOrders,
+        growth: stats.totalOrdersGrowth,
         ...withSubFilters("totalOrders"),
       },
-      {    // used 
+      {
         key: "totalRevenue",
         title: Analytics_KEYS.totalRevenue.title,
-        value: orderStats.totalRevenueCurrent || 0,
-        growth: calculateGrowth(
-          orderStats.totalRevenueCurrent,
-          orderStats.totalRevenuePrevious
-        ),
+        value: stats.totalRevenue,
+        growth: stats.totalRevenueGrowth,
         ...withSubFilters("totalRevenue"),
       },
-      // ---------------- USERS ----------------
-      {    // used 
+      {
         key: "revenueAfterCommission",
         title: Analytics_KEYS.revenueAfterCommission.title,
-        value: orderStats.revenueAfterCommission || 0,
+        value: stats.revenueAfterCommission,
         ...withSubFilters("revenueAfterCommission"),
       },
       {
-        key: "averageOrderValue",  // used 
+        key: "averageOrderValue",
         title: Analytics_KEYS.averageOrderValue.title,
-        value: orderStats.averageOrderValue || 0,
-
+        value: stats.averageOrderValue,
         ...withSubFilters("averageOrderValue"),
       },
       {
-        key: "orderFrequencyPerHour",  // used 
+        key: "orderFrequencyPerHour",
         title: Analytics_KEYS.orderFrequencyPerHour.title,
-        value: orderStats.orderFrequencyPerHour || 0,
-
+        value: stats.orderFrequencyPerHour,
         ...withSubFilters("orderFrequencyPerHour"),
       },
       {
-        key: "mostOrderedSubCategory",  // used 
+        key: "mostOrderedSubCategory",
         title: Analytics_KEYS.mostOrderedSubCategory.title,
-        value: orderStats.mostOrderedCategory || 0,
+        value: stats.mostOrderedCategory,
         ...withSubFilters("mostOrderedSubCategory"),
       },
       {
-        key: "totalItemsSold",  // used 
+        key: "totalItemsSold",
         title: Analytics_KEYS.totalItemsSold.title,
-        value: orderStats.totalItemsSold || 0,
+        value: stats.totalItemsSold,
         ...withSubFilters("totalItemsSold"),
       },
       {
-        key: "totalLimitedTimeItems",  // used 
+        key: "totalLimitedTimeItems",
         title: Analytics_KEYS.totalLimitedTimeItems.title,
-        value: orderStats.totalLimitedTimeItems || 0,
+        value: stats.totalLimitedTimeItems,
         ...withSubFilters("totalLimitedTimeItems"),
       },
-
-    ].filter(Boolean),
-    ordersOverTime:reservationsOverTime,
-    revenueOverTime,
+    ],
+    ordersOverTime: series.ordersOverTime,
+    revenueOverTime: series.revenueOverTime,
     orderedCategories,
-    orderByHour:reservationsByHour,
-    salesSourceBreakDown:userLevelStats,
-    averageOrderValueOverTime,
+    orderByHour: series.orderByHour,
+    salesSourceBreakDown,
+    averageOrderValueOverTime: series.averageOrderValueOverTime,
     loyaltyImpact: {
       orderFrequencyLoyalty: loyaltyImpactRaw.orderFrequencyLoyalty.value,
       averageSpendLoyalty: loyaltyImpactRaw.averageSpend.value,
     },
-  }
+  };
 };
 const getAnalyticsStats = async ({ dateFilter, timezone }) => {
   const [users, events, ticketsSold, averageTicketPrice, averageRevenuePerUser] = await Promise.all([
@@ -331,43 +304,17 @@ const getGlobalWalletPointsOverTimeRaw = async (companyOrganizer) => {
   const rows = await AnalyticsRepo.getGlobalWalletPointsOverTimeRaw(companyOrganizer);
   return buildGlobalLoyaltyPointsOverTime(rows);
 }
-const getRevenueOverTimeRaw = async (organizations) => {
-  const rows = await AnalyticsRepo.getRevenueOverTimeRaw(organizations);
 
-  return buildRevenueOverTime(rows);
-}
 
-const getReservationsOverTimeRaw = async (organizations) => {
-  const rows = await AnalyticsRepo.getReservationsOverTimeRaw(organizations);
-  return buildReservationsOverTime(rows);
-};
-const getAverageOrderValueOverTimeRaw = async (organizations) => {
-  const rows = await AnalyticsRepo.getAverageOrderValueOverTimeRaw(organizations);
-  return buildReservationsOverTime(rows);
-};
-
-const getReservationsByHourRaw = async (organizations) => {
-  const rows = await AnalyticsRepo.getReservationsByHourRaw(organizations);
-  return buildReservationsByHour(rows);
-};
 const getReservationTransactions = async ({ page, limit, timezone, companyOrganizer, organizations }) => {
-    if(companyOrganizer){
-   organizations = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-  }
   const { data, meta } = await AnalyticsRepo.getUserReservationPaymentsQA({ page, limit, timezone, organizations });
   return { data, meta };
 };
 const getReservationChnageLogs = async ({ page, limit, timezone, companyOrganizer, organizations }) => {
-    if(companyOrganizer){
-   organizations = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-  }
   const { data, meta } = await AnalyticsRepo.getUserReservationChangeLogs({ page, limit, timezone, organizations });
   return { data, meta };
 };
 const getMenuItemSalesData = async ({ page, limit, timezone, companyOrganizer, organizations }) => {
-    if(companyOrganizer){
-   organizations = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-  }
   const { data, meta } = await AnalyticsRepo.getMenuItemSalesData({ page, limit, organizations });
   return { data, meta };
 };

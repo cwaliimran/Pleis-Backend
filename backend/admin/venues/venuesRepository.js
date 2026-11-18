@@ -1,5 +1,6 @@
 // repositories/venueRepository.js
 const Venues = require("@VenuesModel");
+const { syncOrganizationLocation } = require("../../commonModules/organizations/syncOrganizationLocation");
 const mongoose = require("mongoose");
 const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
 const Organizations = require("../../commonModules/organizations/Organization");
@@ -37,13 +38,10 @@ const createVenue = async (data) => {
     const venue = new Venues(data);
     await venue.save({ session });
 
-    // 🔒 Keep this INSIDE transaction for atomicity
+    // 🔒 Inside the transaction: the organization's location is its primary
+    // venue's location (changes only when the new venue is the primary one).
     if (data.organization) {
-      await Organizations.updateOne(
-        { _id: data.organization },
-        { $set: { location: data.location } },
-        { session }
-      );
+      await syncOrganizationLocation(data.organization, { session });
     }
 
     await session.commitTransaction();
