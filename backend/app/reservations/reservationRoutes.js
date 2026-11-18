@@ -17,7 +17,7 @@ const {
   getReservationsV2Calender,
 } = require("../../admin/reservation/reservationController");
 const {
-  getReservationPreferencess,
+  getReservationPreferencesForApp,
 } = require("../../admin/reservation/reservationPreferences/reservationPreferencesController");
 const {
   getReservationTypes,
@@ -49,7 +49,7 @@ router.get("/", auth, getReservations);
 router.get(
   "/reservation-preferences",
   apiRateLimiter,
-  getReservationPreferencess,
+  getReservationPreferencesForApp,
 );
 router.get("/reservation-types", apiRateLimiter, getReservationTypes);
 router.get("/occasion", apiRateLimiter, getOccasion);
