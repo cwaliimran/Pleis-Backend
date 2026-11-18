@@ -7,9 +7,14 @@ function formatSuggestedClub(item) {
 
   delete obj.__v;
 
- if (obj?.companyDetails && obj.companyDetails?.logo) {
-    obj.companyDetails.logo = getFullImageUrl(obj.companyDetails.logo || "noimage.png");
-  }
+  // Always return a usable logo URL. The fallback used to sit inside an
+  // `if (logo)` check, so clubs without a logo got none (empty circle in the
+  // app) instead of noimage.png. getFullImageUrl returns noimage.png for an
+  // empty path and leaves absolute URLs as they are.
+  obj.companyDetails = {
+    ...(obj.companyDetails || {}),
+    logo: getFullImageUrl(obj.companyDetails?.logo),
+  };
 
    // distance formatting (meters → km)
   if (item.distance !== undefined && item.distance !== null) {

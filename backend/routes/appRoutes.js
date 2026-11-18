@@ -69,6 +69,12 @@ router.use("/reviews", require("../app/reviews/reviewsRoutes"));
 router.use("/badges", require("../app/badges/badgesRoutes"));
 router.use("/payments/monri", require("../commonModules/paymentsIntegrations/monri/monriRoutes"));
 router.get("/open", require("../commonModules/fiscalDocuments/api/openAppRedirect").openConfirmationInApp);
+// The app asks which screen an "Open in the app" email link points to.
+router.get(
+  "/open/resolve",
+  require("../middlewares/authMiddleware"),
+  require("../commonModules/fiscalDocuments/api/openAppRedirect").resolveOpenLink,
+);
 router.use("/fiscal-documents", require("../commonModules/fiscalDocuments/api/routes"));
 router.use("/user-billing-information", require("../app/userBillingInformation/userBillingInformationRoutes"));
 router.use("/payments/cards", require("../commonModules/paymentsIntegrations/usersPaymentsCards/routes/userCardRoutes"));

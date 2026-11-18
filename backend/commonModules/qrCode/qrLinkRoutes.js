@@ -46,7 +46,10 @@ const renderInvalidCodeHtml = () => `<!DOCTYPE html>
 
 // Paths the apps claim. Keep in sync with the Android intent filter
 // (AndroidManifest.xml) and the iOS associated domains.
-const APP_LINK_PATHS = ["/q/*", "/api/v1/q/*", "/api/v1/share", "/api/v1/share/*"];
+// "/api/v1/app/open" is "Open in the app" in payment emails: with the app
+// installed it opens straight in the app (OpenLink screen), otherwise the
+// browser shows the open page with the store buttons.
+const APP_LINK_PATHS = ["/q/*", "/api/v1/q/*", "/api/v1/share", "/api/v1/share/*", "/api/v1/app/open"];
 
 const assetLinks = () => {
   const fingerprints = resolvePleisAndroidCertFingerprints();
