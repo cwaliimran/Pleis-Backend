@@ -20,6 +20,7 @@ const {
   sendUserNotifications,
 } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { notifyStaffNewOrder } = require("./notifyStaffNewOrder");
 const Organizations = require("@OrganizationModel");
 const {
   emitOrderEvent,
@@ -641,31 +642,11 @@ const placeOrder = async ({
         userId: order.user,
         data: formattedOrder,
       });
-      const staffIds = await getCheckedInStaffForOrganization(
-        organizationId,
-        timezone,
+      // Staff app only (never the guest app), opens the order on tap
+      fireAndForget(
+        notifyStaffNewOrder({ order, formattedOrder, sender: userId }),
+        "STAFF_NEW_ORDER_NOTIFICATION",
       );
-
-      sendUserNotifications({
-        recipientIds: staffIds,
-        titleKey: "new_order_placed_title",
-        bodyKey: "new_order_placed_body",
-        bodyValues: {
-          status: formattedOrder.status,
-          amount: formattedOrder.totalPrice,
-        },
-        data: {
-          type: NotificationTypes.NEW_MENU_ITEMS_ORDER,
-          objectType: "menuorders",
-          organization_id: organizationId.toString(),
-        },
-        image:
-          order.items[0]?.menuItemSnapShot?.image ||
-          order.combos[0]?.items[0]?.menuItemSnapShot?.image ||
-          "noimage",
-        sender: userId,
-        objectId: formattedOrder._id,
-      });
     }
 
     // Truly free / €0 orders (no voucher) — plain email, no payment-confirmation PDF.
@@ -1440,17 +1421,19 @@ const getOrderDetails = async (orderId, timezone, assertAccess) => {
   let order = await orderRepo.getOrderById(orderId);
   if (!order) return null;
   if (assertAccess) await assertAccess(order);
-  const userID = order.user._id;
+  // The guest's user record can be gone (account removed outright): the order
+  // still opens, just without the guest's wallet and reservation.
+  const userID = order.user?._id || null;
   const organizationID = order.organization._id;
 
   const companyOrganizer = await getOrgCompanyOrganizer(organizationID);
-  
-  const wallet = await clubMemberRepo.getWallet(userID, companyOrganizer, null, { autoCreate: false });
-  const reservation = await getLatestUserReservations(
-    userID,
-    organizationID,
-    5,
-  );
+
+  const wallet = userID
+    ? await clubMemberRepo.getWallet(userID, companyOrganizer, null, { autoCreate: false })
+    : null;
+  const reservation = userID
+    ? await getLatestUserReservations(userID, organizationID, 5)
+    : null;
 
   let promoCode = null;
   if (reservation) {

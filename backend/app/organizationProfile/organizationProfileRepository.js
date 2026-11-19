@@ -3,6 +3,7 @@ const { Favorites } = require("../../commonModules/favorites/Favorite");
 const Menus = require("../../commonModules/menuManagement/menu/Menus");
 const Organizations = require("../../commonModules/organizations/Organization");
 const mongoose = require("mongoose");
+const { selectedTagObjectIds } = require("../maps/mapsTagFilter");
 const Venues = require("../../commonModules/venues/Venues");
 const VenueTypes = require("@VenueTypesModel");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
@@ -364,7 +365,7 @@ function getSimilarityWeights(options = {}) {
 }
 
 
-const { NEARBY_MAX_DISTANCE_KM, NEARBY_DISTANCE_TAU_KM } = require("../home/utils/homeFeedLimits");
+const { NEARBY_MAX_DISTANCE_KM, NEARBY_DISTANCE_TAU_KM, FILTER_MAX_DISTANCE_KM, resolveSearchRadiusKm } = require("../home/utils/homeFeedLimits");
 const {
   getVenueTypeObjectIdsForMainCategories,
   primaryVenueTypeMatchStages,
@@ -455,9 +456,8 @@ const getNearbyOrganizations = async ({
     .filter(Boolean)
     .map(id => new mongoose.Types.ObjectId(id));
 
-  const filterTags = (advanceFilters.tags || [])
-    .filter(Boolean)
-    .map(id => new mongoose.Types.ObjectId(id));
+  // Every tag selected in the filter; a place must carry all of them
+  const filterTags = selectedTagObjectIds(advanceFilters);
 
   const filterVenueTypes = (advanceFilters.venueTypes || [])
     .filter(Boolean)
@@ -467,9 +467,8 @@ const getNearbyOrganizations = async ({
     advanceFilters.distanceFrom || 0
   );
 
-  const distanceTo = clampNearbyRadiusKm(
-    advanceFilters.distanceTo || radiusKm
-  );
+  // Filter-sheet distance may go past the 50 km default (up to 150 km)
+  const distanceTo = resolveSearchRadiusKm(advanceFilters, radiusKm);
   const cappedRadiusKm = clampNearbyRadiusKm(radiusKm);
 
   // Non-geo fallback only. Near You geo rank is always nearest-first (matches home).
@@ -513,7 +512,7 @@ const getNearbyOrganizations = async ({
   // ctx tag filters only (category is applied as venue-type match below)
   if (ctx && filterTags.length) {
     geoQuery["otherInfo.tags"] = {
-      $in: filterTags
+      $all: filterTags
     };
   }
 
@@ -545,7 +544,7 @@ const getNearbyOrganizations = async ({
 
     if (ctx && distanceFrom > 0) {
       geoNearStage.minDistance =
-        Math.min(distanceFrom, NEARBY_MAX_DISTANCE_KM) * 1000;
+        Math.min(distanceFrom, FILTER_MAX_DISTANCE_KM) * 1000;
     }
 
     pipeline.push(
@@ -1128,9 +1127,8 @@ const getForYouOrganizationsForHomeRepo = async ({
     .filter(Boolean)
     .map(id => new mongoose.Types.ObjectId(id));
 
-  const filterTags = (advanceFilters.tags || [])
-    .filter(Boolean)
-    .map(id => new mongoose.Types.ObjectId(id));
+  // Every tag selected in the filter; a place must carry all of them
+  const filterTags = selectedTagObjectIds(advanceFilters);
 
   // const filterGenres = (advanceFilters.genre || [])
   //   .filter(Boolean)
@@ -1209,7 +1207,7 @@ const getForYouOrganizationsForHomeRepo = async ({
 
   if (ctx && filterTags.length) {
     geoQuery["otherInfo.tags"] = {
-      $in: filterTags
+      $all: filterTags
     };
   }
 
@@ -1672,9 +1670,8 @@ const getTrendingOrganizationsForHomeRepo = async ({
     .filter(Boolean)
     .map(id => new mongoose.Types.ObjectId(id));
 
-  const filterTags = (advanceFilters.tags || [])
-    .filter(Boolean)
-    .map(id => new mongoose.Types.ObjectId(id));
+  // Every tag selected in the filter; a place must carry all of them
+  const filterTags = selectedTagObjectIds(advanceFilters);
 
   const filterVenueTypes = (advanceFilters.venueTypes || [])
     .filter(Boolean)
@@ -1892,7 +1889,7 @@ const getTrendingOrganizationsForHomeRepo = async ({
     pipeline.push({
       $match: {
         "otherInfo.tags": {
-          $in: filterTags
+          $all: filterTags
         }
       }
     });
@@ -1978,9 +1975,8 @@ const getNewlyListedOrganizationsRepo = async ({
     .filter(Boolean)
     .map(id => new mongoose.Types.ObjectId(id));
 
-  const filterTags = (advanceFilters.tags || [])
-    .filter(Boolean)
-    .map(id => new mongoose.Types.ObjectId(id));
+  // Every tag selected in the filter; a place must carry all of them
+  const filterTags = selectedTagObjectIds(advanceFilters);
 
   const filterVenueTypes = (advanceFilters.venueTypes || [])
     .filter(Boolean)
@@ -2204,7 +2200,7 @@ const getNewlyListedOrganizationsRepo = async ({
     pipeline.push({
       $match: {
         "otherInfo.tags": {
-          $in: filterTags
+          $all: filterTags
         }
       }
     });
@@ -2393,33 +2389,43 @@ const getOrganizationsByPrimaryTagRepo = async ({
   limit = 10,
   skip = 0,
   category = null,
+  // Filter sheet on the "see all" screen (global/search filterKey tag:<id>)
+  advanceFilters = null,
 }) => {
   if (!tagId || !mongoose.Types.ObjectId.isValid(tagId)) {
     return { organizations: [], totalCount: 0 };
   }
 
   const tagObjectId = new mongoose.Types.ObjectId(tagId);
-  const cappedRadiusKm = clampNearbyRadiusKm(radiusKm);
+  // Home sections: 50 km cap; see-all with a filter distance: up to 150 km
+  const cappedRadiusKm = resolveSearchRadiusKm(advanceFilters, radiusKm);
   const radiusMeters = cappedRadiusKm * 1000;
   const safeSkip = Math.max(0, Number(skip) || 0);
   const safeLimit = Math.max(1, Number(limit) || 10);
 
-  const categoryObjectId = category
-    ? new mongoose.Types.ObjectId(category)
-    : null;
+  // Category / venue type: filter-sheet values win over the carousel category
+  const effectiveVenueTypeIds = await resolveEffectiveVenueTypeIds({
+    category,
+    ctx: { advanceFilters },
+  });
+  const hasCategoryFilter =
+    !!category ||
+    (advanceFilters?.categories || []).some(Boolean) ||
+    (advanceFilters?.venueTypes || []).some(Boolean);
 
-  const effectiveVenueTypeIds = categoryObjectId
-    ? await getVenueTypeObjectIdsForMainCategories(categoryObjectId)
-    : [];
-
-  if (categoryObjectId && !effectiveVenueTypeIds.length) {
+  if (hasCategoryFilter && !effectiveVenueTypeIds.length) {
     return { organizations: [], totalCount: 0 };
   }
 
-  // Any tag of the org — same rule as the home tag sections
+  // The section's tag, plus every tag selected in the filter (all required)
+  const extraTagIds = selectedTagObjectIds(advanceFilters).filter(
+    (id) => !id.equals(tagObjectId)
+  );
   const geoQuery = {
     status: "active",
-    "otherInfo.tags": tagObjectId,
+    "otherInfo.tags": extraTagIds.length
+      ? { $all: [tagObjectId, ...extraTagIds] }
+      : tagObjectId,
   };
 
   const pipeline = [];

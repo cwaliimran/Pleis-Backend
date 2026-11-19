@@ -18,8 +18,8 @@ const { ReferredRecord } = require("@ReferredRecordModel");
 const GlobalReferralSettings = require("@GlobalReferralSettingsModel");
 const LoyaltyReferralSettings = require("@LoyaltyReferralSettingsModel");
 const { LoyaltyReferredRecords } = require("@LoyaltyReferredRecordModel");
-const Reservations = require("@ReservationsModel");
-const { UserReservations } = require("@UserReservationsModel");
+const ReservationType = require("@ReservationTypeModel");
+const { UserReservations, CAPACITY_CONSUMING_STATUSES } = require("@UserReservationsModel");
 const WebhookTransactionsEventModel = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/WebhookTransactionsEvent.model");
 const { generateMeta } = require("@utils/responseUtil");
 const { buildUserReservationPaymentsQA } = require("./utils/buildUserReservationPaymentsQA");
@@ -36,6 +36,8 @@ const { buildUserChangeLogs } = require("./utils/buildUserChangeLogs");
  *              unpaid reservations bring no money.
  */
 const CONFIRMED_STATUSES = ["confirmed", "checkedIn", "noShow", "completed"];
+const PENDING_STATUSES = ["pendingPayment", "needsConfirmation"];
+const EXPIRED_STATUSES = ["cancelled", "rejected", "deleted"];
 const REVENUE_MATCH = {
   status: { $in: CONFIRMED_STATUSES },
   "paymentDetails.paymentStatus": "paid",
@@ -54,40 +56,24 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
       organizerMatch.organizationId = { $in: organizations.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
+    const reservationTypeMatch = {
+      ...(companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }),
+      ...(organizations && { organization: { $in: organizations.map(id => new mongoose.Types.ObjectId(id)) } }),
+    };
+
     // =========================
-    // 1. RESERVATIONS (CONFIG)
+    // 1. RESERVATION TYPES (CONFIG)
     // =========================
-    const reservationsAgg = await Reservations.aggregate([
-      { $match: organizerMatch },
+    const reservationTypesAgg = await ReservationType.aggregate([
+      { $match: reservationTypeMatch },
       {
         $group: {
           _id: null,
-
-          totalReservations: {
-            $sum: {
-              $cond: [
-                { $eq: ["$status", "active"] },
-                { $ifNull: ["$availableReservations", 0] },
-                0,
-              ],
-            },
-          },
-
-          expiredReservations: {
-            $sum: {
-              $cond: [
-                { $in: ["$status", ["inactive", "deleted"]] },
-                { $ifNull: ["$availableReservations", 0] },
-                0,
-              ],
-            },
-          },
-
           totalCapacity: {
             $sum: {
               $cond: [
                 { $eq: ["$status", "active"] },
-                { $ifNull: ["$maxCapacityPerReservation", 0] },
+                { $ifNull: ["$maxCapacity", 0] },
                 0,
               ],
             },
@@ -95,10 +81,9 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
         },
       },
     ]);
+
     const reservationsStats = {
-      totalReservations: reservationsAgg[0]?.totalReservations || 0,
-      expiredReservations: reservationsAgg[0]?.expiredReservations || 0,
-      totalCapacity: reservationsAgg[0]?.totalCapacity || 0,
+      totalCapacity: reservationTypesAgg[0]?.totalCapacity || 0,
     };
 
     // =========================
@@ -110,10 +95,24 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
         $group: {
           _id: null,
 
+          totalReservations: { $sum: 1 },
+
+          expiredReservations: {
+            $sum: {
+              $cond: [{ $in: ["$status", EXPIRED_STATUSES] }, 1, 0],
+            },
+          },
+
           // Confirmed, including those later marked Show (checkedIn) or No-show.
           totalConfirmedReservations: {
             $sum: {
               $cond: [{ $in: ["$status", CONFIRMED_STATUSES] }, 1, 0],
+            },
+          },
+
+          pendingReservations: {
+            $sum: {
+              $cond: [{ $in: ["$status", PENDING_STATUSES] }, 1, 0],
             },
           },
 
@@ -149,8 +148,14 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
             },
           },
 
-          totalPartySize: {
-            $sum: { $ifNull: ["$partySize", 0] },
+          totalCapacityReserved: {
+            $sum: {
+              $cond: [
+                { $in: ["$status", CAPACITY_CONSUMING_STATUSES] },
+                { $ifNull: ["$partySize", 0] },
+                0,
+              ],
+            },
           },
 
           avgGroupSize: {
@@ -209,12 +214,15 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
 
     const userReservationsStats = {
       // Counts: whole numbers (a reservation or a seat is never fractional).
+      totalReservations: Math.round(userAgg.totalReservations || 0),
+      expiredReservations: Math.round(userAgg.expiredReservations || 0),
       totalConfirmedReservations: Math.round(userAgg.totalConfirmedReservations || 0),
+      pendingReservations: Math.round(userAgg.pendingReservations || 0),
       totalRevenue: (userAgg.totalRevenue || 0).toFixed(2),
       totalPrepayReservations: (userAgg.totalPrepayReservations || 0).toFixed(2),
 
       averageGroupSize:(userAgg.avgGroupSize || 0).toFixed(2),
-      totalCapacityReserved: Math.round(userAgg.totalPartySize || 0),
+      totalCapacityReserved: Math.round(userAgg.totalCapacityReserved || 0),
 
       averageReservationValue: (userAgg.averageReservationValue || 0).toFixed(2),
 
@@ -224,12 +232,8 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
     };
 
     // =========================
-    // 🔥 DERIVED METRICS (FIXED)
+    // DERIVED METRICS
     // =========================
-    const pendingReservations =
-      reservationsStats.totalReservations -
-      userReservationsStats.totalConfirmedReservations;
-
     const remainingCapacity =
       reservationsStats.totalCapacity -
       userReservationsStats.totalCapacityReserved;
@@ -240,7 +244,6 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
     return {
       ...reservationsStats,
       ...userReservationsStats,
-      pendingReservations: Math.max(pendingReservations, 0),
       remainingCapacity: Math.max(remainingCapacity, 0),
     };
 

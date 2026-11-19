@@ -448,6 +448,7 @@ const getOrganizationsByPrimaryTagService = async ({
   skip = 0,
   userId,
   category,
+  advanceFilters = null,
 }) => {
   const { organizations, totalCount } = await getOrganizationsByPrimaryTagRepo({
     tagId,
@@ -457,6 +458,7 @@ const getOrganizationsByPrimaryTagService = async ({
     limit,
     skip,
     category,
+    advanceFilters,
   });
 
   const formatted = (organizations || []).map((org) => {

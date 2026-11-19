@@ -42,14 +42,20 @@ const getOrders = async ({
   }
 
   const menuItemIds = menuItems.map(i => i._id);
+  // Not used by the staff app's order list (the staff controller calls the
+  // admin getOrdersService); kept correct in case it is. Search text is
+  // matched literally.
+  const safeKeyword = keyword && keyword.trim()
+    ? String(keyword.trim()).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    : null;
   const keywordMatch =
-    keyword && keyword.trim()
+    safeKeyword
       ? {
         $match: {
           $or: [
-            { "user.firstName": { $regex: keyword, $options: "i" } },
-            { "user.userlastName": { $regex: keyword, $options: "i" } },
-            { "user.email": { $regex: keyword, $options: "i" } }
+            { "user.firstName": { $regex: safeKeyword, $options: "i" } },
+            { "user.lastName": { $regex: safeKeyword, $options: "i" } },
+            { "user.email": { $regex: safeKeyword, $options: "i" } }
           ]
         }
       }
@@ -100,7 +106,7 @@ const getOrders = async ({
           _id: "$userObjectId",
           username: { $arrayElemAt: ["$userInfo.username", 0] },
           firstName: { $arrayElemAt: ["$userInfo.firstName", 0] },
-          userlastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
+          lastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
           email: { $arrayElemAt: ["$userInfo.email", 0] }
         }
       }

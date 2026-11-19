@@ -15,6 +15,7 @@ const {
   invalidateOrganizationPickupSettingsCache,
 } = require("../../admin/organizations/organizationRepository");
 const { syncMapMarker, toBlobName } = require("../../helperUtils/mapMarkerImage");
+const { emitOrderingSettingsChanged } = require("@socketIo/orderingSettings/orderingSettingsSocketEmitter");
 
 const createOrganization = async ({ data }) => {
   if (data?.basicInfo?.media?.logo) {
@@ -414,6 +415,10 @@ const updateOrganization = async ({ id, data }) => {
       organization.inAppOrderingSettings?.paymentMethods,
       organization.creator,
     );
+    // The earlier invalidate ran before the save; clear again so the
+    // guests' re-read below can't get a value cached in between.
+    await invalidateOrganizationPickupSettingsCache(id);
+    await emitOrderingSettingsChanged(id, ["updated"]);
   }
 
   /* ================= SUBSCRIPTION UPDATE ================= */
@@ -455,6 +460,8 @@ const updateOrganizationV2 = async ({ id, inAppOrderingSettings }) => {
 
   if (inAppOrderingSettings !== undefined) {
     await invalidateOrganizationPickupSettingsCache(id);
+    // Guests already ordering at this venue re-read the settings now.
+    await emitOrderingSettingsChanged(id, ["updated"]);
   }
 
   return formatOrganization(organization);

@@ -10,6 +10,8 @@ const MenuItems = require("@MenuItemsModel");
 const MenuOrders = require("@OrdersModel");
 const { formatOrdersForUI } = require("../formatters/formatOrdersForUI");
 const { getModelCounts } = require("@utils/dbUtils/queryUtil");
+
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const { getFullImageUrl } = require("@utils/imageHelper");
 const {
   visibleOnOrderBoardMatch,
@@ -141,18 +143,17 @@ const getOrders = async ({
 
   let keywordMatch = {};
   if (keyword && keyword.trim()) {
-    keywordMatch =
-      keyword && keyword.trim()
-        ? {
-            $or: [
-              { "user.firstName": { $regex: keyword, $options: "i" } },
-              { "user.lastName": { $regex: keyword, $options: "i" } },
-              { "user.username": { $regex: keyword, $options: "i" } },
-              { "user.email": { $regex: keyword, $options: "i" } },
-              { orderNumber: { $regex: keyword, $options: "i" } },
-            ],
-          }
-        : null;
+    // Search text is matched literally: "(" or "." must not act as regex syntax.
+    const safeKeyword = escapeRegex(keyword.trim());
+    keywordMatch = {
+      $or: [
+        { "user.firstName": { $regex: safeKeyword, $options: "i" } },
+        { "user.lastName": { $regex: safeKeyword, $options: "i" } },
+        { "user.username": { $regex: safeKeyword, $options: "i" } },
+        { "user.email": { $regex: safeKeyword, $options: "i" } },
+        { orderNumber: { $regex: safeKeyword, $options: "i" } },
+      ],
+    };
   }
 
   if (status && status.trim()) {

@@ -12,6 +12,8 @@ const { getForYouEventsAgainstInterests } = require("./recommendationSystem/getF
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getTicketings } = require("../ticketing/ticketingsService");
 const { default: mongoose } = require("mongoose");
+const { selectedTagObjectIds } = require("../maps/mapsTagFilter");
+const { eventDateRangeQuery } = require("./eventDateRangeFilter");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 const Tags = require("@TagsModel");
 const { getUpdatesByEventIdService } = require("../../admin/updates/updatesService");
@@ -234,7 +236,8 @@ const thisWeekEvents = async ({
   const advanceFilters = ctx?.advanceFilters || {};
 
   const ctxCategories = toObjectIdArray(advanceFilters.categories);
-  const ctxTags = toObjectIdArray(advanceFilters.tags);
+  // Every tag selected in the filter; an event must carry all of them
+  const ctxTags = selectedTagObjectIds(advanceFilters);
   const categoryIds = toObjectIdArray(category);
 
   const finalCategories =
@@ -251,9 +254,12 @@ const thisWeekEvents = async ({
   /* ===============================
      BASE QUERY (USED BY BOTH PIPELINES)
      =============================== */
+  // Filter-sheet date range narrows the week window further
+  const pickedRange = eventDateRangeQuery(advanceFilters);
   const baseQuery = {
     status: "active",
     ...dateFilter,
+    ...(Object.keys(pickedRange).length ? { $and: [pickedRange] } : {}),
   };
 
   // Main carousel categories → venue types (not event.basicInfo.categories)
@@ -269,7 +275,7 @@ const thisWeekEvents = async ({
 
   if (ctxTags.length) {
     baseQuery["basicInfo.tags"] = {
-      $in: ctxTags,
+      $all: ctxTags,
     };
   }
 

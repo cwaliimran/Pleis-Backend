@@ -86,6 +86,8 @@ function resolvePleisAndroidStoreUrl() {
 // App identity used for verified links (Android App Links / iOS Universal
 // Links) and for the Android "open app or store" intent (#82, #84).
 const PLEIS_ANDROID_PACKAGE = "com.Efuria.org";
+/** Staff (business) app package — staff pushes are locked to it on Android. */
+const PLEIS_STAFF_ANDROID_PACKAGE = "com.pleisbussiness";
 const PLEIS_IOS_APP_IDS = "BUKST6P34T.com.Efuria.org";
 
 /**
@@ -113,6 +115,10 @@ function buildPleisLink(path) {
 
 function resolvePleisAndroidPackage() {
   return envOr("PLEIS_ANDROID_PACKAGE", PLEIS_ANDROID_PACKAGE);
+}
+
+function resolvePleisStaffAndroidPackage() {
+  return envOr("PLEIS_STAFF_ANDROID_PACKAGE", PLEIS_STAFF_ANDROID_PACKAGE);
 }
 
 /** SHA-256 fingerprints of the app signing certificates (Play Console → App signing), comma separated. */
@@ -201,6 +207,7 @@ module.exports = {
   resolvePleisLinkBase,
   buildPleisLink,
   resolvePleisAndroidPackage,
+  resolvePleisStaffAndroidPackage,
   resolvePleisAndroidCertFingerprints,
   resolvePleisIosAppIds,
   resolveMailgunApiBase,

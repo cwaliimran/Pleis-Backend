@@ -19,7 +19,7 @@ const {
   organizerWelcomeEmailTemplate,
   APP_NAME,
 } = require("../helperUtils/emailTemplates");
-const { createOrSkipDevice, Devices } = require("../models/Devices");
+const { createOrSkipDevice, Devices, appFromLoginUserType } = require("../models/Devices");
 const validator = require("validator");
 const crypto = require("crypto");
 const { registerUserUtility } = require("./authUtil");
@@ -414,8 +414,9 @@ const login = async (req, res) => {
       deviceId !== "test" &&
       typeof deviceType === "string"
     ) {
-      // Save device information (not part of the transaction)
-      createOrSkipDevice(userObject._id, deviceId, deviceType);
+      // Save device information (not part of the transaction), tagged with the
+      // app that logged in so staff pushes never land in the guest app
+      createOrSkipDevice(userObject._id, deviceId, deviceType, appFromLoginUserType(userType));
     } else {
       console.warn("FCM Token information not saved due to invalid input");
     }
@@ -1264,7 +1265,7 @@ const socialAuth = async (req, res) => {
         typeof deviceType === "string"
       ) {
         // Save device information
-        createOrSkipDevice(existingUser._id, deviceId, deviceType);
+        createOrSkipDevice(existingUser._id, deviceId, deviceType, appFromLoginUserType(userType));
       }
 
 
@@ -1334,7 +1335,7 @@ const socialAuth = async (req, res) => {
         typeof deviceType === "string"
       ) {
         // Save device information
-        createOrSkipDevice(newUser._id, deviceId, deviceType);
+        createOrSkipDevice(newUser._id, deviceId, deviceType, appFromLoginUserType(userType));
       }
 
 

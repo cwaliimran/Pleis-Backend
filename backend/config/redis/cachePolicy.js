@@ -22,6 +22,8 @@ function isAdvanceFiltersEmpty(af = {}) {
   if (isNonEmptyList(af.venueTypes)) return false;
   if (Number(af.distanceFrom) > 0) return false;
   if (Number(af.distanceTo) > 0) return false;
+  // A picked date range filters events — never serve the unfiltered cache
+  if (!isBlank(af.dateFrom) || !isBlank(af.dateTo)) return false;
   if (!isBlank(af.time) && af.time !== "all") return false;
   if (!isBlank(af.customCategoryId)) return false;
   return true;

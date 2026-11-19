@@ -14,19 +14,49 @@ const getCustomCategoriesWithFilters = async (
   skip,
   limit,
   sort = { order: 1 },
-  category
+  category,
+  // Filter sheet on the "see all" screen; omitted by the home feed and admin.
+  // { tagIds, venueTypeIds, geo: { coordinates: [lng, lat], radiusKm }, dateRange }
+  objectFilters = null
 ) => {
   const now = getCurrentDateInTimezone({ timezone });
   const userObjectId = new mongoose.Types.ObjectId(userId);
-  const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+  // One category id or several (all selected categories, any of them)
+  const catObjIds = (Array.isArray(category) ? category : category ? [category] : [])
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
 
-  const eventCategoryFilter = category
-    ? { "basicInfo.categories": { $in: [catObjId] } }
+  const eventCategoryFilter = catObjIds.length
+    ? { "basicInfo.categories": { $in: catObjIds } }
     : {};
 
-  const organizationCategoryFilter = category
-    ? { "otherInfo.categories": { $in: [catObjId] } }
+  const organizationCategoryFilter = catObjIds.length
+    ? { "otherInfo.categories": { $in: catObjIds } }
     : {};
+
+  const of = objectFilters || {};
+  const tagIds = of.tagIds || [];
+  const venueTypeIds = of.venueTypeIds || [];
+  const geoWithin = of.geo
+    ? {
+        $geoWithin: {
+          $centerSphere: [of.geo.coordinates, of.geo.radiusKm / 6378.1],
+        },
+      }
+    : null;
+
+  // Every selected tag must be on the object; distance from the guest
+  const organizationFilterSheet = {
+    ...(tagIds.length ? { "otherInfo.tags": { $all: tagIds } } : {}),
+    ...(geoWithin ? { location: geoWithin } : {}),
+  };
+  const eventFilterSheet = {
+    ...(tagIds.length ? { "basicInfo.tags": { $all: tagIds } } : {}),
+    ...(geoWithin ? { "basicInfo.venueLocation": geoWithin } : {}),
+    ...(of.dateRange && Object.keys(of.dateRange).length
+      ? { $and: [of.dateRange] }
+      : {}),
+  };
 
   const dateFilter = {
     "schedule.endDateTime": { $gte: now }
@@ -70,7 +100,8 @@ const getCustomCategoriesWithFilters = async (
             $match: {
               status: "active",
               ...eventCategoryFilter,
-              ...dateFilter
+              ...dateFilter,
+              ...eventFilterSheet
             }
           },
           {
@@ -138,7 +169,8 @@ const getCustomCategoriesWithFilters = async (
           {
             $match: {
               status: "active",
-              ...organizationCategoryFilter
+              ...organizationCategoryFilter,
+              ...organizationFilterSheet
             }
           },
 
@@ -165,6 +197,11 @@ const getCustomCategoriesWithFilters = async (
               as: "primaryVenue"
             }
           },
+
+          // Venue types picked in the filter sheet (primary venue)
+          ...(venueTypeIds.length
+            ? [{ $match: { "primaryVenue.venueType": { $in: venueTypeIds } } }]
+            : []),
 
           // populate VenueTypes
           {
@@ -198,6 +235,8 @@ const getCustomCategoriesWithFilters = async (
               "basicInfo.media": 1,
               operatingHours: 1,
               tags: 1,
+              // Card address line: "street, City"
+              location: 1,
 
               venue: {
                 venueType: "$venueTypes"

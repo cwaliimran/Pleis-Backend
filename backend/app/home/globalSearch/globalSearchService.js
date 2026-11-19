@@ -38,8 +38,13 @@ const {
   isPlainFilterKeyCacheable,
 } = require("./searchCache");
 const { encodeGeohash } = require("../utils/homeGeoCache");
-const { NEARBY_RANK_GEOHASH_PRECISION } = require("../utils/homeFeedLimits");
+const {
+  NEARBY_RANK_GEOHASH_PRECISION,
+  resolveSearchRadiusKm,
+} = require("../utils/homeFeedLimits");
 const { parseFilterKeyToken } = require("../utils/sectionFilterKey");
+const { selectedTagObjectIds } = require("../../maps/mapsTagFilter");
+const { eventDateRangeQuery } = require("../../events/eventDateRangeFilter");
 
 const SEARCH_HANDLERS = {
   events: searchEvents,
@@ -189,11 +194,11 @@ function escapeRegex(s) {
  * Accepts advanceFilters.tags, body/query tagId, or title fallback.
  */
 async function resolveTagIdsForFilterKey(ctx) {
-  const fromFilters = toValidObjectIds(ctx.advanceFilters?.tags);
-  if (fromFilters.length) return fromFilters;
-
+  // Section tag first: it is the one the cards show; the rest are extra filters
   const fromTagId = toValidObjectIds(ctx.tagId);
-  if (fromTagId.length) return fromTagId;
+  const fromFilters = toValidObjectIds(ctx.advanceFilters?.tags);
+  const ids = [...new Set([...fromTagId, ...fromFilters])];
+  if (ids.length) return ids;
 
   const title = String(ctx.title || "").trim();
   if (!title) return [];
@@ -343,6 +348,8 @@ async function fetchCustomCategoryObjects({
   page,
   limit,
   skip,
+  userLocation: searchLocation = null,
+  radiusKm = null,
 }) {
   const customCategoryRepo = require("../../customCategories/customCategoriesRepository");
   const {
@@ -368,6 +375,21 @@ async function fetchCustomCategoryObjects({
     );
   }
 
+  // Filter sheet: the admin's list is narrowed by every filter the guest set
+  const af = ctx.advanceFilters || {};
+  const hasPickedDistance = Number(af.distanceTo) > 0;
+  const objectFilters = {
+    tagIds: selectedTagObjectIds(af),
+    venueTypeIds: toValidObjectIds(af.venueTypes).map(
+      (id) => new mongoose.Types.ObjectId(id)
+    ),
+    geo:
+      hasPickedDistance && searchLocation
+        ? { coordinates: searchLocation.coordinates, radiusKm }
+        : null,
+    dateRange: eventDateRangeQuery(af),
+  };
+
   const rows = await customCategoryRepo.getCustomCategoriesWithFilters(
     ctx.userId,
     ctx.timezone,
@@ -375,9 +397,8 @@ async function fetchCustomCategoryObjects({
     0,
     1,
     { order: 1 },
-    Array.isArray(ctx.advanceFilters?.categories)
-      ? ctx.advanceFilters.categories[0]
-      : ctx.advanceFilters?.categories || null
+    toValidObjectIds(af.categories),
+    objectFilters
   );
 
   const category = rows?.[0];
@@ -520,7 +541,11 @@ const getFilterKeySearchService = async (ctx) => {
   const filterKey = resolved.filterKey;
   const resolvedCtx = resolved.ctx;
 
-  const radiusKm = clampNearbyRadiusKm(resolvedCtx.radiusKm ?? 50);
+  // Filter-sheet distance (advanceFilters.distanceTo, km, up to 150) wins over the 50 km default
+  const radiusKm = resolveSearchRadiusKm(
+    resolvedCtx.advanceFilters,
+    resolvedCtx.radiusKm ?? 50
+  );
   const userLocation = pointFromLatLng(
     resolvedCtx.latitude,
     resolvedCtx.longitude
@@ -778,6 +803,11 @@ async function fetchFilterKeyPayload({
           skip,
           userId,
           category: Array.isArray(category) ? category[0] : category,
+          // Tags beyond the section's own (and the filter sheet) must all match
+          advanceFilters: {
+            ...(advanceFilters || {}),
+            tags: tagIds.slice(1),
+          },
         });
       return {
         data: organizations,
@@ -785,7 +815,14 @@ async function fetchFilterKeyPayload({
       };
     }
     case "customCategory": {
-      return fetchCustomCategoryObjects({ ctx, page, limit, skip });
+      return fetchCustomCategoryObjects({
+        ctx,
+        page,
+        limit,
+        skip,
+        userLocation,
+        radiusKm,
+      });
     }
     default:
       throw new Error(`Unsupported filterKey: ${filterKey}`);

@@ -10,6 +10,7 @@ const { formatOrganization, formatNotificationImage } = require("./formatter/for
 const { default: mongoose } = require("mongoose");
 const { invalidate } = require("@redisCache");
 const { invalidateDiscoveryCaches } = require("@cacheNamespaces");
+const { emitOrderingSettingsChanged } = require("@socketIo/orderingSettings/orderingSettingsSocketEmitter");
 const { getActiveEventsCountForOrganizations } = require("../events/eventRepository");
 const {
   applyInAppOrderingSettingsV2,
@@ -399,6 +400,10 @@ const updateOrganization = async ({ id, data, timezone }) => {
         organization.inAppOrderingSettings?.paymentMethods,
         organization.creator,
       );
+      // The earlier invalidate ran before the commit; clear again so the
+      // guests' re-read below can't get a value cached in between.
+      await organizationRepo.invalidateOrganizationPickupSettingsCache(id);
+      await emitOrderingSettingsChanged(id, ["updated"]);
     }
 
     // Return formatted organization
@@ -424,6 +429,8 @@ const updateOrganizationV2 = async ({ id, inAppOrderingSettings, timezone }) => 
 
   if (inAppOrderingSettings !== undefined) {
     await organizationRepo.invalidateOrganizationPickupSettingsCache(id);
+    // Guests already ordering at this venue re-read the settings now.
+    await emitOrderingSettingsChanged(id, ["updated"]);
   }
 
   return formatOrganization(organization, [], timezone);

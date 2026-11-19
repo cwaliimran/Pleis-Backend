@@ -973,10 +973,13 @@ const createReservation = async (data, session) => {
     data: {
       type: NotificationTypes.RESERVATION_UPDATE,
       objectType: "userreservations",
+      // Lets the staff app open the venue's reservations on tap
+      organization_id: String(userReservation.organizationId || ""),
     },
     image: organizationImage,
     sender: userId,
     objectId: userReservation.reservationId,
+    audience: "staff",
   });
 
   return {
