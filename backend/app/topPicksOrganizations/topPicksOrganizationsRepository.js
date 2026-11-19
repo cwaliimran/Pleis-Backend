@@ -2,6 +2,7 @@
 const TopPicksOrganizations = require("@TopPicksOrganizationsModel");
 const Organizations = require("@OrganizationModel");
 const mongoose = require("mongoose");
+const { selectedTagObjectIds } = require("../maps/mapsTagFilter");
 const {
   getVenueTypeObjectIdsForMainCategories,
 } = require("../../admin/venueTypes/resolveCategoryVenueTypes");
@@ -179,9 +180,8 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
     .filter(Boolean)
     .map(id => new mongoose.Types.ObjectId(id));
 
-  const filterTags = (advanceFilters.tags || [])
-    .filter(Boolean)
-    .map(id => new mongoose.Types.ObjectId(id));
+  // Every tag selected in the filter; a place must carry all of them
+  const filterTags = selectedTagObjectIds(advanceFilters);
 
   const filterVenueTypes = (advanceFilters.venueTypes || [])
     .filter(Boolean)
@@ -262,7 +262,7 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
     pipeline.push({
       $match: {
         "otherInfo.tags": {
-          $in: filterTags
+          $all: filterTags
         }
       }
     });

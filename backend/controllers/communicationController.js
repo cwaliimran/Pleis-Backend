@@ -5,6 +5,25 @@ const {
 const { Devices } = require("../models/Devices");
 const { sendResponse, validateParams } = require("../helperUtils/responseUtil");
 const adminFireBConfig = require("../config/firebaseAdmin"); // Firebase admin SDK setup
+const {
+  resolvePleisAndroidPackage,
+  resolvePleisStaffAndroidPackage,
+} = require("../config/CONSTANTS");
+
+/**
+ * Which app a push is for: "staff" (business app: new orders, new reservations,
+ * reviews for the venue) or "guest". null = every app the account uses.
+ * Tokens tagged with the other app are skipped, and on Android the message is
+ * locked to that app's package, so an untagged token of the other app (saved
+ * before tags existed) can't show it either.
+ */
+const PUSH_AUDIENCES = ["guest", "staff"];
+const androidPackageForAudience = (audience) =>
+  audience === "staff"
+    ? resolvePleisStaffAndroidPackage()
+    : audience === "guest"
+      ? resolvePleisAndroidPackage()
+      : null;
 const { getFullImageUrl } = require("@utils/imageHelper");
 
 const { NotificationExp } = require("../models/Notifications");
@@ -149,7 +168,9 @@ const sendUserNotifications = async ({
   meta = {},
   saveNotification = true, // send false if you don't want to save notification in db
   image = null, // optional image url
+  audience = null, // "staff" | "guest" — which app should show it (see PUSH_AUDIENCES)
 }) => {
+  const pushAudience = PUSH_AUDIENCES.includes(audience) ? audience : null;
   setImmediate(async () => {
     try {
       // Always resolve copy: static *Key strings + dynamic title/body via locale catalog
@@ -167,11 +188,14 @@ const sendUserNotifications = async ({
       if (recipientDevices && recipientDevices.length > 0) {
         // Flatten the devices array and associate it with the userId
         const flattenedDevices = recipientDevices.flatMap((userDevice) =>
-          userDevice.devices.map((device) => ({
-            userId: userDevice.userId,
-            deviceId: device.deviceId,
-            deviceType: device.deviceType,
-          }))
+          userDevice.devices
+            // Skip tokens of the other app (e.g. the guest app for a staff push)
+            .filter((device) => !pushAudience || !device.app || device.app === pushAudience)
+            .map((device) => ({
+              userId: userDevice.userId,
+              deviceId: device.deviceId,
+              deviceType: device.deviceType,
+            }))
         );
 
         // Group devices by userId and ensure no duplicate device IDs
@@ -236,7 +260,8 @@ const sendUserNotifications = async ({
                 subjectId: sender ? sender.toString() : null,
                 objectId: objectId ? objectId.toString() : null,
               },
-              image
+              image,
+              audience: pushAudience,
             });
             responses.push({
               userId,
@@ -328,12 +353,15 @@ const sendNotification = async (recipients, payload) => {
 
 
   // Notification payload for Android
+  const restrictedPackageName = androidPackageForAudience(payload.audience);
   const androidPayload = {
     notification: {
       title: payload.title,
       body: payload.body,
     },
     data: payload.data,
+    // FCM drops the message for tokens of any other app package
+    ...(restrictedPackageName ? { android: { restrictedPackageName } } : {}),
   };
 
   // Notification payload for iOS

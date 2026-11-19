@@ -22,6 +22,7 @@ const {
   isRefundableThroughPleis,
   assertRefundablePayoutState,
 } = require("../../../commonModules/menuItemsAndOrders/orderRefundService");
+const { guestOrderStatusBodyKey } = require("../../../commonModules/menuItemsAndOrders/orderNotificationCopy");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -284,11 +285,8 @@ const updateOrders = async (staffId, id, data) => {
       sendUserNotifications({
         recipientIds: [order.user.toString()],
         titleKey: "order_updated_title",
-        bodyKey: "order_updated_status_body",
-        bodyValues: {
-          orderNumber: order.orderNumber,
-          status: order.status,
-        },
+        bodyKey: guestOrderStatusBodyKey(order.status, { statusChanged }),
+        bodyValues: { orderNumber: order.orderNumber },
         data: {
           type: NotificationTypes.ORDER_UPDATE,
           objectType: "menuorders",

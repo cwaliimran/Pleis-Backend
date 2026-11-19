@@ -491,7 +491,7 @@ async function editOrderBeforePayment({ orderId, actor, input = {}, timezone, as
     recipientIds: [String(order.user)],
     titleKey: "order_updated_title",
     bodyKey: "order_updated_body",
-    bodyValues: { orderNumber: order.orderNumber, status: order.status },
+    bodyValues: { orderNumber: order.orderNumber },
     data: { type: NotificationTypes.ORDER_UPDATE, objectType: "menuorders" },
     sender: order.organization,
     objectId: order._id,

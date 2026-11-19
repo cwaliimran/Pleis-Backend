@@ -20,8 +20,25 @@ const clampNearbyRadiusKm = (requestedKm) => {
   return Math.min(base, NEARBY_MAX_DISTANCE_KM);
 };
 
+/** Largest distance the guest can pick in the filter sheet (app DISTANCE_STOPS). */
+const FILTER_MAX_DISTANCE_KM = 150;
+
+/**
+ * Radius (km) for a home "see all" list: the filter-sheet distance when the
+ * guest set one (up to FILTER_MAX_DISTANCE_KM), otherwise the nearby cap.
+ */
+const resolveSearchRadiusKm = (advanceFilters, fallbackKm) => {
+  const picked = Number(advanceFilters?.distanceTo);
+  if (Number.isFinite(picked) && picked > 0) {
+    return Math.min(picked, FILTER_MAX_DISTANCE_KM);
+  }
+  return clampNearbyRadiusKm(fallbackKm);
+};
+
 module.exports = {
   clampNearbyRadiusKm,
+  resolveSearchRadiusKm,
+  FILTER_MAX_DISTANCE_KM,
 
   /**
    * Hard max for nearby org lists (home nearYou, /organizations/nearby).

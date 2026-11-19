@@ -15,4 +15,14 @@ function genreTagObjectIds(genre) {
   return [...new Set(ids)].map((id) => new mongoose.Types.ObjectId(id));
 }
 
-module.exports = { genreTagObjectIds };
+/**
+ * Every tag the filter selected: advanceFilters.genre (what the guest app
+ * sends) plus advanceFilters.tags (older clients). Match with $all.
+ */
+function selectedTagObjectIds(advanceFilters = {}) {
+  const af = advanceFilters || {};
+  const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+  return genreTagObjectIds([...list(af.tags), ...list(af.genre)]);
+}
+
+module.exports = { genreTagObjectIds, selectedTagObjectIds };

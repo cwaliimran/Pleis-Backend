@@ -1,4 +1,5 @@
 const SetttingsRepo = require("./settingRepository");
+const { emitOrderingSettingsChanged } = require("@socketIo/orderingSettings/orderingSettingsSocketEmitter");
 
 const getSetttings = async ({ organization }) => {
   const SetttingsData = await SetttingsRepo.getSetttings({
@@ -10,12 +11,15 @@ const getSetttings = async ({ organization }) => {
 const updateSetttings = async (organization, data) => {
   const Setttings = await SetttingsRepo.findSetttingsById(organization);
   if (!Setttings) {
-    return SetttingsRepo.createSetttings({
+    const created = await SetttingsRepo.createSetttings({
       organization,
       companyOrganizer: data.companyOrganizer,
       paymentMethod: data.paymentMethod,
       automaticOrderAcceptance: data.automaticOrderAcceptance,
     });
+    // Guests already ordering at this venue re-read the settings now.
+    await emitOrderingSettingsChanged(organization, ["created"]);
+    return created;
   }
 
   // -----------------------------
@@ -79,6 +83,9 @@ const updateSetttings = async (organization, data) => {
     organization,
     Setttings.toObject ? Setttings.toObject() : Setttings,
   );
+  // After the pickup-settings cache is cleared (sync above): guests already
+  // on the menu / checkout / payment screen re-read the settings now.
+  await emitOrderingSettingsChanged(organization, ["updated"]);
 
   return Setttings;
 };

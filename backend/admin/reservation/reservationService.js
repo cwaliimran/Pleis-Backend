@@ -302,6 +302,26 @@ const updateUserReservationStatus = async (
     organizationIds,
   });
 
+/**
+ * New date/time for the guest's "Reservation Time Updated" text, in the guest's
+ * timezone (the one the app shows reservations in): "24 Nov 2026, 08:00",
+ * or just the date when the type has no time slots.
+ */
+const formatTimingForGuest = async (reservation) => {
+  const day = reservation?.timingSlots?.dateTimeSlots?.[0];
+  if (!day?.date) return "";
+  let timezone = "UTC";
+  if (reservation.userId) {
+    const { User } = require("@UserModel");
+    const guest = await User.findById(reservation.userId).select("timezone").lean();
+    if (guest?.timezone && moment.tz.zone(guest.timezone)) timezone = guest.timezone;
+  }
+  const start = day.timeSlots?.[0]?.startTime;
+  return start
+    ? moment(start).tz(timezone).format("D MMM YYYY, HH:mm")
+    : moment.utc(day.date).format("D MMM YYYY");
+};
+
 const updateUserReservation = async (data) => {
   const UserReservation = await ReservationRepo.findUserReservationById(
     data.id,
@@ -470,11 +490,12 @@ const updateUserReservation = async (data) => {
   // The status notification (D-04) is sent by changeReservationStatus.
   if (UserReservation.userId && !statusChanged && (timingChanged || detailsChanged)) {
     if (timingChanged) {
+      const newTiming = await formatTimingForGuest(UserReservation);
       fireAndForget(
         sendReservationNotification({
           reservationId: UserReservation._id,
           action: "RESERVATION_TIMING_CHANGED",
-          context: { newTiming: "updated" },
+          context: { newTiming },
         }),
         "RESERVATION_TIMING_CHANGED_NOTIFICATION",
       );

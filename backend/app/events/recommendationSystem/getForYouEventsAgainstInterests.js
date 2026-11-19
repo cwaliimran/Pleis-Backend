@@ -2,6 +2,8 @@ const { Events } = require("../../../commonModules/events/Event");
 const { generateMeta } = require("@utils/responseUtil");
 const { formatRecentlyViewedEventResponse } = require("../../recentlyViewed/formatter/recentlyViewedItemsFormatter");
 const { default: mongoose } = require("mongoose");
+const { selectedTagObjectIds } = require("../../maps/mapsTagFilter");
+const { eventDateRangeQuery } = require("../eventDateRangeFilter");
 const { getCurrentDateInTimezone } = require("../../../helperUtils/responseUtil");
 const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
 const {
@@ -45,7 +47,8 @@ const getForYouEventsAgainstInterests = async ({
   const advanceFilters = ctx?.advanceFilters || {};
 
   const ctxCategories = (advanceFilters.categories || []).map(id => new mongoose.Types.ObjectId(id));
-  const ctxTags = (advanceFilters.tags || []).map(id => new mongoose.Types.ObjectId(id));
+  // Every tag selected in the filter; an event must carry all of them
+  const ctxTags = selectedTagObjectIds(advanceFilters);
   const ctxVenueTypes = (advanceFilters.venueTypes || []).map(id => new mongoose.Types.ObjectId(id));
 
   const prefCategories = (preferences.categories || []).map(id => new mongoose.Types.ObjectId(id));
@@ -80,8 +83,12 @@ const getForYouEventsAgainstInterests = async ({
      CTX TAG FILTER (STRICT)
      =============================== */
   if (ctx && ctxTags.length) {
-    baseQuery["basicInfo.tags"] = { $in: ctxTags };
+    baseQuery["basicInfo.tags"] = { $all: ctxTags };
   }
+
+  // Filter-sheet date range (event fully inside it)
+  const pickedRange = eventDateRangeQuery(advanceFilters);
+  if (Object.keys(pickedRange).length) baseQuery.$and = [pickedRange];
 
   let pipeline = [];
 

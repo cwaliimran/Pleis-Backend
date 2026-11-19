@@ -1454,22 +1454,33 @@ const overlaps = (a, b) => a.start < b.end && b.start < a.end;
 
 const sumBy = (list, key) => list.reduce((total, item) => total + (item[key] || 0), 0);
 const num = (value) => (value == null ? 0 : Number(value));
+/**
+ * Comparable key for a reservation's timing: every date with its time slots.
+ * timingSlots is { enabled, dateTimeSlots: [{ date, timeSlots: [{ startTime, endTime }] }] }
+ * (a bare slot array is accepted too). A changed date or time gives a new key.
+ */
 const slotsFingerprint = (timingSlots) => {
-  if (!Array.isArray(timingSlots) || timingSlots.length === 0) {
-    return "";
+  const time = (value) => {
+    if (!value) return "";
+    const ms = new Date(value).getTime();
+    return Number.isNaN(ms) ? String(value) : ms;
+  };
+  const slotKey = (slot) => `${time(slot?.startTime)}-${time(slot?.endTime)}`;
+
+  if (Array.isArray(timingSlots)) {
+    return timingSlots.map(slotKey).sort().join("|");
   }
 
-  return timingSlots
-    .map((slot) => {
-      const start = slot?.startTime
-        ? new Date(slot.startTime).getTime()
-        : "";
+  const days = timingSlots?.dateTimeSlots;
+  if (!Array.isArray(days) || days.length === 0) return "";
 
-      const end = slot?.endTime
-        ? new Date(slot.endTime).getTime()
-        : "";
-
-      return `${start}-${end}`;
+  return days
+    .map((day) => {
+      const slots = (Array.isArray(day?.timeSlots) ? day.timeSlots : [])
+        .map(slotKey)
+        .sort()
+        .join(",");
+      return `${toDateKey(day?.date) || ""}@${slots}`;
     })
     .sort()
     .join("|");

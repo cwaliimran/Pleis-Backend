@@ -21,6 +21,7 @@ const createReviews = async (data) => {
         image: "noimage",
         sender: reviews.user,
         objectId: reviews.event,
+        audience: "staff", // venue owner: business app, not the guest app
       });
     }
 

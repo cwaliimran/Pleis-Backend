@@ -237,6 +237,14 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
             menuOrder.organization?._id || menuOrder.organization;
 
           emitNewOrder(menuOrder, formattedOrder);
+
+          // Card/Apple Pay orders reach the board only now — tell the staff
+          // the same way as a cash order (staff app push, opens the order).
+          const { notifyStaffNewOrder } = require("../../../../app/menuItemsAndOrdering/orders/notifyStaffNewOrder");
+          fireAndForget(
+            notifyStaffNewOrder({ order: menuOrder, formattedOrder, sender: menuOrder.user }),
+            "STAFF_NEW_ORDER_NOTIFICATION",
+          );
         })
         .catch((err) => console.error("Order emit failed:", err));
     }
