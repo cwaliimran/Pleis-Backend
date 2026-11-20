@@ -124,7 +124,9 @@ const startAddCard = async (req, res) => {
     try {
         const { startAddCard: start } = require("../services/userCardAddService");
         const data = await start({ userId: req.user._id, pageBaseUrl: cardsBaseUrl(req) });
-        return res.json({ page_url: data.page_url });
+        // attemptId: the app posts Monri's result via WebView postMessage when
+        // the page cannot fetch our http complete URL (local emulator).
+        return res.json({ page_url: data.page_url, attemptId: data.attemptId });
     } catch (error) {
         const readableError = getReadableErrorMessage(error);
         return sendResponse({

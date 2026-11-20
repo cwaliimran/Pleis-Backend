@@ -68,23 +68,39 @@ async function createAddPaymentMethodSession(orderNumber) {
     scenario: "add_payment_method",
   });
   let response;
+  let lastNetworkError;
+  // ipgtest often answers Cloudflare 522 / hangs past 20 s (docs/monri-payments-refunds-saved-cards.md).
   for (let attempt = 1; attempt <= 3; attempt++) {
-    response = await axios.post(`${getMonriBaseUrl()}/v2/payment/new`, body, {
-      headers: {
-        Authorization: buildAuthorizationHeader({ body }),
-        "Content-Type": "application/json",
-      },
-      timeout: 20000,
-      validateStatus: () => true,
-    });
+    try {
+      response = await axios.post(`${getMonriBaseUrl()}/v2/payment/new`, body, {
+        headers: {
+          Authorization: buildAuthorizationHeader({ body }),
+          "Content-Type": "application/json",
+        },
+        timeout: 30000,
+        validateStatus: () => true,
+      });
+      lastNetworkError = null;
+    } catch (err) {
+      lastNetworkError = err;
+      console.warn(
+        `[add-card] Monri network error (${err.code || err.message}), try ${attempt}/3`,
+      );
+      if (attempt < 3) await new Promise((r) => setTimeout(r, 2000 * attempt));
+      continue;
+    }
     if (!NOT_DELIVERED.has(response.status)) break;
     console.warn(`[add-card] Monri not reached (HTTP ${response.status}), try ${attempt}/3`);
-    if (attempt < 3) await new Promise((r) => setTimeout(r, 1500 * attempt));
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 2000 * attempt));
+  }
+  if (!response && lastNetworkError) {
+    console.error("[add-card] Monri unreachable:", lastNetworkError.message);
+    throw httpError(502, "card_save_start_failed");
   }
   const data = response?.data || {};
   if (response?.status === 200 && data.client_secret) return data.client_secret;
 
-  const message = String(data.message || "");
+  const message = String(data.message || data.title || "");
   if (message.includes("tokenization has been requested")) {
     throw httpError(409, "card_saving_unavailable");
   }
@@ -136,8 +152,15 @@ async function renderAddCardPage({ attemptId, pageToken, pageBaseUrl }) {
     .populate("user", "firstName lastName email username")
     .lean();
   const User = mongoose.model("User");
-  const user = await User.findById(attempt.user).select("firstName lastName email username").lean();
+  const user = await User.findById(attempt.user)
+    .select("firstName lastName email username location phoneNumber")
+    .lean();
   const address = billing?.billingAddress || {};
+  const location = user?.location || {};
+  // Monri Components require ch_address / city / zip (confirmPayment). Guests
+  // without billing still need Add card to work — fall back to profile location
+  // then a country default, never empty strings.
+  const countryRaw = address.country || location.country || getMonriCountry();
   const params = {
     fullName:
       `${billing?.user?.firstName || ""} ${billing?.user?.lastName || ""}`.trim() ||
@@ -145,11 +168,19 @@ async function renderAddCardPage({ attemptId, pageToken, pageBaseUrl }) {
       user?.username ||
       "Pleis guest",
     email: billing?.email || user?.email || "",
-    address: address.address || "",
-    city: address.city || "",
-    zip: address.postalCode || "",
-    phone: billing?.phone || "",
-    country: address.country === "USA" ? "US" : address.country || getMonriCountry(),
+    address:
+      address.address ||
+      location.fullAddress ||
+      [location.city, location.country].filter(Boolean).join(", ") ||
+      "Address on file",
+    city: address.city || location.city || "Zagreb",
+    zip: address.postalCode || location.postalCode || "10000",
+    phone:
+      billing?.phone ||
+      [user?.phoneNumber?.code, user?.phoneNumber?.number].filter(Boolean).join("") ||
+      // Monri Components require ch_phone even when the guest never stored one.
+      "+385910000000",
+    country: countryRaw === "USA" ? "US" : countryRaw === "Croatia" ? "HR" : countryRaw,
     orderInfo: "Save card",
   };
 
@@ -179,7 +210,8 @@ async function renderAddCardPage({ attemptId, pageToken, pageBaseUrl }) {
   body { font-family: -apple-system, Roboto, sans-serif; margin: 0; padding: 20px; color: #111; background: #fff; }
   h1 { font-size: 20px; margin: 0 0 6px; }
   p { font-size: 14px; color: #555; line-height: 1.45; margin: 0 0 18px; }
-  #card { margin-bottom: 18px; }
+  #card { margin-bottom: 18px; min-height: 140px; }
+  #card iframe { width: 100% !important; min-height: 120px; }
   button { width: 100%; padding: 14px; font-size: 16px; border: 0; border-radius: 10px; background: #111; color: #fff; }
   button:disabled { opacity: .5; }
   #error { color: #b00020; font-size: 14px; margin-top: 12px; min-height: 18px; }
@@ -197,17 +229,30 @@ async function renderAddCardPage({ attemptId, pageToken, pageBaseUrl }) {
   var completeUrl = ${jsLiteral(`${pageBaseUrl}/add-complete/${attempt._id}`)};
   var resultUrl = ${jsLiteral(`${pageBaseUrl}/add-result`)};
   var pageToken = ${jsLiteral(pageToken)};
-  var monri = Monri(${jsLiteral(getMonriAuthToken())}, { environment: ${jsLiteral(getMonriComponentsEnv())} });
-  var components = monri.components({ clientSecret: ${jsLiteral(attempt.clientSecret)} });
-  var card = components.create("card", { tokenizePan: true });
-  card.mount("card");
-
   var button = document.getElementById("save");
   var errorBox = document.getElementById("error");
   function finish(status, code) {
     window.location.href = resultUrl + "?status=" + encodeURIComponent(status) + "&code=" + encodeURIComponent(code || "");
   }
+  var monri, components, card;
+  try {
+    monri = Monri(${jsLiteral(getMonriAuthToken())}, { environment: ${jsLiteral(getMonriComponentsEnv())} });
+    components = monri.components({ clientSecret: ${jsLiteral(attempt.clientSecret)} });
+    card = components.create("card", { tokenizePan: true });
+    card.mount("card");
+    if (card.on) {
+      card.on("change", function (ev) {
+        if (ev && ev.error) errorBox.textContent = ev.error.message || "Card form error";
+      });
+    }
+  } catch (err) {
+    errorBox.textContent = (err && err.message) || "Card form failed to load";
+  }
   button.onclick = function () {
+    if (!card || !monri) {
+      errorBox.textContent = "Card form is not ready.";
+      return;
+    }
     button.disabled = true;
     errorBox.textContent = "";
     monri.confirmPayment(card, params).then(function (res) {
@@ -217,18 +262,29 @@ async function renderAddCardPage({ attemptId, pageToken, pageBaseUrl }) {
         return;
       }
       var r = res.result || {};
+      var payload = {
+        t: pageToken,
+        result: {
+          status: r.status,
+          order_number: r.order_number,
+          pan_token: r.pan_token,
+          payment_method: r.payment_method || null
+        }
+      };
+      // Prefer postMessage when running inside the app WebView: a Monri HTTPS
+      // baseUrl (needed so the card iframe mounts on local http) cannot fetch
+      // our http complete URL (mixed content). The app then POSTs add-complete.
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: "addCardComplete",
+          payload: payload
+        }));
+        return;
+      }
       return fetch(completeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          t: pageToken,
-          result: {
-            status: r.status,
-            order_number: r.order_number,
-            pan_token: r.pan_token,
-            payment_method: r.payment_method || null
-          }
-        })
+        body: JSON.stringify(payload)
       }).then(function (resp) { return resp.json(); })
         .then(function (data) { finish(data.status || "failed", data.code); });
     }).catch(function () {

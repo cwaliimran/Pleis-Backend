@@ -966,15 +966,44 @@ const createReservation = async (data, session) => {
 
   const organizationImage = await getLogoByOrganization(userReservation.organizationId);
 
+  const slotBlock = userReservation.timingSlots?.dateTimeSlots?.[0];
+  const startIso = slotBlock?.timeSlots?.[0]?.startTime;
+  const reservationDate = slotBlock?.date
+    ? String(slotBlock.date).slice(0, 10)
+    : startIso
+      ? String(startIso).slice(0, 10)
+      : "";
+  const reservationTime =
+    startIso && String(startIso).length >= 16 ? String(startIso).slice(11, 16) : "";
+  const guestName =
+    `${userReservation.firstName || ""} ${userReservation.lastName || ""}`.trim() || "A guest";
+  let venue = "the venue";
+  try {
+    const org = await Organizations.findById(userReservation.organizationId)
+      .select("basicInfo.name")
+      .lean();
+    if (org?.basicInfo?.name) venue = org.basicInfo.name;
+  } catch (err) {
+    console.warn("[RESERVATION_NOTIFICATION] venue lookup failed:", err?.message);
+  }
+
   await sendUserNotifications({
     recipientIds: staffIds,
     titleKey: "new_reservation_created_title",
     bodyKey: "new_reservation_created_body",
+    bodyValues: {
+      guestName,
+      partySize: userReservation.partySize || 0,
+      when: [reservationDate, reservationTime].filter(Boolean).join(" "),
+      venue,
+    },
     data: {
       type: NotificationTypes.RESERVATION_UPDATE,
       objectType: "userreservations",
       // Lets the staff app open the venue's reservations on tap
       organization_id: String(userReservation.organizationId || ""),
+      reservationDate,
+      focus: "new",
     },
     image: organizationImage,
     sender: userId,
