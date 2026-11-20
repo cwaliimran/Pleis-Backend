@@ -363,6 +363,12 @@ exports.redirectToMonriWalletPay = async (req, res) => {
       return res.status(400).send("Invalid amount");
     }
 
+    // Apple Pay is Apple-only, Google Pay is Android-only. A desktop browser
+    // (no mobile UA) still sees both.
+    const walletUa = String(req.headers["user-agent"] || "");
+    const showApplePay = !/Android/i.test(walletUa);
+    const showGooglePay = !/iPhone|iPad|iPod/i.test(walletUa);
+
     // Save transaction
     await monriRepository.createTransaction({
       orderNumber,
@@ -440,8 +446,8 @@ button {
 <div id="card"></div>
 <button id="payBtn">Pay with Card</button>
 
-<div id="apple-pay"></div>
-<div id="google-pay"></div>
+${showApplePay ? '<div id="apple-pay"></div>' : ""}
+${showGooglePay ? '<div id="google-pay"></div>' : ""}
 
 <script>
 
@@ -483,10 +489,7 @@ document.getElementById("payBtn").onclick = async function() {
 };
 
 
-/* -----------------------
-   APPLE PAY
------------------------ */
-
+${showApplePay ? `
 const applePay = components.create("apple-pay", {
   trx_token: "${trxToken}",
   environment: "${getMonriComponentsEnv()}",
@@ -503,14 +506,16 @@ const applePay = components.create("apple-pay", {
     ch_read_only: "true",
   }
 });
-
 applePay.mount("apple-pay");
+applePay.on("paymentSuccess", function() {
+  window.location.href = "${getMonriSuccessUrl()}?order_number=${orderNumber}";
+});
+applePay.on("paymentError", function() {
+  window.location.href = "${getMonriCancelUrl()}";
+});
+` : ""}
 
-
-/* -----------------------
-   GOOGLE PAY
------------------------ */
-
+${showGooglePay ? `
 const googlePay = components.create("google-pay", {
   trx_token: "${trxToken}",
   environment: "${getMonriComponentsEnv()}",
@@ -518,36 +523,16 @@ const googlePay = components.create("google-pay", {
   currencyCode: "${getMonriCurrency()}",
   ch_read_only: "true",
 });
-
 googlePay.mount("google-pay");
-
-
-/* -----------------------
-   SUCCESS EVENTS
------------------------ */
-
-applePay.on("paymentSuccess", function(result) {
-  window.location.href =
-    "${getMonriSuccessUrl()}?order_number=${orderNumber}";
+googlePay.on("paymentSuccess", function() {
+  window.location.href = "${getMonriSuccessUrl()}?order_number=${orderNumber}";
 });
-
-googlePay.on("paymentSuccess", function(result) {
-  window.location.href =
-    "${getMonriSuccessUrl()}?order_number=${orderNumber}";
-});
-
-
-/* -----------------------
-   ERROR EVENTS
------------------------ */
-
-applePay.on("paymentError", function() {
-  window.location.href = "${getMonriCancelUrl()}";
-});
-
 googlePay.on("paymentError", function() {
   window.location.href = "${getMonriCancelUrl()}";
 });
+` : ""}
+
+
 
 </script>
 
