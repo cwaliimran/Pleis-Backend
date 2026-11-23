@@ -68,7 +68,7 @@ const userReservationsFormatter = (item, timezone) => {
     cat.eventTime = convertUtcToTimezoneAMPM(start.toISOString(), timezone);
     delete cat.eventStartDate;
   }
-  cat.profileIcon = getFullImageUrl(cat.profileIcon || "noimage.png");
+  cat.profileIcon = getFullImageUrl(cat.profileIcon || "noimage.png", "user");
   cat.organizationCover = getFullImageUrl(cat.organizationCover || "noimage.png");
   cat.organizationLogo = getFullImageUrl(cat.organizationLogo || "noimage.png");
   // ---------------------------

@@ -7,8 +7,8 @@ function formatUpdate(Update) {
   const cat = Update.toObject ? Update.toObject() : { ...Update };
 
   // Check if user exists and has an image field
-  if (cat.user && cat.user.profileIcon) {
-    cat.user.profileIcon = getFullImageUrl(cat.user.profileIcon || "noimage.png");
+  if (cat.user && typeof cat.user === "object" && !cat.user._bsontype) {
+    cat.user.profileIcon = getFullImageUrl(cat.user.profileIcon || "noimage.png", "user");
   }
 
   // Return the updated object

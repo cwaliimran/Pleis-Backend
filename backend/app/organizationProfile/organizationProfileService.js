@@ -285,9 +285,7 @@ const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
   };
 
   const reviews = result[0].reviews.map(r => {
-    r.user.profileIcon = getFullImageUrl(
-      r.user.profileIcon || "noimage.png"
-    );
+    r.user.profileIcon = getFullImageUrl(r.user.profileIcon, "user");
     return r;
   });
 

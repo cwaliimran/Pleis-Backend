@@ -13,7 +13,7 @@ function formatUserBilling(category) {
     ...cat,
     user: {
       ...cat.user,
-      profileIcon: getFullImageUrl(cat.user?.profileIcon || "noimage.png"),
+      profileIcon: getFullImageUrl(cat.user?.profileIcon || "noimage.png", "user"),
     },
   };
 }

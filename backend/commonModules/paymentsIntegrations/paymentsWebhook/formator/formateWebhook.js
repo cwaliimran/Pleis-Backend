@@ -10,12 +10,12 @@ const formatImages = (data) => {
             }
         }
 
-        if (data.companyOrganizer && data.companyOrganizer.profileIcon) {
-            data.companyOrganizer.profileIcon = getFullImageUrl(data.companyOrganizer.profileIcon);
+        if (data.companyOrganizer && typeof data.companyOrganizer === "object" && !data.companyOrganizer._bsontype) {
+            data.companyOrganizer.profileIcon = getFullImageUrl(data.companyOrganizer.profileIcon, "user");
         }
 
-        if (data.user && data.user.profileIcon) {
-            data.user.profileIcon = getFullImageUrl(data.user.profileIcon);
+        if (data.user && typeof data.user === "object" && !data.user._bsontype) {
+            data.user.profileIcon = getFullImageUrl(data.user.profileIcon, "user");
         }
 
         if (data.orderData && data.orderData.items) {

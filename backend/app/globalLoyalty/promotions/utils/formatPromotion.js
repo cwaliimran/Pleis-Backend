@@ -24,8 +24,8 @@ function formatPromotion(promotion, timezone) {
   }
 
   // Organizer image
-  if (obj?.companyOrganizer?.profileIcon) {
-    obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
+  if (obj?.companyOrganizer && typeof obj.companyOrganizer === "object" && !obj.companyOrganizer._bsontype) {
+    obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon, "user");
   }
 
   // Tier image

@@ -9,8 +9,8 @@ function formatTransactionItem(item) {
     if (obj?.organization?.basicInfo?.media?.logo) {
       obj.organization.basicInfo.media.logo = getFullImageUrl(obj.organization.basicInfo.media.logo);
     }
-    if (obj?.user?.profileIcon) {
-      obj.user.profileIcon = getFullImageUrl(obj.user.profileIcon);
+    if (obj?.user && typeof obj.user === "object" && !obj.user._bsontype) {
+      obj.user.profileIcon = getFullImageUrl(obj.user.profileIcon, "user");
     }
     if (obj?.companyOrganizer?.logo) {
       obj.companyOrganizer.logo = getFullImageUrl(obj.companyOrganizer.logo);

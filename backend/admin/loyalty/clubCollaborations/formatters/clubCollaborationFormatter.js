@@ -11,13 +11,15 @@ function formatClubCollaboration(item) {
   // Append only the icons (do not touch any other field)
   if (obj.sender?.user) {
     obj.sender.user.profileIcon = getFullImageUrl(
-      obj.sender.user.profileIcon || "noimage.png"
+      obj.sender.user.profileIcon,
+      "user"
     );
   }
 
   if (obj.receiver?.user) {
     obj.receiver.user.profileIcon = getFullImageUrl(
-      obj.receiver.user.profileIcon || "noimage.png"
+      obj.receiver.user.profileIcon,
+      "user"
     );
   }
 

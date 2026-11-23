@@ -27,6 +27,7 @@ const {
   getStartAndEndOfWeek,
 } = require("../../../helperUtils/responseUtil");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
+const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 
 
 const upsertGlobalReferral = async (data) => {
@@ -96,7 +97,7 @@ const getGlobalReferralSettings = async () => {
 
 function getUserImage(userId) {
   return User.findById(userId).lean().then(user => {
-    return user?.profileIcon || "noimage.png";
+    return getFullImageUrl(user?.profileIcon, "user");
   });
 }
 

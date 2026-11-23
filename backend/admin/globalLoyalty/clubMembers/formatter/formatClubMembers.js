@@ -7,7 +7,7 @@ function formatClubMembers(item) {
     if (!obj) return null;
 
     // Format image URL
-    obj.user.profileIcon = getFullImageUrl(obj.user.profileIcon || "noimage.png");
+    obj.user.profileIcon = getFullImageUrl(obj.user.profileIcon || "noimage.png", "user");
 
     return obj;
 }

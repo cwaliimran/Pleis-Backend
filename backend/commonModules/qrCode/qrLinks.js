@@ -346,7 +346,14 @@ const getShareCode = async ({ type, id, userId = null }) => {
  */
 const getShareCodeByPublicId = async ({ type, publicId }) => {
   const storedType = SHARE_TYPES[String(type || "").toLowerCase()];
-  if (!publicId || !["organization", "event"].includes(storedType)) return null;
+  if (!publicId || !storedType) return null;
+  // Club invite links carry the company's publicId. The club page needs its _id.
+  if (storedType === "loyalty") {
+    const company = await User.findOne({ publicId: String(publicId) }).select("_id").lean();
+    if (!company) return null;
+    return getShareCode({ type: "loyalty", id: String(company._id) });
+  }
+  if (!["organization", "event"].includes(storedType)) return null;
   const Model = storedType === "event" ? Events : Organizations;
   const doc = await Model.findOne({ publicId: String(publicId) }).select("_id status").lean();
   if (!isLive(doc)) return null;

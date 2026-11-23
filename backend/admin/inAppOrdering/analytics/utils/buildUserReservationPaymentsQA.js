@@ -7,14 +7,14 @@ const buildUserReservationPaymentsQA = (rows = [], baseImageUrl = "") => {
     return items.map(item => {
       // Enrich the user profile image
       if (item.user) { // empty → noimage.png, never a blank image
-        item.user.profileIcon = getFullImageUrl(item.user.profileIcon);
+        item.user.profileIcon = getFullImageUrl(item.user.profileIcon, "user");
       }
 
       // Enrich the profile image for the changedByUser inside reservationChanges
       if (item.reservation && item.reservation.reservationChanges) {
         item.reservation.reservationChanges.forEach(change => {
           if (change.changedByUser) {
-            change.changedByUser.profileIcon = getFullImageUrl(change.changedByUser.profileIcon);
+            change.changedByUser.profileIcon = getFullImageUrl(change.changedByUser.profileIcon, "user");
           }
         });
       }

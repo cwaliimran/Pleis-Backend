@@ -88,22 +88,32 @@ const result = await getUserOrganizationPublicIds(
 
 
 router.get("/share", async (req, res) => {
-
     try {
-        const { organizer, user } = req.query;
-        const referrer=user
-const result = await saveUserReferralData(organizer,referrer);
+        const organizer = typeof req.query.organizer === "string" ? req.query.organizer.trim() : "";
+        const referrer = typeof req.query.user === "string" ? req.query.user.trim() : "";
+        if (!organizer) {
+            return sendResponse({
+                res,
+                statusCode: 400,
+                translationKey: "invalid_parameters",
+            });
+        }
 
-        const appLink = `${resolvePleisAppScheme()}://organizer=${result.organizerId}/referrer=${result.referrerId}`;
+        const result = await saveUserReferralData(organizer, referrer);
+        const organizerId = result?.organizerId ? String(result.organizerId) : "";
+        // `com.pleis://loyaltyclub/<id>` is a real route the guest app already
+        // opens. `com.pleis://organizer=<id>/referrer=<id>` is not a valid
+        // address, so the phone never leaves the browser.
+        const appLink = organizerId
+            ? `${resolvePleisAppScheme()}://loyaltyclub/${encodeURIComponent(organizerId)}`
+            : `${resolvePleisAppScheme()}://`;
 
-        // Opens the app (Android: straight intent redirect) or the store
         return sendSmartOpen(req, res, { appLink, title: "PLEIS" });
     } catch (err) {
-        
         return sendResponse({
             res,
             statusCode: 500,
-            translationKey: "internal_server_error",  // Handle any internal server errors
+            translationKey: "internal_server_error",
             error: err,
         });
     }
