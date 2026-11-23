@@ -754,6 +754,8 @@ const getSuggestedLoyaltyClubsForUser = async ({
     _id: { $nin: joinedClubIds },
     "accountState.status": "active",
     "accountState.userType": "organizer",
+    // accountState can stay active while the company itself is suspended.
+    "companyDetails.status": "active",
     "companyDetails.loyaltySettings.isEnabled": true,
   };
 
@@ -813,6 +815,7 @@ const getSuggestedLoyaltyClubsForHome = async ({
     },
     "accountState.status": "active",
     "accountState.userType": "organizer",
+    "companyDetails.status": "active",
     "companyDetails.loyaltySettings.isEnabled": true,
     "companyDetails.loyaltySettings.title": { $exists: true, $ne: "" }
   };

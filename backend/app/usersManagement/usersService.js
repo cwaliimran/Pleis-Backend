@@ -212,6 +212,15 @@ const updateUser = async (req, res, options = {}) => {
       }
     }
 
+    // Social sign-up sends the invite code here, after the account exists.
+    // Email sign-up already stored it, so only the first write claims the referrer.
+    const incomingReferral = typeof req.body.referralCode === "string" ? req.body.referralCode.trim() : "";
+    let referralToClaim = "";
+    if (incomingReferral && !user.referralCode && userType === "user") {
+      user.referralCode = incomingReferral;
+      referralToClaim = incomingReferral;
+    }
+
     // Handle organization changes for manager/staff
     if ((userType === "staff" || userType === "manager") && Array.isArray(organizations)) {
       // Find all organizations where this user is currently staff
@@ -311,6 +320,19 @@ const updateUser = async (req, res, options = {}) => {
     }
 
     await session.commitTransaction();
+
+    if (referralToClaim) {
+      try {
+        const { claimReferralCode } = require("../globalReferral/globalReferralRepository");
+        await claimReferralCode({
+          username: referralToClaim,
+          userId: user._id,
+          userIp: req.ip,
+        });
+      } catch (err) {
+        // The profile is already saved.
+      }
+    }
 
     userCache.del(userId.toString());
     const userObject = user.toJSON();

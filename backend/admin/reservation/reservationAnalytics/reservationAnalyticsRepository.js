@@ -23,6 +23,7 @@ const { UserReservations, CAPACITY_CONSUMING_STATUSES } = require("@UserReservat
 const WebhookTransactionsEventModel = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/WebhookTransactionsEvent.model");
 const { generateMeta } = require("@utils/responseUtil");
 const { buildUserReservationPaymentsQA } = require("./utils/buildUserReservationPaymentsQA");
+const { paymentAmountExpression } = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/utils/paymentAmount");
 const { buildUserChangeLogs } = require("./utils/buildUserChangeLogs");
 
 
@@ -851,7 +852,7 @@ const getUserReservationPaymentsQA = async ({
         orderNumber: 1,
         orderType: 1,
         paymentStatus: 1,
-        amount: 1,
+        amount: paymentAmountExpression("$reservation.amount"),
         createdAt: 1,
         user: {
           _id: "$user._id",

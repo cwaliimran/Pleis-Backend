@@ -3,6 +3,7 @@ const { formatImages } = require("../formator/formateWebhook");
 const { getDateRanges } = require("../utils/transsectionDate.utils");
 const WebhookEvent = require("./WebhookTransactionsEvent.model");
 const mongoose = require("mongoose");
+const { correctedReservationAmountStages } = require("../utils/paymentAmount");
 
 const saveIfNotProcessed = async (data) => {
   try {
@@ -216,6 +217,10 @@ const getOrdersTransactions = async ({
   if (Object.keys(match).length) {
     pipeline.push({ $match: match });
   }
+
+  // Google Pay fulfills stored Monri cents on the webhook row. Show the
+  // reservation's euro total before commission and search use `amount`.
+  pipeline.push(...correctedReservationAmountStages());
 
   // Lookups FIRST (so we can search inside them)
   pipeline.push(
@@ -1340,6 +1345,7 @@ const getTotalAmount = async (Model, baseMatch, extra, range) => {
   const finalMatch = { ...baseMatch, ...extra, ...(range && { createdAt: range }) };
   const result = await Model.aggregate([
     { $match: finalMatch },
+    ...correctedReservationAmountStages(),
     { $group: { _id: null, totalAmount: { $sum: { $toDouble: "$amount" } } } },
   ]);
   return result[0] ? result[0].totalAmount : 0;
@@ -1350,6 +1356,7 @@ const getTotalCommission = async (Model, baseMatch, extra, range) => {
   const finalMatch = { ...baseMatch, ...extra, ...(range && { createdAt: range }) };
   const result = await Model.aggregate([
     { $match: finalMatch },
+    ...correctedReservationAmountStages(),
     { $group: { _id: null, totalCommission: { $sum: { $multiply: [{ $toDouble: "$amount" }, 0.06] } } } },
   ]);
   return result[0] ? result[0].totalCommission : 0;

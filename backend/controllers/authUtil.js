@@ -317,6 +317,21 @@ const registerUserUtility = async (req, res, options = {}) => {
 
     await session.commitTransaction();
 
+    // The share link opens sign-up with this code. Attach the new account to
+    // the referrer. A bad code must not undo the account that was just created.
+    if (userType === "user" && String(referralCode || "").trim()) {
+      try {
+        const { claimReferralCode } = require("../app/globalReferral/globalReferralRepository");
+        await claimReferralCode({
+          username: referralCode,
+          userId: user._id,
+          userIp: req.ip,
+        });
+      } catch (err) {
+        // The account is already saved.
+      }
+    }
+
     const userObject = user.toJSON();
     if (emailVerificationLink) {
       userObject.emailVerificationLink = emailVerificationLink;

@@ -110,22 +110,30 @@ const result = await saveReferralData(id);
 
 
 router.get("/share", async (req, res) => {
-
     try {
-        const { id } = req.query; 
-        const username=id;
+        const username = typeof req.query.id === "string" ? req.query.id.trim() : "";
+        if (!username) {
+            return sendResponse({
+                res,
+                statusCode: 400,
+                translationKey: "invalid_parameters",
+            });
+        }
 
-const result = await saveUserReferralData(username, req.ip);
-        const appLink = `${resolvePleisAppScheme()}://${result}`;
+        // Records the click against this IP. A missing referrer must not stop
+        // the open page — the app still has to open, the way other share links do.
+        await saveUserReferralData(username, req.ip);
 
-        // Opens the app (Android: straight intent redirect) or the store
+        // saveUserReferralData returns a record, not a path. The app scheme
+        // has to be a real route (`com.pleis://referral/<username>`), which
+        // the guest app opens onto sign-up with the code filled in.
+        const appLink = `${resolvePleisAppScheme()}://referral/${encodeURIComponent(username)}`;
         return sendSmartOpen(req, res, { appLink, title: "PLEIS" });
     } catch (err) {
-   
         return sendResponse({
             res,
             statusCode: 500,
-            translationKey: "internal_server_error",  // Handle any internal server errors
+            translationKey: "internal_server_error",
             error: err,
         });
     }
