@@ -11,7 +11,7 @@ function formatCategory(category) {
 
   return {
     ...cat,
-    profileIcon: getFullImageUrl(cat.profileIcon || "noimage.png"),
+    profileIcon: getFullImageUrl(cat.profileIcon || "noimage.png", "user"),
   };
 }
 

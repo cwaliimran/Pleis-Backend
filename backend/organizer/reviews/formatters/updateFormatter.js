@@ -7,7 +7,7 @@ function formatReviewData(review) {
     ...review,
     userDetails: {
       ...review.userDetails,
-      profileIcon: getFullImageUrl(review.userDetails?.profileIcon || "noimage.png"),  // Format user profile image
+      profileIcon: getFullImageUrl(review.userDetails?.profileIcon || "noimage.png", "user"),  // Format user profile image
     },
     organizationDetails: {
       ...review.organizationDetails,

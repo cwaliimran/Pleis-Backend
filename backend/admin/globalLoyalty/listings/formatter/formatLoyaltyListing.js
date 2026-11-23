@@ -3,7 +3,7 @@ const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
 // utils/formatLoyaltyListing.js
 function formatLoyaltyListing(challenge, timezone) {
     const obj = { ...challenge };
-    obj.profileIcon = getFullImageUrl(obj.profileIcon || "noimage.png");
+    obj.profileIcon = getFullImageUrl(obj.profileIcon || "noimage.png", "user");
     return obj;
 }
 

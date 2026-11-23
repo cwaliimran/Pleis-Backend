@@ -15,9 +15,7 @@ function menuItemOrderFormatter(orders) {
     const obj = typeof order.toObject === "function" ? order.toObject() : order;
 
     // Replace only profileIcon
-    obj.profileIcon = obj.profileIcon
-      ? getFullImageUrl(obj.profileIcon)
-      : getFullImageUrl("noimage.png");
+    obj.profileIcon = getFullImageUrl(obj.profileIcon, "user");
 
     return obj;
   });

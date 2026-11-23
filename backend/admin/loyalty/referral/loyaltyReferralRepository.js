@@ -9,6 +9,7 @@ const {
 } = require("../../../helperUtils/responseUtil");
 
 const { LoyaltyReferredRecords } = require("@LoyaltyReferredRecordModel");
+const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 
 
 
@@ -88,7 +89,7 @@ const findLoyaltyReferralSettingsByCompanyOrganizer = async (companyOrganizer) =
 
 const getUserImage = async (userId) => {
   const user = await User.findById(userId).lean();
-  return user?.profileIcon || "noimage.png";
+  return getFullImageUrl(user?.profileIcon, "user");
 };
 const getLoyaltyReferralStats = async (companyOrganizer) => {
   const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer);

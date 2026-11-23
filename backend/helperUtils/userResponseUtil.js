@@ -12,7 +12,7 @@ const  formatUserResponse = (
   excludeFields = []
 ) => {
   if (!userObject) return null;
-  const pIcon = getFullImageUrl(userObject?.profileIcon) || null;
+  const pIcon = getFullImageUrl(userObject?.profileIcon, "user") || null;
   const userType = userObject.accountState?.userType;
 
   // Construct basicInfo cleanly using conditionals
@@ -140,7 +140,7 @@ const  formatUserResponse = (
 //attach url to profile icon without any other formatting
 const formatUserProfileIconOnly = (userObject) => {
   if (!userObject) return null;
-  const pIcon = getFullImageUrl(userObject?.profileIcon) || null;
+  const pIcon = getFullImageUrl(userObject?.profileIcon, "user") || null;
   userObject.profileIcon = pIcon;
   return userObject;
 };

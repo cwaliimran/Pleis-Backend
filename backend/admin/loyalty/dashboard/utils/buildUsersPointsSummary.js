@@ -35,9 +35,7 @@ const buildUsersPointsSummary = (rows = {}, limit = 7) => {
             _id: item.user?._id || null,
             firstName: item.user?.firstName || "",
             lastName: item.user?.lastName || "",
-            profileIcon: item.user?.profileIcon
-              ? getFullImageUrl(item.user.profileIcon)
-              : ""
+            profileIcon: getFullImageUrl(item.user?.profileIcon, "user")
           },
 
           globalWallet: {

@@ -57,7 +57,8 @@ function menuItemOrderFormatter(order, timezone) {
   }
   if (obj.user) {
     obj.user.profileIcon = getFullImageUrl(
-      obj.user.profileIcon || "noimage.png",
+      obj.user.profileIcon,
+      "user"
     );
   }
 

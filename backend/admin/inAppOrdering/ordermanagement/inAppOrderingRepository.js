@@ -341,10 +341,20 @@ const getOrders = async ({
             $concat: [
               process.env.AZURE_STORAGE_BASE_URL,
               {
-                $ifNull: [
-                  { $arrayElemAt: ["$userInfo.profileIcon", 0] },
-                  "noimage.png",
-                ],
+                $let: {
+                  vars: {
+                    icon: {
+                      $ifNull: [{ $arrayElemAt: ["$userInfo.profileIcon", 0] }, ""],
+                    },
+                  },
+                  in: {
+                    $cond: [
+                      { $in: ["$$icon", ["", "noimage.png"]] },
+                      "usernoimage.png",
+                      "$$icon",
+                    ],
+                  },
+                },
               },
             ],
           },
@@ -545,10 +555,20 @@ const getOrderByIdForAdminUI = async (orderId) => {
             $concat: [
               process.env.AZURE_STORAGE_BASE_URL || "",
               {
-                $ifNull: [
-                  { $arrayElemAt: ["$userInfo.profileIcon", 0] },
-                  "noimage.png",
-                ],
+                $let: {
+                  vars: {
+                    icon: {
+                      $ifNull: [{ $arrayElemAt: ["$userInfo.profileIcon", 0] }, ""],
+                    },
+                  },
+                  in: {
+                    $cond: [
+                      { $in: ["$$icon", ["", "noimage.png"]] },
+                      "usernoimage.png",
+                      "$$icon",
+                    ],
+                  },
+                },
               },
             ],
           },

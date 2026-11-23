@@ -29,9 +29,10 @@ function formatPromotion(promotion, timezone) {
     obj.image = getFullImageUrl(obj.image);
   }
 
-  if (obj?.companyOrganizer?.profileIcon) {
+  if (obj?.companyOrganizer && typeof obj.companyOrganizer === "object" && !obj.companyOrganizer._bsontype) {
     obj.companyOrganizer.profileIcon = getFullImageUrl(
       obj.companyOrganizer.profileIcon,
+      "user"
     );
   }
 

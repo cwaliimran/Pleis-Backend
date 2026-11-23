@@ -5,8 +5,8 @@ const { convertUtcToTimezone } = require("../../../../../../helperUtils/response
 // utils/formatChallenge.js
 function formatChallenge(challenge, timezone) {
     const obj = { ...challenge };
-    if (obj?.companyOrganizer?.profileIcon) {
-        obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
+    if (obj?.companyOrganizer && typeof obj.companyOrganizer === "object" && !obj.companyOrganizer._bsontype) {
+        obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon, "user");
     }
     if(obj?.image){
         obj.image = getFullImageUrl(obj.image);

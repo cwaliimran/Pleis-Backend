@@ -7,6 +7,7 @@ const { randomBytes } = require("crypto");
 const crypto = require("crypto");
 const { CompanySchema } = require("./CompanyDetails");
 const { generateSecureToken } = require("../helperUtils/secureToken");
+const { getFullImageUrl } = require("../helperUtils/imageHelper");
 const { LocationSchema } = require("../shared/locations/locationSchmea");
 const { createUserWallet } = require("../app/userWalletService/global/walletManagement/userWalletService");
 // Define subscription statuses
@@ -863,12 +864,8 @@ userSchema.methods.toJSON = function (userData) {
 
   const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
 
-  // Attach base URL to profileIcon
-  if (userObject.profileIcon && !userObject.profileIcon.startsWith("http")) {
-    userObject.profileIcon = baseUrl + userObject.profileIcon;
-  } else if (!userObject.profileIcon) {
-    userObject.profileIcon = baseUrl + "noimage.png";
-  }
+  // Missing user photos use usernoimage.png. Other images stay on noimage.png.
+  userObject.profileIcon = getFullImageUrl(userObject.profileIcon, "user");
 
   //attach baseUrl with company logo and cover image
   if (
@@ -901,11 +898,7 @@ userSchema.methods.toJSON = function (userData) {
 };
 
 userSchema.methods.addBaseUrlToProfileIcon = function (user) {
-  const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
-  if (user.profileIcon && !user.profileIcon.startsWith("http")) {
-    user.profileIcon = baseUrl + user.profileIcon;
-  }
-  return { ...user, profileIcon: user.profileIcon };
+  return { ...user, profileIcon: getFullImageUrl(user.profileIcon, "user") };
 };
 const generateResetToken = () => {
   return randomBytes(32).toString("hex"); // 64-character token

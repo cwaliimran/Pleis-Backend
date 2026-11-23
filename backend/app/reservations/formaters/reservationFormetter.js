@@ -183,7 +183,7 @@ const userReservationsFormatter = (item, timezone) => {
      Images
   --------------------------- */
   cat.profileIcon =
-    getFullImageUrl(cat.profileIcon || "noimage.png");
+    getFullImageUrl(cat.profileIcon || "noimage.png", "user");
 
   cat.organizationCover =
     getFullImageUrl(cat.organizationCover || "noimage.png");

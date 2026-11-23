@@ -36,6 +36,35 @@ const {
 const moment = require("moment-timezone");
 const ReservationPreferences = require("@ReservationPreferencesModel");
 
+// Staff push data must be YYYY-MM-DD. Date#toString().slice(0, 10) is
+// "Mon Nov 23", which the staff reservations screen renders as Invalid Date.
+const calendarDay = value => {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match ? match[1] : "";
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const clockTime = value => {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const match = value.match(/T(\d{2}:\d{2})/);
+    if (match) return match[1];
+    if (/^\d{2}:\d{2}/.test(value)) return value.slice(0, 5);
+    return "";
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+};
+
 const getReservationTimeRange = (slot, bookingDuration) => {
   const start = moment.parseZone(slot.startTime);
 
@@ -968,13 +997,8 @@ const createReservation = async (data, session) => {
 
   const slotBlock = userReservation.timingSlots?.dateTimeSlots?.[0];
   const startIso = slotBlock?.timeSlots?.[0]?.startTime;
-  const reservationDate = slotBlock?.date
-    ? String(slotBlock.date).slice(0, 10)
-    : startIso
-      ? String(startIso).slice(0, 10)
-      : "";
-  const reservationTime =
-    startIso && String(startIso).length >= 16 ? String(startIso).slice(11, 16) : "";
+  const reservationDate = calendarDay(slotBlock?.date) || calendarDay(startIso);
+  const reservationTime = clockTime(startIso);
   const guestName =
     `${userReservation.firstName || ""} ${userReservation.lastName || ""}`.trim() || "A guest";
   let venue = "the venue";

@@ -40,6 +40,13 @@ function buildAndroidIntentUrl(appLink, fallbackUrl) {
 function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
   const { ios, android } = getStoreUrls();
   const safeTitle = String(title || "PLEIS").replace(/</g, "");
+  const safeAppLink = String(appLink || "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[ch]));
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -278,7 +285,7 @@ function renderSmartOpenHtml({ appLink, title = "PLEIS" }) {
         </a>
       </div>
 
-      <button type="button" class="retry" id="retry">Try opening the app again</button>    </main>
+      <a class="retry" id="retry" href="${safeAppLink}">Open the app</a>    </main>
 
     <script>
       (function () {
@@ -359,6 +366,12 @@ function sendSmartOpen(req, res, { appLink, title = "PLEIS" }) {
   if (intent && isAndroidBrowser(req.headers?.["user-agent"])) {
     return res.redirect(302, intent);
   }
+  // The site policy blocks inline scripts. This page's only script is the
+  // one that opens the app, so this response allows that and nothing else.
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src data:; base-uri 'none'"
+  );
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   return res.send(renderSmartOpenHtml({ appLink, title }));
 }
