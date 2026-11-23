@@ -84,6 +84,30 @@ open(path, "w").write(body)
 PY
 
   git commit -F "$comment"
+  # A commit wrapper may append an agent trailer. Drop it before the commit is pushed.
+  COMMENT_FILE="$comment" python3 - << 'PY'
+import os, subprocess
+body = subprocess.check_output(["git", "log", "-1", "--format=%B"], text=True)
+kept = []
+for line in body.splitlines():
+    low = line.lower()
+    agent = any(word in low for word in ("cursor", "cursoragent", "copilot", "claude", "chatgpt", "openai", "assistant"))
+    if agent and (low.startswith("co-authored-by:") or low.startswith("signed-off-by:")):
+        continue
+    kept.append(line)
+clean = "\n".join(kept).strip() + "\n"
+original = body if body.endswith("\n") else body + "\n"
+if clean == original:
+    raise SystemExit(0)
+path = os.environ["COMMENT_FILE"]
+open(path, "w").write(clean)
+tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip()
+parent = subprocess.check_output(["git", "rev-parse", "HEAD^"], text=True).strip()
+env = os.environ.copy()
+env["GIT_AUTHOR_DATE"] = subprocess.check_output(["git", "log", "-1", "--format=%aD"], text=True).strip()
+new = subprocess.check_output(["git", "commit-tree", tree, "-p", parent, "-F", path], env=env, text=True).strip()
+subprocess.check_call(["git", "reset", "--soft", new])
+PY
   echo "Committed as $name <$email>"
 else
   echo "Nothing new to commit."
