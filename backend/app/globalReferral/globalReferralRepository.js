@@ -79,8 +79,9 @@ const saveUserReferralData = async (username, ip) => {
     const newRecord = await ReferredRecord.create({
       referrerUserName: username,
       userIp: ip,
-      referrerUserId: referrer._id,  // Set the referrer ObjectId
-      status: false,  // Default status is false
+      referrerUserId: referrer._id,
+      status: "active",
+      expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     });
 
     return { userId: newRecord.userId, referrerUserName: newRecord.referrerUserName };
@@ -452,11 +453,33 @@ const getUserReferradrecord = async ({
 };
 
 
+/**
+ * Ties a new account to the referrer named by a share link.
+ * Signup must succeed even when the code is unknown or the limit is reached.
+ * Skips when this account is already on a referral record.
+ */
+const claimReferralCode = async ({ username, userId, userIp }) => {
+  const code = typeof username === "string" ? username.trim() : "";
+  if (!code || !userId) return null;
+  const existing = await ReferredRecord.findOne({ userId });
+  if (existing) return existing;
+  try {
+    return await createUserReferradrecord({
+      username: code,
+      userId,
+      userIp: userIp || `signup:${userId}`,
+    });
+  } catch (err) {
+    return null;
+  }
+};
+
 module.exports = {
   createGlobalReferral,
   getGlobalReferrals,
   saveReferralData,
   saveUserReferralData,
   createUserReferradrecord,
+  claimReferralCode,
   getUserReferradrecord
 };

@@ -49,6 +49,11 @@ const renderInvalidCodeHtml = () => `<!DOCTYPE html>
 // "/api/v1/app/open" is "Open in the app" in payment emails: with the app
 // installed it opens straight in the app (OpenLink screen), otherwise the
 // browser shows the open page with the store buttons.
+// Paths the installed apps claim, so the OS opens the app instead of the browser.
+// Referral invites (/api/v1/app/global-referral/share?id=) are not listed:
+// every iOS build with this domain would claim them, including builds that
+// don't open sign-up, and the open page would never run. Android claims that
+// path in the app manifest, which ships with the build that handles it.
 const APP_LINK_PATHS = ["/q/*", "/api/v1/q/*", "/api/v1/share", "/api/v1/share/*", "/api/v1/app/open"];
 
 const assetLinks = () => {

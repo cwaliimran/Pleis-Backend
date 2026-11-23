@@ -294,6 +294,7 @@ async function searchLoyaltyClubs(ctx) {
   const baseMatch = {
     "accountState.status": "active",
     "accountState.userType": "organizer",
+    "companyDetails.status": "active",
     "companyDetails.loyaltySettings.title": { $exists: true, $ne: "" },
 
     ...(keyword

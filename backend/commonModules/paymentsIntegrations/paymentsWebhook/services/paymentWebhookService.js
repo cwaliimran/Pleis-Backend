@@ -19,6 +19,7 @@ const MenuOrders = require("@OrdersModel");
 const {
   recordPaidCaptureLedger,
 } = require("../../ledger/ledgerWriter");
+const { monriMinorToEuros } = require("../utils/paymentAmount");
 
 function toWebhookPaymentMethod(method) {
   if (method === "applePay") return "applePay";
@@ -289,7 +290,11 @@ const fulfillMonriRedirectPayment = async ({ tx, payload, status }) => {
         id: String(transactionId),
         orderNumber: tx.orderNumber,
         status,
-        amount: payload.amount || tx.amount,
+        // tx.amount and Monri's callback amount are minor units. The order
+        // documents and the app webhook are euros; store euros here too.
+        amount: monriMinorToEuros(
+          payload.amount != null && payload.amount !== "" ? payload.amount : tx.amount,
+        ),
         metadata: {
           type: tx.orderType,
           companyOrganizer: context.companyOrganizer,
